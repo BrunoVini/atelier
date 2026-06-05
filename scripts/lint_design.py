@@ -23,26 +23,16 @@ from scan_repo import (
 DELTA_E = 8.0
 
 
-def _load_contract(path):
-    """Return ({hex: token_name}, {fonts}, {spacing}) from design-tokens.json."""
-    data = json.load(open(path, encoding="utf-8"))
-
-    def values(group):
-        out = {}
-        for name, node in (data.get(group, {}) or {}).items():
-            v = node.get("$value", node) if isinstance(node, dict) else node
-            out[name] = v
-        return out
-
+def _load_contract(target):
+    """Return ({hex: token_name}, {fonts}, {spacing}) — resolved from a
+    design-tokens.json OR the repo's DESIGN.md (whichever the repo has)."""
+    from contract import resolve_contract
+    c = resolve_contract(target)
     colors = {}
-    for n, v in values("color").items():  # first token wins -> deterministic
+    for name, v in c["colors"].items():  # first token wins -> deterministic
         if isinstance(v, str) and v.startswith("#") and v.lower() not in colors:
-            colors[v.lower()] = n
-    fonts = set()
-    for v in values("font").values():
-        fonts.update(v if isinstance(v, list) else [v])
-    spacing = {str(v) for v in values("space").values()}
-    return colors, fonts, spacing
+            colors[v.lower()] = name
+    return colors, set(c["fonts"]), set(c["spacing"])
 
 
 def _nearest_token(rgb, contract_colors):
@@ -131,15 +121,14 @@ if __name__ == "__main__":
     if not args:
         print("usage: lint_design.py <repo> [--contract design/design-tokens.json] [--json]")
         sys.exit(2)
+    from contract import has_contract
     repo = args[0]
-    contract = "design/design-tokens.json"
-    if "--contract" in args:
-        contract = args[args.index("--contract") + 1]
-    if not os.path.isabs(contract) and not os.path.exists(contract):
-        contract = os.path.join(repo, "design", "design-tokens.json")
-    if not os.path.exists(contract):
-        print(f"no contract found at {contract} — run generate-design-md first")
+    # Resolve from an explicit --contract, else the repo (design-tokens.json OR DESIGN.md).
+    target = args[args.index("--contract") + 1] if "--contract" in args else repo
+    if not has_contract(target):
+        print(f"no contract found for {target} — need design/design-tokens.json or "
+              "DESIGN.md (run generate-design-md first)")
         sys.exit(2)
-    findings = lint_repo(repo, contract)
+    findings = lint_repo(repo, target)
     print(json.dumps(findings, indent=2) if "--json" in args else _format(findings))
     sys.exit(1 if findings else 0)

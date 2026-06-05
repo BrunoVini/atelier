@@ -30,6 +30,36 @@ def test_audit_enforces_on_token_against_its_base():
     assert row["informational"] is False  # on-primary on primary IS enforced
 
 
+def test_contract_resolves_from_design_md(tmp_path):
+    from contract import resolve_contract
+    (tmp_path / "DESIGN.md").write_text(
+        "# DESIGN.md\n## 2. Palette\n"
+        "| background | `#faf7ee` | `--color-paper` |\n"
+        "| foreground | `#1a1a1a` | `--color-ink` |\n"
+        "## 3. Typography\n- **Display:** `Caveat`\n- **Body:** `Kalam`\n")
+    c = resolve_contract(str(tmp_path))  # no design/ json -> must read DESIGN.md
+    assert c["colors"]["background"] == "#faf7ee" and c["colors"]["foreground"] == "#1a1a1a"
+    assert "Caveat" in c["fonts"] and "Kalam" in c["fonts"]
+
+
+def test_house_rule_ignores_comments_imports_strings(tmp_path):
+    from check_rules import scan_violations
+    (tmp_path / "X.tsx").write_text(
+        '// we avoid Popover here\n'
+        'import { Popover } from "@radix-ui/react-popover";\n'
+        'const label = "Close popover";\n'
+        'function flyoutMenu(){ return null }\n'
+        'export const Bad = () => <Flyout><button/></Flyout>;\n')
+    v = scan_violations(str(tmp_path), {"flyout": "Modal", "popover": "Modal"})
+    assert len(v) == 1 and v[0]["forbidden"] == "flyout"  # only the real <Flyout> usage
+
+
+def test_contrast_gate_is_aa_normal_for_text_aa_large_for_headings():
+    from audit_contrast import audit, gate_failures
+    assert gate_failures(audit({"foreground": "#808080", "background": "#ffffff"}))  # 3.95:1 < AA
+    assert not gate_failures(audit({"heading": "#808080", "background": "#ffffff"}))  # heading ok at 3:1
+
+
 def test_house_rules_forbid_and_require():
     from check_rules import parse_rules, scan_violations
     import tempfile, os

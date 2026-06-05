@@ -110,11 +110,12 @@ if __name__ == "__main__":
     if not args:
         print("usage: migrate_to_tokens.py <repo> [--contract <json>] [--apply]")
         sys.exit(2)
+    from contract import has_contract
     repo = args[0]
-    contract = args[args.index("--contract") + 1] if "--contract" in args else os.path.join(repo, "design", "design-tokens.json")
+    contract = args[args.index("--contract") + 1] if "--contract" in args else repo
     apply = "--apply" in args
-    if not os.path.exists(contract):
-        print(f"no contract at {contract} — run generate-design-md first")
+    if not has_contract(contract):
+        print(f"no contract for {contract} — need design/design-tokens.json or DESIGN.md")
         sys.exit(2)
     diffs, total = migrate_repo(repo, contract, apply)
     for d in diffs:

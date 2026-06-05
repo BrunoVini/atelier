@@ -27,6 +27,18 @@ const url = /^https?:\/\//.test(input) ? input : 'file://' + path.resolve(input)
 const slug = path.basename(input).replace(/\W+/g, '_');
 const outDir = path.resolve('.atelier-responsive');
 fs.mkdirSync(outDir, { recursive: true });
+ensureGitignored('.atelier-*/');
+
+// Keep atelier scratch dirs out of the user's commits.
+function ensureGitignored(pattern) {
+  try {
+    const gi = path.resolve('.gitignore');
+    const cur = fs.existsSync(gi) ? fs.readFileSync(gi, 'utf-8') : '';
+    if (!cur.split(/\r?\n/).includes(pattern)) {
+      fs.appendFileSync(gi, (cur && !cur.endsWith('\n') ? '\n' : '') + pattern + '\n');
+    }
+  } catch { /* best-effort */ }
+}
 
 async function launch() {
   try {

@@ -32,6 +32,13 @@ const baseDir = path.resolve('.atelier-baseline');
 const curDir = path.resolve('.atelier-baseline', '_current');
 fs.mkdirSync(baseDir, { recursive: true });
 fs.mkdirSync(curDir, { recursive: true });
+try {  // keep scratch out of commits
+  const gi = path.resolve('.gitignore');
+  const cur = fs.existsSync(gi) ? fs.readFileSync(gi, 'utf-8') : '';
+  if (!cur.split(/\r?\n/).includes('.atelier-*/')) {
+    fs.appendFileSync(gi, (cur && !cur.endsWith('\n') ? '\n' : '') + '.atelier-*/\n');
+  }
+} catch { /* best-effort */ }
 
 async function capture(viewport, outPath) {
   let browser, page;

@@ -37,11 +37,36 @@ def parse_rules(design_md):
     return forbids, requires
 
 
+_LINE_COMMENT = re.compile(r"//.*$|#.*$", re.M)
+_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.S)
+_STRINGS = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"|`(?:[^`\\]|\\.)*`", re.S)
+
+
+def _strip(text):
+    """Blank out comments and string/template literals (preserving newlines) so a
+    forbidden term in a comment, a quoted UI string, or an import path ('@x/popover')
+    is NOT a false positive — only real code usage remains."""
+    def blank(m):
+        return re.sub(r"[^\n]", " ", m.group(0))
+    text = _BLOCK_COMMENT.sub(blank, text)
+    text = _LINE_COMMENT.sub(blank, text)
+    text = _STRINGS.sub(blank, text)
+    return text
+
+
+def _matcher(term):
+    """Match the term only as real usage: a JSX/HTML element (`<Term`, `</Term`) or
+    a call/constructor (`Term(`) — not a substring of an identifier, comment, or
+    string. Kills the classic false positives (imports, `flyoutMenu`, copy text)."""
+    t = re.escape(term)
+    return re.compile(r"<\s*/?\s*" + t + r"(?=[\s/>])"            # JSX/HTML element
+                      r"|(?<![\w.$])" + t + r"\s*\(", re.I)        # call / constructor
+
+
 def scan_violations(root, forbids):
     if not forbids:
         return []
-    matchers = [(term, prefer, re.compile(r"\b" + re.escape(term), re.I))
-                for term, prefer in forbids.items()]
+    matchers = [(term, prefer, _matcher(term)) for term, prefer in forbids.items()]
     findings = []
     design_path = os.path.realpath(os.path.join(root, "DESIGN.md"))
     for dirpath, dirnames, filenames in os.walk(root):
@@ -53,9 +78,11 @@ def scan_violations(root, forbids):
             if os.path.realpath(p) == design_path:
                 continue  # don't flag the rule text itself
             try:
-                lines = open(p, encoding="utf-8").read().splitlines()
+                raw = open(p, encoding="utf-8").read()
             except Exception:
                 continue
+            lines = _strip(raw).splitlines()
+            originals = raw.splitlines()
             rel = os.path.relpath(p, root)
             for i, line in enumerate(lines, 1):
                 for term, prefer, rx in matchers:
@@ -63,7 +90,7 @@ def scan_violations(root, forbids):
                         findings.append({
                             "file": rel, "line": i, "forbidden": term,
                             "prefer": prefer, "severity": "important",
-                            "snippet": line.strip()[:100],
+                            "snippet": originals[i - 1].strip()[:100] if i - 1 < len(originals) else "",
                         })
     return findings
 

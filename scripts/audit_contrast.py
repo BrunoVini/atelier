@@ -21,16 +21,11 @@ _SURFACE_HINTS = ("background", "bg", "surface", "card", "muted", "base", "paper
 AA_NORMAL, AA_LARGE, AAA_NORMAL = 4.5, 3.0, 7.0
 
 
-def _load_colors(path):
-    """Return {name: '#hex'} from a W3C design-tokens.json (color group)."""
-    data = json.load(open(path, encoding="utf-8"))
-    colors = data.get("color", data.get("colors", {}))
-    out = {}
-    for name, node in colors.items():
-        val = node.get("$value", node) if isinstance(node, dict) else node
-        if isinstance(val, str) and val.startswith("#"):
-            out[name] = val
-    return out
+def _load_colors(target):
+    """Return {name: '#hex'} resolved from a tokens.json OR the repo's DESIGN.md."""
+    from contract import resolve_contract
+    return {n: v for n, v in resolve_contract(target)["colors"].items()
+            if isinstance(v, str) and v.startswith("#")}
 
 
 def _role(name):
@@ -75,8 +70,17 @@ def _nearest_passing(text_hex, surface_hex, target=AA_NORMAL):
     return best
 
 
+# Tokens whose text is genuinely large (headings/display) only need AA-large (3:1).
+_LARGE_HINTS = ("heading", "display", "title", "hero", "h1", "h2", "h3", "lead")
+
+
 def audit(colors):
-    """Return a list of pairings with ratios and AA/AAA verdicts."""
+    """Return a list of pairings with ratios and AA/AAA verdicts.
+
+    Each enforced pair carries a `required` threshold: AA-normal (4.5:1) for body
+    text, AA-large (3:1) only for heading/display roles — so the gate no longer
+    green-lights real AA-normal failures.
+    """
     texts = [n for n in colors if _role(n) in ("text", "both")]
     surfaces = [n for n in colors if _role(n) in ("surface", "both")]
     rows = []
@@ -86,45 +90,52 @@ def audit(colors):
                 continue
             ratio = round(contrast_ratio(_hex_to_rgb(colors[t]), _hex_to_rgb(colors[s])), 2)
             # Only enforced pairings (real text on a real surface, or on-X on X)
-            # can fail the gate; brand-fill pairings are advisory. This stops a
-            # sane palette from making `atelier check` unpassable.
+            # can fail the gate; brand-fill pairings are advisory.
             informational = not _enforced(t, s)
+            large = any(h in t.lower() for h in _LARGE_HINTS)
+            required = AA_LARGE if large else AA_NORMAL
+            passes = ratio >= required
             row = {
                 "text": t, "surface": s, "ratio": ratio,
                 "aa_normal": ratio >= AA_NORMAL,
                 "aa_large": ratio >= AA_LARGE,
                 "aaa_normal": ratio >= AAA_NORMAL,
+                "required": required, "passes": passes,
                 "informational": informational,
             }
-            if not row["aa_large"] and not informational:
-                row["suggest"] = _nearest_passing(colors[t], colors[s])
+            if not passes and not informational:
+                row["suggest"] = _nearest_passing(colors[t], colors[s], required)
             rows.append(row)
     return rows
 
 
+def gate_failures(rows):
+    """Enforced pairs that fail their required WCAG threshold (for the CI gate)."""
+    return [r for r in rows if not r["informational"] and not r["passes"]]
+
+
 def _format(rows):
     lines = ["Contrast audit (WCAG):", ""]
-    fails = 0
     for r in sorted(rows, key=lambda x: x["ratio"]):
-        if r["aa_normal"]:
-            tag = "AA✓"
-        elif r["aa_large"]:
-            tag = "AA-large only"
-        elif r.get("informational"):
+        if r.get("informational"):
             tag = "low (brand×brand — informational)"
+        elif r["passes"]:
+            tag = "AA✓" if r["aa_normal"] else "AA-large ✓ (heading role)"
         else:
-            tag = f"FAIL (suggest {r.get('suggest', '?')})"
-            fails += 1
+            need = "AA-large 3:1" if r["required"] == AA_LARGE else "AA 4.5:1"
+            tag = f"FAIL (needs {need}; suggest {r.get('suggest', '?')})"
         lines.append(f"  {r['ratio']:>5}:1  {r['text']} on {r['surface']:<14} {tag}")
+    fails = len(gate_failures(rows))
     lines.append("")
-    lines.append(f"{len(rows)} pairings, {fails} fail AA-large (text < 3:1).")
+    lines.append(f"{len(rows)} pairings, {fails} fail their required WCAG level "
+                 "(AA 4.5:1 for text, 3:1 for heading roles).")
     return "\n".join(lines)
 
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a]
-    if not args:
-        print("usage: audit_contrast.py <design-tokens.json> [--json]")
+    if not args or args[0].startswith("-"):
+        print("usage: audit_contrast.py <repo | design-tokens.json | DESIGN.md> [--json]")
         sys.exit(2)
     colors = _load_colors(args[0])
     rows = audit(colors)
@@ -132,4 +143,4 @@ if __name__ == "__main__":
         print(json.dumps(rows, indent=2))
     else:
         print(_format(rows))
-    sys.exit(1 if any(not r["aa_large"] and not r.get("informational") for r in rows) else 0)
+    sys.exit(1 if gate_failures(rows) else 0)

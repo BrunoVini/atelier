@@ -90,6 +90,14 @@ LOG_FILE="${STATE_DIR}/server.log"
 # Create fresh session directory with content and state peers
 mkdir -p "${SESSION_DIR}/content" "$STATE_DIR"
 
+# Keep atelier scratch dirs out of the user's commits.
+if [[ -n "$PROJECT_DIR" ]]; then
+  gi="${PROJECT_DIR}/.gitignore"
+  if [[ ! -f "$gi" ]] || ! grep -qxF ".atelier-*/" "$gi" 2>/dev/null; then
+    printf '\n.atelier-*/\n' >> "$gi" 2>/dev/null || true
+  fi
+fi
+
 # Kill any existing server
 if [[ -f "$PID_FILE" ]]; then
   old_pid=$(cat "$PID_FILE")

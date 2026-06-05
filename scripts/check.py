@@ -12,7 +12,7 @@ import os
 import sys
 
 from lint_design import lint_repo
-from audit_contrast import audit, _load_colors
+from audit_contrast import audit, gate_failures, _load_colors
 from check_rules import check as check_house_rules
 
 
@@ -25,7 +25,8 @@ def run(repo, contract, max_drift=0, allow_contrast_fail=False):
     results["ok"] &= drift_ok
 
     colors = _load_colors(contract)
-    fails = [r for r in audit(colors) if not r["aa_large"] and not r.get("informational")]
+    # AA-normal (4.5:1) for body text, AA-large (3:1) only for heading roles.
+    fails = gate_failures(audit(colors))
     contrast_ok = allow_contrast_fail or not fails
     results["steps"].append({"step": "contrast-audit", "fails": len(fails), "ok": contrast_ok})
     results["ok"] &= contrast_ok
@@ -50,14 +51,17 @@ if __name__ == "__main__":
     if not args:
         print("usage: check.py <repo> [--contract <json>] [--max-drift N] [--allow-contrast-fail]")
         sys.exit(2)
+    from contract import has_contract
     repo = args[0]
-    contract = args[args.index("--contract") + 1] if "--contract" in args else os.path.join(repo, "design", "design-tokens.json")
+    # Resolve from an explicit --contract, else the repo (design-tokens.json OR DESIGN.md).
+    contract = args[args.index("--contract") + 1] if "--contract" in args else repo
     cfg_path = os.path.join(repo, "design", "atelier.config.json")
     cfg = json.load(open(cfg_path)).get("check", {}) if os.path.exists(cfg_path) else {}
     max_drift = int(args[args.index("--max-drift") + 1]) if "--max-drift" in args else cfg.get("max_drift", 0)
     allow_contrast = "--allow-contrast-fail" in args or cfg.get("allow_contrast_fail", False)
-    if not os.path.exists(contract):
-        print(f"::error:: no contract at {contract} — run generate-design-md first")
+    if not has_contract(contract):
+        print(f"::error:: no contract for {contract} — need design/design-tokens.json or "
+              "DESIGN.md (run generate-design-md first)")
         sys.exit(2)
     res = run(repo, contract, max_drift, allow_contrast)
     for s in res["steps"]:

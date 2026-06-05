@@ -17,7 +17,7 @@ import os
 import sys
 
 from lint_design import lint_repo, _load_contract
-from audit_contrast import audit
+from audit_contrast import audit, gate_failures
 from census import build_census
 from scan_repo import scan_directory, check_drift
 
@@ -31,7 +31,7 @@ def build_report(repo, contract_path):
     drift = lint_repo(repo, contract_path)
     colors, fonts = _contract_colors(contract_path)
     contrast_rows = audit(colors)
-    contrast_fails = [r for r in contrast_rows if not r["aa_large"] and not r.get("informational")]
+    contrast_fails = gate_failures(contrast_rows)
     census = build_census(repo)
     dupes = census["duplicates"]
     scan = scan_directory(repo)
@@ -91,11 +91,12 @@ if __name__ == "__main__":
     if not args:
         print("usage: design_report.py <repo> [--contract design/design-tokens.json] [--stamp <iso>]")
         sys.exit(2)
+    from contract import has_contract
     repo = args[0]
-    contract = args[args.index("--contract") + 1] if "--contract" in args else os.path.join(repo, "design", "design-tokens.json")
+    contract = args[args.index("--contract") + 1] if "--contract" in args else repo
     stamp = args[args.index("--stamp") + 1] if "--stamp" in args else ""
-    if not os.path.exists(contract):
-        print(f"no contract at {contract} — run generate-design-md first")
+    if not has_contract(contract):
+        print(f"no contract for {contract} — need design/design-tokens.json or DESIGN.md")
         sys.exit(2)
     rep = build_report(repo, contract)
     md = to_markdown(rep, stamp)
