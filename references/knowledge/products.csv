@@ -1,0 +1,9 @@
+product_type,keywords,primary_style,secondary_styles,landing_pattern,key_considerations
+SaaS,"saas,software,b2b,cloud,subscription",Flat + subtle depth,"Minimalism,Soft UI",Hero + Features + CTA,Clarity and CTA focus; balance modern feel with legibility
+Fintech,"fintech,finance,banking,crypto,payments",Minimal authority,"Glassmorphism,Dark mode",Trust + Proof + CTA,"Trust signals, security cues, precise data display"
+E-commerce,"ecommerce,shop,store,retail",Product-forward,"Minimalism,Bold",Grid + Product + Urgency,"Fast product scanning, strong CTAs, trust badges"
+Healthcare,"health,medical,clinic,wellness",Calm accessible,"Minimalism,Soft UI",Hero + Reassurance + CTA,"WCAG AA+, calm palette, plain language"
+Creative,"agency,portfolio,studio,creative",Editorial,"Brutalism,Maximalism",Showcase + Story,"Strong POV, asymmetry, let work breathe"
+AI,"ai,ml,chatbot,assistant",AI-native minimal,"Dark mode,Glassmorphism",Interactive demo,"Conversational UI, streaming feedback, minimal chrome"
+Education,"education,learning,course,edtech",Friendly structured,"Soft UI,Flat",Hero + Curriculum + CTA,"Approachable, progress affordances, readable"
+Productivity,"productivity,tasks,notes,tool",Low-distraction,"Minimalism,Flat",Hero + Use-cases + CTA,"Focus, keyboard-first, restrained motion"

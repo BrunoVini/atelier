@@ -1,0 +1,13 @@
+category,issue,keywords,platform,do,dont,severity
+Accessibility,Color contrast,"contrast,wcag,a11y,readable",All,Meet 4.5:1 for text (3:1 large/UI),Light gray text on white,Critical
+Accessibility,Focus visible,"focus,keyboard,outline,a11y",Web,Keep a visible focus ring,Remove outline with no replacement,Critical
+Touch,Target size,"touch,tap,44,hit,mobile",Mobile,Min 44x44pt tap targets with spacing,Tiny icon-only taps crowded together,Critical
+Touch,Icon button labels,"icon,aria,label,accessibility",All,Give icon-only buttons an accessible name,Bare icon with no label,High
+Performance,Image format,"image,webp,avif,lazy,performance",Web,Serve WebP/AVIF and lazy-load below fold,Ship full-size PNGs eagerly,High
+Layout,Layout shift,"cls,shift,reserve,jank",Web,Reserve space for images/embeds (CLS<0.1),Inject content that pushes layout,High
+Animation,Reduced motion,"motion,reduced,prefers,a11y",Web,Honor prefers-reduced-motion,Force large motion on everyone,High
+Animation,Timing,"duration,easing,150,300,snappy",All,UI transitions 150-300ms with easing,Slow 1s+ transitions on every action,Medium
+Forms,Visible labels,"label,placeholder,form,field",All,Persistent visible labels per field,Placeholder-as-label only,High
+Forms,Error proximity,"error,validation,inline,form",All,Show errors next to the field,One generic error at the top,Medium
+Navigation,Bottom nav count,"nav,bottom,tabs,mobile",Mobile,Keep bottom nav to <=5 items,Seven crammed tabs,Medium
+Feedback,Loading state,"loading,skeleton,spinner,feedback",All,Show skeletons/feedback for async work,Frozen UI with no signal,High

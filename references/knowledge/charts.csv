@@ -1,0 +1,9 @@
+data_type,keywords,best_chart,secondary,when_to_use,when_not,library,accessibility
+Trend over time,"trend,time,timeseries,line,growth,timeline",Line chart,"Area chart,Smooth area",Continuous time axis; observe rise/fall,Fewer than 4 points or no time dimension,"Recharts,Chart.js,ApexCharts",Differentiate series by line style not color alone
+Comparison,"compare,ranking,bar,category,versus",Bar chart,"Column chart,Lollipop",Compare discrete categories,Too many categories (>12) becomes noise,"Recharts,Chart.js",Order bars meaningfully; label values
+Part to whole,"proportion,share,percentage,pie,donut",Donut chart,"Pie,Stacked bar",2-5 parts summing to a whole,More than 5 slices,"Recharts,Chart.js",Add value labels; avoid color-only encoding
+Correlation,"correlation,scatter,relationship,xy",Scatter plot,"Bubble chart",Relationship between two numeric vars,Categorical data,"Recharts,D3,Plotly",Provide a togglable data table
+Distribution,"distribution,histogram,spread,frequency",Histogram,"Box plot,Density",Shape/spread of one numeric variable,Few data points,"Recharts,Plotly",Describe axis bins clearly
+Performance vs target,"kpi,target,goal,progress,bullet",Bullet chart,"Gauge,Progress bar",Single metric against a target,Multiple unrelated metrics,"D3,ECharts",State the target value in text too
+Hierarchical,"hierarchy,tree,nested,treemap,sunburst",Treemap,"Sunburst,Icicle",Nested part-to-whole with size,Flat data,"D3,ECharts,Plotly",Provide drill-down + labels
+Geographic,"map,geo,region,location,choropleth",Choropleth map,"Symbol map",Values varying by region,Non-spatial data,"D3,Leaflet,Plotly",Pair color scale with a legend + table

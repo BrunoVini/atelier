@@ -1,0 +1,9 @@
+pairing,category,display_font,body_font,keywords,best_for,notes
+Classic Elegant,Serif + Sans,Playfair Display,Inter,"elegant,luxury,editorial,premium,timeless,fashion",Luxury brands / editorial / high-end e-commerce,High-contrast elegant heading over clean body
+Modern Geometric,Sans + Sans,Sora,Inter,"modern,tech,geometric,clean,saas,startup",SaaS / startups / product UIs,Characterful geometric display over neutral body
+Bold Statement,Display + Sans,Clash Display,Satoshi,"bold,confident,marketing,landing,striking",Landing pages / marketing / brand,"Loud display for hero, refined body for content"
+Editorial Serif,Serif + Serif,Fraunces,Newsreader,"editorial,magazine,reading,longform,literary",Blogs / publications / longform,Warm literary pairing for reading-heavy surfaces
+Developer Mono,Mono + Sans,JetBrains Mono,Inter,"developer,technical,code,docs,terminal",Docs / dev tools / technical,Mono headings signal technical authority
+Soft Rounded,Sans + Sans,Quicksand,Nunito Sans,"friendly,playful,soft,wellness,consumer,approachable",Consumer / wellness / kids / playful brands,"Rounded warmth, low-intimidation"
+Brutalist Raw,Mono + Mono,Space Mono,Space Mono,"brutalist,raw,experimental,bold,counterculture",Experimental / portfolio / statement sites,"Single mono family, hard and intentional"
+Luxury Serif,Serif + Sans,Cormorant Garamond,Jost,"luxury,fashion,beauty,spa,refined,high-end",Beauty / fashion / hospitality,Delicate high-contrast serif + geometric sans

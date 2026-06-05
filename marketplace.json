@@ -1,0 +1,14 @@
+{
+  "name": "atelier-dev",
+  "description": "Marketplace for the atelier repo-aware design skill",
+  "owner": { "name": "Bruno Vinicius", "email": "brunovinissouza@gmail.com" },
+  "plugins": [
+    {
+      "name": "atelier",
+      "description": "Repo-aware design studio",
+      "version": "0.1.0",
+      "source": "./",
+      "author": { "name": "Bruno Vinicius", "email": "brunovinissouza@gmail.com" }
+    }
+  ]
+}

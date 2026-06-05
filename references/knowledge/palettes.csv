@@ -1,0 +1,9 @@
+product_type,keywords,primary,on_primary,accent,on_accent,background,foreground,muted,border,destructive,notes
+SaaS,"saas,software,b2b,cloud,subscription,app",#2563EB,#FFFFFF,#EA580C,#FFFFFF,#F8FAFC,#1E293B,#E9EFF8,#E2E8F0,#DC2626,Trust blue + orange CTA contrast (WCAG-adjusted)
+Fintech,"fintech,finance,banking,crypto,payments,wallet",#0F172A,#FFFFFF,#22C55E,#04210F,#F8FAFC,#0F172A,#E2E8F0,#CBD5E1,#DC2626,Deep navy authority + green growth accent
+E-commerce,"ecommerce,shop,store,retail,checkout,cart",#059669,#FFFFFF,#EA580C,#FFFFFF,#ECFDF5,#064E3B,#E8F1F3,#A7F3D0,#DC2626,Success green + urgency orange
+Healthcare,"health,medical,clinic,wellness,patient,care",#0EA5E9,#04293A,#14B8A6,#04261F,#F0F9FF,#0C4A6E,#E0F2FE,#BAE6FD,#DC2626,"Calm sky + teal, soft and trustworthy"
+Creative,"agency,portfolio,studio,creative,design,art",#111111,#FFFFFF,#F43F5E,#FFFFFF,#FAFAF9,#111111,#F0EFEC,#E7E5E4,#DC2626,High-contrast editorial monochrome + hot accent
+AI,"ai,ml,chatbot,automation,assistant,model",#6366F1,#FFFFFF,#06B6D4,#04222A,#0B0B12,#E5E7EB,#1A1A24,#2A2A38,#F43F5E,"Indigo AI + cyan, dark-first minimal chrome"
+Education,"education,learning,course,edtech,school,student",#7C3AED,#FFFFFF,#F59E0B,#3A2200,#FAF5FF,#3B0764,#F1E9FB,#E9D5FF,#DC2626,Purple focus + amber encouragement
+Productivity,"productivity,tasks,notes,calendar,tool,workflow",#0F766E,#FFFFFF,#F97316,#FFFFFF,#F8FAFC,#134E4A,#E6F0EF,#CCE3E0,#DC2626,"Teal focus, low-distraction neutrals"

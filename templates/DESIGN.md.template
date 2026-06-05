@@ -1,0 +1,52 @@
+# DESIGN.md — {{PROJECT_NAME}}
+
+> The design constitution for this repo. atelier (and any contributor) must obey
+> it when producing visual work. Tokens in `design/` are the enforceable form of
+> the palette / type / spacing below. Regenerate tokens after editing this file.
+
+## 1. Identity & tone
+- **Product type:** {{PRODUCT_TYPE}}
+- **Audience:** {{AUDIENCE}}
+- **Tone (committed):** {{TONE}}  <!-- one bold, intentional direction -->
+
+## 2. Palette
+| Role | Hex | On (contrast pair) |
+|------|-----|--------------------|
+| primary | {{COLOR_PRIMARY}} | {{ON_PRIMARY}} |
+| secondary | {{COLOR_SECONDARY}} | {{ON_SECONDARY}} |
+| accent | {{COLOR_ACCENT}} | {{ON_ACCENT}} |
+| background | {{COLOR_BG}} | {{COLOR_FG}} |
+| muted | {{COLOR_MUTED}} | {{ON_MUTED}} |
+| border | {{COLOR_BORDER}} | — |
+| destructive | {{COLOR_DESTRUCTIVE}} | {{ON_DESTRUCTIVE}} |
+
+_WCAG: {{WCAG_NOTES}}_
+
+## 3. Typography
+- **Display:** {{FONT_DISPLAY}}
+- **Body:** {{FONT_BODY}}
+- **Scale:** {{TYPE_SCALE}}  · **Weights:** {{WEIGHTS}}  · **Line-height:** {{LINE_HEIGHT}}
+
+## 4. Spacing & radius
+- **Spacing scale:** {{SPACING_SCALE}}
+- **Radius scale:** {{RADIUS_SCALE}}
+- **Grid:** {{GRID}}
+
+## 5. Motion
+- **Durations:** {{DURATIONS}}  · **Easing:** {{EASING}}
+- **Philosophy:** {{MOTION_PHILOSOPHY}}
+
+## 6. Anti-slop rules (project-specific)
+- {{ANTISLOP_RULE_1}}
+- {{ANTISLOP_RULE_2}}
+- {{ANTISLOP_RULE_3}}
+
+## 7. Components
+- **Library:** {{COMPONENT_LIB}}
+- **Inventory / reuse conventions:** {{COMPONENT_NOTES}}
+
+## 8. Accessibility
+- **Target:** {{WCAG_TARGET}}  · **Min contrast:** {{MIN_CONTRAST}}  · **Reduced motion:** {{REDUCED_MOTION}}
+
+## 9. Overrides
+- {{OVERRIDES}}  <!-- e.g. DESIGN.marketing.md inherits this and overrides the palette -->
