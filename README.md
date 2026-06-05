@@ -13,6 +13,21 @@ obey it. One bold, intentional aesthetic per project; never generic AI slop.
 > coherent over the product's lifetime* is the part a senior designer-engineer
 > brings — and what atelier automates.
 
+## Install
+
+In Claude Code, add the marketplace and install the plugin:
+
+```text
+/plugin marketplace add BrunoVini/atelie
+/plugin install atelier@atelier-dev
+```
+
+Then just ask for design work in any repo — atelier triggers on prototypes,
+pages, components, slides, animations, previews, variants, reviews, layout scores,
+"weigh the options", or "make it look good". The Python scripts use the stdlib
+(no install needed); `screenshot.mjs` / `diff_screens.mjs` and video export are
+optional and need Node + a headless browser.
+
 ## What atelier does that nothing else does
 
 These are not "generate a page" features — they're why atelier is different:
