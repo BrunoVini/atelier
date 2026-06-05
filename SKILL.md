@@ -76,7 +76,8 @@ flags violations.
 | A live preview / demo / "show me" / pick between options | `references/capabilities/preview.md` | `scripts/preview/start.sh` |
 | A hi-fi prototype / app mockup / device frame | `references/capabilities/prototypes.md` | `assets/frames/*.jsx` |
 | Slides / a deck / presentation | `references/capabilities/slides.md` | `assets/engines/deck.js` |
-| An animation / explainer / narrated video / MP4·GIF | `references/capabilities/animations.md` | `assets/engines/narration.jsx`, `scripts/export_video.sh` |
+| An animation / explainer / narrated video / MP4·GIF | `references/capabilities/animations.md` (+ `capabilities/animation/` craft refs) | `assets/engines/narration.jsx`, `scripts/export_video.sh` |
+| Icons / decorative SVG / diagrams / animated SVG | `references/capabilities/svg.md` | `assets/engines/sprites.jsx` |
 | 2-3 design directions to choose from | `references/capabilities/variants.md` | `assets/engines/canvas.jsx` |
 | A critique / review / score a layout / "is this good?" | `references/capabilities/review.md` | `scripts/screenshot.mjs` |
 | A hard call / "weigh the options" / decide a direction | `references/capabilities/council.md` | (5-agent council) |

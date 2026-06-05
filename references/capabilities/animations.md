@@ -43,3 +43,20 @@ scripts/export_video.sh path/to/animation.html out.mp4   # or out.gif
 
 For a live, scrubbable view, serve the HTML through the preview server
 (`capabilities/preview.md`).
+
+## Deep craft (read on demand for sophisticated / cinematic work)
+
+For anything beyond a simple reveal — narrated explainers, hero films, multi-scene
+pieces — read the craft references under `capabilities/animation/` (vendored from
+huashu-design, MIT):
+
+- **`animation/animation-pitfalls.md`** — the failure modes: fallback-font width
+  measurement (wrap DOM measurement in `document.fonts.ready`), first-frame jumps,
+  timing drift. Read this BEFORE shipping motion.
+- **`animation/cinematic-patterns.md`** — the vocabulary of good motion (entrances,
+  holds, transitions as one continuous narrative).
+- **`animation/scene-templates.md`** — ready scene structures to adapt.
+- **`animation/animation-best-practices.md`** — the full reference.
+
+The engines (`assets/engines/narration.jsx`, `sprites.jsx`) are the runtime; these
+are the craft that keeps the output from looking cheap.
