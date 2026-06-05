@@ -33,6 +33,7 @@ _TYPE_MAP = {
     "font": "fontFamily",
     "duration": "duration",
     "easing": "cubicBezier",
+    "breakpoint": "dimension",
 }
 
 
@@ -107,6 +108,8 @@ def to_tailwind_preset(tokens):
         theme["extend"]["transitionDuration"] = dict(tokens["duration"])
     if "easing" in tokens:
         theme["extend"]["transitionTimingFunction"] = dict(tokens["easing"])
+    if "breakpoint" in tokens:
+        theme["screens"] = dict(tokens["breakpoint"])  # top-level: define the screens
     return "module.exports = " + json.dumps({"theme": theme}, indent=2) + ";\n"
 
 

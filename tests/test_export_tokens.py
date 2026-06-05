@@ -39,6 +39,14 @@ def test_to_tailwind_preset_is_valid_js_object():
     assert payload["theme"]["extend"]["fontFamily"]["display"] == ["Sora"]
 
 
+def test_breakpoints_export_to_screens_and_vars():
+    tokens = {"breakpoint": {"md": "768px", "lg": "1280px"}}
+    js = to_tailwind_preset(tokens)
+    payload = json.loads(js[len("module.exports = "):].rstrip(";\n"))
+    assert payload["theme"]["screens"] == {"md": "768px", "lg": "1280px"}
+    assert "--breakpoint-md: 768px;" in to_css_vars(tokens)
+
+
 def test_write_all(tmp_path):
     out = tmp_path / "design"
     written = write_all(TOKENS, str(out))

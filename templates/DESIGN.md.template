@@ -27,10 +27,19 @@ _WCAG: {{WCAG_NOTES}}_
 - **Body:** {{FONT_BODY}}
 - **Scale:** {{TYPE_SCALE}}  · **Weights:** {{WEIGHTS}}  · **Line-height:** {{LINE_HEIGHT}}
 
-## 4. Spacing & radius
+## 4. Layout & responsiveness
 - **Spacing scale:** {{SPACING_SCALE}}
 - **Radius scale:** {{RADIUS_SCALE}}
 - **Grid:** {{GRID}}
+- **Target surfaces:** {{RESPONSIVE_TARGET}}
+  <!-- pick one and scope the work to it:
+       responsive (full range)  ·  pc-only (min–max, e.g. 1024–1920)  ·  mobile-only.
+       "pc-only" still must be fluid across the declared width range — PCs vary. -->
+- **Breakpoints:** {{BREAKPOINTS}}  <!-- placed where the content breaks, not at device sizes -->
+- **Fluid strategy:** {{FLUID_STRATEGY}}
+  <!-- e.g. clamp() type/space, intrinsic auto-fit grids, container queries for
+       components, few content-driven breakpoints. Design the mid-range (tablet
+       768–1024), not just the endpoints. See references/capabilities/responsive.md -->
 
 ## 5. Motion
 - **Durations:** {{DURATIONS}}  · **Easing:** {{EASING}}

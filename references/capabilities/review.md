@@ -62,6 +62,7 @@ Quick wins: <top 3 doable in ~5 min>
 ## 3b. Regression & weight checks (when editing an existing page)
 
 ```bash
+node scripts/responsive_check.mjs <page.html> # sweep widths; flags tablet/mid-range overflow
 node scripts/diff_screens.mjs <page.html>     # vs saved baseline; proves "nothing else moved"
 python3 scripts/perf_budget.py <page.html>    # font/image/CSS/motion weight vs budget
 ```

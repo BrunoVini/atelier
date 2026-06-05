@@ -209,6 +209,22 @@ def extract_radius(text):
     return _scale_from(counter) + (["9999px"] if "9999px" in counter else [])
 
 
+# --- responsive breakpoints --------------------------------------------------
+_MEDIA_BP = re.compile(r"@media[^{]*\((?:min|max)-width:\s*(\d+)px", re.I)
+_TW_SCREENS = re.compile(r"screens\s*:\s*\{([^}]*)\}", re.S)
+
+
+def extract_breakpoints(text):
+    """Breakpoints actually used: CSS @media (min/max-width) + Tailwind `screens`."""
+    nums = set()
+    for n in _MEDIA_BP.findall(text):
+        nums.add(int(n))
+    for block in _TW_SCREENS.findall(text):
+        for n in re.findall(r"(\d+)px", block):
+            nums.add(int(n))
+    return [f"{n}px" for n in sorted(n for n in nums if 200 <= n <= 2560)]
+
+
 # --- Tailwind / code-file extraction ----------------------------------------
 # Design in modern repos lives in tailwind.config, utility classes in JSX/TSX,
 # and theme.ts / CSS-in-JS — not just stylesheets. These read from that surface.
@@ -430,6 +446,7 @@ def scan_directory(root):
         "fonts": fonts,
         "spacing": spacing,
         "radius": radius,
+        "breakpoints": extract_breakpoints(style_blob + "\n" + code_blob),
     }
 
 

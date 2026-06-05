@@ -126,3 +126,13 @@ def test_spacing_radius_from_css_in_js():
     code = "styled.div`padding: 16px; gap: 8px; border-radius: 12px;`"
     assert set(extract_spacing(code)) >= {"8px", "16px"}
     assert "12px" in extract_radius(code)
+
+
+def test_extract_breakpoints_from_media_and_tailwind():
+    from scan_repo import extract_breakpoints
+    css = "@media (min-width: 768px){} @media (max-width: 1024px){}"
+    assert set(extract_breakpoints(css)) >= {"768px", "1024px"}
+    cfg = "screens: { sm: '640px', md: '768px', lg: '1280px' }"
+    assert set(extract_breakpoints(cfg)) >= {"640px", "768px", "1280px"}
+    # sorted numerically, not lexically
+    assert extract_breakpoints("@media(min-width:1280px){} @media(min-width:640px){}") == ["640px", "1280px"]

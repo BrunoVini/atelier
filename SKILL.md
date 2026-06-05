@@ -83,6 +83,7 @@ flags violations.
 | Design-review a pull request | `references/workflows/pr-review.md` | `scripts/lint_design.py` |
 | Audit accessibility / contrast against the palette | `references/capabilities/review.md` | `scripts/audit_contrast.py` |
 | A living style guide page (swatches, scale, components) | `references/workflows/generate-design-md.md` | `scripts/build_styleguide.py` |
+| Make a layout work across screens / fix the tablet mid-range / responsive | `references/capabilities/responsive.md` | `scripts/responsive_check.mjs` |
 | Verify a change didn't regress (visual/responsive diff) | `references/capabilities/review.md` | `scripts/diff_screens.mjs` |
 | A performance / weight budget for a page | `references/capabilities/review.md` | `scripts/perf_budget.py` |
 | Reuse existing components / component inventory | `references/workflows/census.md` | `scripts/census.py` |

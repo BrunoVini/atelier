@@ -14,9 +14,12 @@ knowledge base, and writing both the prose contract and the enforceable tokens.
 python3 scripts/scan_repo.py /path/to/repo > /tmp/atelier-scan.json
 ```
 
-This returns the dominant clustered colors, referenced fonts, the framework, and
-the component library. Treat the most frequent colors as palette candidates and
-the referenced fonts as the existing type choices.
+This returns the dominant clustered colors, referenced fonts, the framework, the
+component library, the spacing/radius scales, and the **breakpoints** in use
+(from `@media` + Tailwind `screens`). Treat the most frequent colors as palette
+candidates and the referenced fonts as the existing type choices. Use the
+breakpoints + framework to fill §4's **target surfaces** (responsive / pc-only /
+mobile-only) and fluid strategy — ask the user the target if it's ambiguous.
 
 ### 2. Classify the product type
 

@@ -12,8 +12,12 @@ lives at the repo root. Generated artifacts must obey it.
    `primary, secondary, accent, background, foreground, muted, border,
    destructive` (+ their `on-*` contrast pairs). Note WCAG status.
 3. **Typography** — display font + body font, the type scale, weights, line-height.
-4. **Spacing & radius** — the spacing scale (e.g. 4/8/12/16/24/32), border-radius
-   scale, grid.
+4. **Layout & responsiveness** — the spacing scale (e.g. 4/8/12/16/24/32),
+   border-radius scale, grid, PLUS the responsive contract: **target surfaces**
+   (`responsive` / `pc-only` with a min–max range / `mobile-only`), the
+   **breakpoints** (measured from the repo's `@media` + Tailwind `screens`), and
+   the **fluid strategy** (clamp type/space, intrinsic grids, container queries).
+   See `references/capabilities/responsive.md`.
 5. **Motion** — durations, easing, and the motion philosophy (high-impact vs
    micro).
 6. **Anti-slop rules** — project-specific prohibitions (e.g. "display font is
