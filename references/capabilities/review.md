@@ -13,11 +13,13 @@ delivery.
 Two modes — confirm which the user wants before spending effort:
 
 - **Visual review (recommended for layout/look).** Screenshots at breakpoints,
-  then you *look*. Needs a renderable target. If atelier can't run the app
-  (backend/env/integrations), **ask the user to run it and paste the URL** — or to
-  just confirm it's already up on a port/URL you can reach — and point the capture
-  at that. If they can't run it either, review the component in isolation with mock
-  data (`preview.md` → "When the app can't run standalone").
+  then you *look*. Needs a renderable target. **First check if the app is already
+  running** — `scripts/detect_server.sh` (or the URL the user gave) — and reuse
+  that URL; never start a second server. If nothing is up and atelier can't run the
+  app (backend/env/integrations), **ask the user to run it and paste the URL** (or
+  just confirm it's up on a reachable port). If they can't either, review the
+  component in isolation with mock data (`preview.md` → "When the app can't run
+  standalone").
 - **Non-visual review (faster, more limited).** Static, from the source + the
   contract — `lint_design` / `audit_contrast` / `slop_check` / structure. No
   rendering, so it CANNOT judge actual rendered hierarchy, spacing, or overflow;

@@ -108,10 +108,16 @@ content to the bar in `references/design-philosophy.md`.
 
 ## When the app can't run standalone (needs a backend / env / integrations)
 
-Rendering needs a page that actually renders. Many real apps don't — they need a
-backend, a database, API keys, auth, or build-time env you can't provision. **Do
-not** silently screenshot a broken/empty/error page and treat it as the design.
-Be honest and fall back, in this order:
+Rendering needs a page that actually renders. **First, check whether it's already
+running** — `scripts/detect_server.sh` probes the common dev ports and prints a
+reachable URL (or the user may have told you the URL/port). If something is up,
+use that URL and skip starting anything. Only if nothing is running do you decide
+how to render.
+
+Many real apps can't be rendered by atelier at all — they need a backend, a
+database, API keys, auth, or build-time env you can't provision. **Do not**
+silently screenshot a broken/empty/error page and treat it as the design. Be
+honest and fall back, in this order:
 
 1. **Render the component in isolation (preferred).** You almost never need the
    real backend to evaluate UI. Mount just the target component in a standalone

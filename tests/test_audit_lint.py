@@ -99,9 +99,18 @@ def test_typography_extraction_excludes_labels(tmp_path):  # regression: bugs 6 
         "- **Body:** `Kalam`\n")
     c = _from_design_md(str(tmp_path / "DESIGN.md"))
     assert set(c["fonts"]) == {"Caveat", "Kalam"}            # labels excluded
-    # table row's 2nd hex is the "On (contrast pair)" of a DIFFERENT role, not a
-    # second swatch — only the Hex column (first) becomes the role color.
-    assert c["colors"] == {"primary": "#2563eb"}
+    # table row's 2nd hex is the "On (contrast pair)" -> named on-<role> so the audit
+    # enforces exactly that text-on-surface pair (not a phantom second swatch).
+    assert c["colors"]["primary"] == "#2563eb" and c["colors"]["on-primary"] == "#1e40af"
+
+
+def test_audit_enforces_on_pairs_precisely():
+    from audit_contrast import audit, gate_failures
+    # a contrast contract from a prose table: on-muted is too light on muted -> FAIL
+    rows = audit({"background": "#ffffff", "foreground": "#111111",
+                  "muted": "#f1f5f9", "on-muted": "#a3a3a3"})
+    fails = gate_failures(rows)
+    assert any(r["text"] == "on-muted" and r["surface"] == "muted" for r in fails)
 
 
 def test_strip_does_not_treat_hash_as_comment():  # regression: bug 7

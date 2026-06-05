@@ -62,11 +62,6 @@ def _from_design_md(path):
         if not hexes:
             continue
         is_table = "|" in line
-        # In a palette table, the FIRST hex is the role's own color (the "Hex"
-        # column); later hexes are the "On (contrast pair)" reference — a DIFFERENT
-        # role's color, NOT a second swatch for this role. Taking them created
-        # phantom ink-on-ink roles and false contrast FAILs, so use only the first.
-        row_hexes = hexes[:1] if is_table else hexes
         name = None
         if is_table:
             cells = [c.strip(" `*|") for c in line.split("|") if c.strip(" `*|")]
@@ -77,9 +72,20 @@ def _from_design_md(path):
             if mtok:
                 name = mtok.group(1)
         base = (_slug(name) if name else "") or f"color{len(colors)}"
-        for i, h in enumerate(row_hexes):
-            key = base if i == 0 else f"{base}-{i + 1}"
-            colors.setdefault(key, _norm_hex(h))
+        if is_table:
+            # In a palette table, the FIRST hex is the role's color (the "Hex"
+            # column). A SECOND hex is the "On (contrast pair)" — the text color
+            # used ON this surface — so name it `on-<role>`: the audit then enforces
+            # exactly that pair (`on-bg on bg`) instead of guessing roles by name,
+            # and it's never mistaken for a separate surface (which caused false
+            # ink-on-ink FAILs).
+            colors.setdefault(base, _norm_hex(hexes[0]))
+            if len(hexes) > 1:
+                colors.setdefault(f"on-{base}", _norm_hex(hexes[1]))
+        else:
+            for i, h in enumerate(hexes):
+                key = base if i == 0 else f"{base}-{i + 1}"
+                colors.setdefault(key, _norm_hex(h))
     # Fonts: backticked names in the Typography section, ON A FONT-CONTEXT line
     # (mentions font/display/body/...), excluding typography label phrases — so
     # `Line Height`, `Tailwind`, `Major Third` are not mistaken for font families.
