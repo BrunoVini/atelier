@@ -94,3 +94,21 @@ def test_extract_spacing_and_radius():
     css = "a{padding:16px} b{margin:8px 16px} c{gap:24px} d{border-radius:10px}"
     assert extract_spacing(css) == ["8px", "16px", "24px"]
     assert extract_radius(css) == ["10px"]
+
+
+def test_tailwind_extraction():
+    from scan_repo import (extract_tailwind_spacing, extract_tailwind_radius,
+                           extract_tailwind_named_colors, extract_code_fonts)
+    code = ('<div className="bg-brand p-8 gap-4 rounded-2xl bg-blue-600 rounded-lg">'
+            'fontFamily: { display: ["Fraunces"], body: ["Newsreader"] }')
+    assert extract_tailwind_spacing(code) == ["16px", "32px"]  # gap-4=16, p-8=32
+    assert set(extract_tailwind_radius(code)) >= {"8px", "16px"}  # lg, 2xl
+    assert ("#2563eb" == "#%02x%02x%02x" % extract_tailwind_named_colors("bg-blue-600")[0])
+    assert extract_code_fonts(code) == ["Fraunces", "Newsreader"]
+
+
+def test_contrast_ratio():
+    from scan_repo import contrast_ratio, _hex_to_rgb
+    # black on white is 21:1
+    assert round(contrast_ratio(_hex_to_rgb("#000000"), _hex_to_rgb("#ffffff"))) == 21
+    assert contrast_ratio(_hex_to_rgb("#777777"), _hex_to_rgb("#ffffff")) < 4.5

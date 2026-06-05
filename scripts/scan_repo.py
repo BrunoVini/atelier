@@ -95,6 +95,22 @@ def _delta_e(c1, c2):
     return sum((a - b) ** 2 for a, b in zip(l1, l2)) ** 0.5
 
 
+def relative_luminance(rgb):
+    """WCAG relative luminance of an (r, g, b) tuple (0..1)."""
+    def chan(c):
+        c /= 255.0
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (chan(x) for x in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast_ratio(rgb1, rgb2):
+    """WCAG contrast ratio between two (r, g, b) tuples (1..21)."""
+    l1, l2 = relative_luminance(rgb1), relative_luminance(rgb2)
+    hi, lo = max(l1, l2), min(l1, l2)
+    return (hi + 0.05) / (lo + 0.05)
+
+
 def extract_colors(text, delta_e_threshold=8.0):
     """Return colors sorted by frequency, with near-duplicates merged.
 
@@ -193,6 +209,84 @@ def extract_radius(text):
     return _scale_from(counter) + (["9999px"] if "9999px" in counter else [])
 
 
+# --- Tailwind / code-file extraction ----------------------------------------
+# Design in modern repos lives in tailwind.config, utility classes in JSX/TSX,
+# and theme.ts / CSS-in-JS — not just stylesheets. These read from that surface.
+
+# Tailwind spacing utilities: p/m/gap/space + a numeric step (1 step = 0.25rem = 4px).
+_TW_SPACE = re.compile(r"\b(?:[pm][trblxyse]?|gap(?:-[xy])?|space-[xy])-(\d+(?:\.\d+)?)\b")
+# Tailwind radius utilities -> px.
+_TW_RADIUS_MAP = {
+    None: "4px", "none": "0px", "sm": "2px", "md": "6px", "lg": "8px",
+    "xl": "12px", "2xl": "16px", "3xl": "24px", "full": "9999px",
+}
+_TW_RADIUS = re.compile(r"\brounded(?:-(none|sm|md|lg|xl|2xl|3xl|full))?\b")
+# A compact slice of the default Tailwind palette (common brand/CTA shades), so
+# `bg-blue-600` etc. resolve. Custom brand colors usually come from the config
+# (caught as hex by _parse_colors); this covers the default-class case.
+_TW_COLORS = {
+    "slate-900": "#0f172a", "slate-700": "#334155", "slate-500": "#64748b",
+    "gray-900": "#111827", "gray-700": "#374151", "zinc-900": "#18181b",
+    "red-600": "#dc2626", "red-500": "#ef4444", "orange-500": "#f97316",
+    "amber-500": "#f59e0b", "yellow-400": "#facc15", "green-600": "#16a34a",
+    "emerald-600": "#059669", "emerald-500": "#10b981", "teal-600": "#0d9488",
+    "cyan-500": "#06b6d4", "blue-600": "#2563eb", "blue-500": "#3b82f6",
+    "indigo-600": "#4f46e5", "indigo-500": "#6366f1", "violet-600": "#7c3aed",
+    "purple-600": "#9333ea", "pink-600": "#db2777", "rose-500": "#f43f5e",
+}
+_TW_COLOR_CLASS = re.compile(
+    r"\b(?:bg|text|border|ring|fill|stroke|from|to|via)-([a-z]+-\d{2,3})\b")
+_TW_FONT_BLOCK = re.compile(r"fontFamily\s*:\s*\{([^}]*)\}", re.S)
+_FONTS_KV = re.compile(r"(?:display|body|sans|serif|mono|heading)\s*:\s*\[?\s*['\"]([^'\"]+)['\"]")
+_TS_FONT = re.compile(r"(?:display|body|heading|font)\s*:\s*['\"]([A-Z][A-Za-z0-9 ]+)['\"]")
+
+
+def extract_tailwind_spacing(code):
+    counter = Counter()
+    for step in _TW_SPACE.findall(code):
+        px = float(step) * 4
+        if px > 0:
+            counter[f"{int(px) if px == int(px) else px}px"] += 1
+    return _scale_from(counter)
+
+
+def extract_tailwind_radius(code):
+    counter = Counter()
+    for m in _TW_RADIUS.findall(code):
+        counter[_TW_RADIUS_MAP[m or None]] += 1
+    pills = ["9999px"] if counter.get("9999px") else []
+    return _scale_from(counter) + pills
+
+
+def extract_tailwind_named_colors(code):
+    """rgb tuples for default-palette utility classes (bg-blue-600, etc.)."""
+    out = []
+    for token in _TW_COLOR_CLASS.findall(code):
+        hexv = _TW_COLORS.get(token)
+        if hexv:
+            out.append(_hex_to_rgb(hexv))
+    return out
+
+
+def extract_code_fonts(code):
+    """Font families declared in tailwind.config fontFamily / theme.ts / CSS-in-JS."""
+    found = []
+
+    def add(name):
+        name = name.strip().strip("'\"")
+        if name and name.lower() not in _GENERIC_FONTS and name not in found:
+            found.append(name)
+
+    for block in _TW_FONT_BLOCK.findall(code):
+        for name in _FONTS_KV.findall(block):
+            add(name)
+    for name in _TS_FONT.findall(code):
+        add(name)
+    for name in extract_fonts(code):  # Google imports + any font-family decls
+        add(name)
+    return found
+
+
 # --- dependency inference ---------------------------------------------------
 
 _FRAMEWORKS = ["react", "vue", "svelte", "@angular/core", "solid-js", "preact"]
@@ -224,11 +318,16 @@ def detect_component_lib(pkg):
 # --- directory scan ---------------------------------------------------------
 
 _STYLE_EXT = (".css", ".scss", ".sass", ".less")
+_CODE_EXT = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".svelte", ".astro")
 _SKIP_DIRS = {"node_modules", ".git", "dist", "build", ".next", "out", "coverage"}
+_MAX_BYTES = 400_000  # skip giant generated/minified files
 
 
 def scan_directory(root):
     """Walk a repo and return an empirical design report.
+
+    Reads not just stylesheets but also tailwind.config / JSX-TSX utility classes
+    / theme.ts / CSS-in-JS — where modern repos actually keep design.
 
     {
       "framework": "react",
@@ -239,7 +338,7 @@ def scan_directory(root):
       "radius":  ["8px"]
     }
     """
-    style_text, pkg = [], {}
+    style_text, code_text, pkg = [], [], {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
         for fn in filenames:
@@ -250,21 +349,53 @@ def scan_directory(root):
                         pkg = json.loads(fh.read())
                 except Exception:
                     pass
-            elif fn.endswith(_STYLE_EXT):
+            elif fn.endswith(_STYLE_EXT) or fn.endswith(_CODE_EXT) or fn.startswith("tailwind.config"):
                 try:
+                    if os.path.getsize(p) > _MAX_BYTES:
+                        continue
                     with open(p, encoding="utf-8") as fh:
-                        style_text.append(fh.read())
+                        text = fh.read()
+                    (style_text if fn.endswith(_STYLE_EXT) else code_text).append(text)
                 except Exception:
                     pass
-    blob = "\n".join(style_text)
+    style_blob = "\n".join(style_text)
+    code_blob = "\n".join(code_text)
+
+    # Colors: hex/rgb/hsl from styles + code (config brand colors, inline styles,
+    # arbitrary `bg-[#hex]`), plus default-palette utility classes, clustered once.
+    color_src = style_blob + "\n" + code_blob
+    extra_named = extract_tailwind_named_colors(code_blob)
+    colors = extract_colors(color_src + "\n" + " ".join(_rgb_to_hex(*c) for c in extra_named))
+
+    # Fonts: style declarations + Google imports + config/theme fonts.
+    fonts = []
+    for f in extract_fonts(style_blob) + extract_code_fonts(code_blob):
+        if f not in fonts:
+            fonts.append(f)
+
+    # Spacing / radius: CSS values + Tailwind utility steps, merged + sorted.
+    spacing = _merge_scales(extract_spacing(style_blob), extract_tailwind_spacing(code_blob))
+    radius = _merge_scales(extract_radius(style_blob), extract_tailwind_radius(code_blob))
+
     return {
         "framework": detect_framework(pkg),
         "component_lib": detect_component_lib(pkg),
-        "colors": extract_colors(blob),
-        "fonts": extract_fonts(blob),
-        "spacing": extract_spacing(blob),
-        "radius": extract_radius(blob),
+        "colors": colors,
+        "fonts": fonts,
+        "spacing": spacing,
+        "radius": radius,
     }
+
+
+def _merge_scales(a, b):
+    """Union two `Npx` scales, sorted numerically, pills (9999px) last."""
+    seen = {}
+    for tok in list(a) + list(b):
+        m = _LEN.match(tok) or re.match(r"(\d+)(px)", tok)
+        if m:
+            seen[tok] = float(m.group(1))
+    ordered = [t for t, _ in sorted(seen.items(), key=lambda kv: kv[1])]
+    return ordered
 
 
 # --- drift detection (perceptual) -------------------------------------------
