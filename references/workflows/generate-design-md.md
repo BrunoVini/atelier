@@ -69,9 +69,22 @@ Show the user the `DESIGN.md` + token files (+ style guide) and offer to commit
 them. Remind them the tokens can be imported by the build (CSS `@import`, tailwind
 `presets`).
 
+## Cold start (no CSS, or "make it like this")
+
+When the repo has no styles to measure, or the user points at a reference, import
+a starting direction instead of inventing one:
+
+```bash
+python3 scripts/import_reference.py --image reference.png    # quantize dominant colors
+python3 scripts/import_reference.py --url https://stripe.com # read live computed styles/fonts
+```
+Assign roles (primary/accent/bg/fg) to the imported colors, then continue from
+step 4. Imported values are a *starting* direction — confirm with the user.
+
 ## Notes
 
 - This is empirical-first: never skip step 1 and invent a palette. The whole
   point of atelier is that the contract reflects reality.
 - For a brand-new repo with no CSS at all, say so plainly, then drive the palette
-  from product type + a chosen tone (design-philosophy §5) and the KB.
+  from product type + a chosen tone (design-philosophy §5), the KB, or an imported
+  reference (above).
