@@ -30,17 +30,31 @@ _TYPE_MAP = {
     "radius": "dimension",
     "size": "dimension",
     "font": "fontFamily",
+    "duration": "duration",
+    "easing": "cubicBezier",
 }
 
 
-def to_css_vars(tokens):
-    """Render a token dict as a :root { --group-key: value; } block."""
-    lines = [":root {"]
+def to_css_vars(tokens, selector=":root"):
+    """Render a token dict as a `selector { --group-key: value; }` block."""
+    lines = [f"{selector} {{"]
     for group, items in tokens.items():
         for key, val in items.items():
             lines.append(f"  --{group}-{key}: {val};")
     lines.append("}")
     return "\n".join(lines)
+
+
+def to_themed_css(base, themes=None):
+    """Render a base :root plus one [data-theme="x"] scope per override theme.
+
+    `themes` is {theme_name: partial_token_dict}; each scope only restates the
+    tokens that differ, inheriting the rest from :root.
+    """
+    blocks = [to_css_vars(base)]
+    for name, overrides in (themes or {}).items():
+        blocks.append(to_css_vars(overrides, selector=f'[data-theme="{name}"]'))
+    return "\n\n".join(blocks) + "\n"
 
 
 def to_w3c_tokens(tokens):
@@ -72,6 +86,10 @@ def to_tailwind_preset(tokens):
         theme["extend"]["fontFamily"] = {
             k: [v] for k, v in tokens["font"].items()
         }
+    if "duration" in tokens:
+        theme["extend"]["transitionDuration"] = dict(tokens["duration"])
+    if "easing" in tokens:
+        theme["extend"]["transitionTimingFunction"] = dict(tokens["easing"])
     return "module.exports = " + json.dumps({"theme": theme}, indent=2) + ";\n"
 
 

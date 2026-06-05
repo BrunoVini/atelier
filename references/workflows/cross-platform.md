@@ -24,3 +24,20 @@ platform, generate that platform's theme file from the JSON — never re-pick
 colors per platform. A per-surface override (e.g. a denser mobile spacing scale)
 belongs in a `DESIGN.<surface>.md` that inherits the global contract
 (`design-md-spec.md` → Hierarchy), not in ad-hoc values.
+
+## Multi-brand / dark mode / white-label theming
+
+For several brands or a light/dark pair from one contract, give `export_tokens.py`
+a base token dict plus per-theme overrides (only the tokens that differ):
+
+```python
+import sys; sys.path.insert(0, "scripts")
+from export_tokens import to_themed_css
+css = to_themed_css(base_tokens, {"dark": dark_overrides, "acme": acme_overrides})
+# -> :root { ... }  [data-theme="dark"] { ... }  [data-theme="acme"] { ... }
+```
+
+Switch themes with `<html data-theme="dark">`; the preview frame already reads
+`/design/tokens.css`, so the chrome follows. **Audit every theme** for contrast
+(`audit_contrast.py`) — a brand override can silently break AA. Each theme that
+diverges in more than color belongs in its own `DESIGN.<theme>.md`.

@@ -63,7 +63,11 @@ purple gradient. This applies no matter how "quick" the request seems.
 | 2-3 design directions to choose from | `references/capabilities/variants.md` | `assets/engines/canvas.jsx` |
 | A critique / review / score a layout / "is this good?" | `references/capabilities/review.md` | `scripts/screenshot.mjs` |
 | A hard call / "weigh the options" / decide a direction | `references/capabilities/council.md` | (5-agent council) |
-| Check the repo doesn't drift from DESIGN.md | `references/workflows/enforce-coherence.md` | `scripts/scan_repo.py` |
+| Check the repo doesn't drift from DESIGN.md (design lint) | `references/workflows/enforce-coherence.md` | `scripts/lint_design.py` |
+| Audit accessibility / contrast against the palette | `references/capabilities/review.md` | `scripts/audit_contrast.py` |
+| Reuse existing components / component inventory | `references/workflows/census.md` | `scripts/census.py` |
+| A motion / interaction spec | `references/capabilities/motion-spec.md` | `scripts/export_tokens.py` |
+| Multi-brand / dark mode / white-label theming | `references/workflows/cross-platform.md` | `scripts/export_tokens.py` |
 | The same design across web + mobile + slides | `references/workflows/cross-platform.md` | `scripts/export_tokens.py` |
 | The design philosophy / why "no generic look" | `references/design-philosophy.md` | — |
 | Palette / font / product-type recommendations | `references/knowledge/` | `scripts/search_kb.py` |

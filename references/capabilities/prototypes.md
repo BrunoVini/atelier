@@ -4,7 +4,10 @@ Build production-looking, interactive prototypes in HTML — web pages, dashboar
 and mobile app screens wrapped in real device frames.
 
 **First:** resolve the DESIGN.md gate (SKILL.md). Read `design/tokens.css` (or the
-contract) and build to `references/design-philosophy.md`.
+contract) and build to `references/design-philosophy.md`. Then **check the
+component census** (`design/components.json` via `workflows/census.md`): reuse the
+repo's real components/variants before inventing new UI — it makes the output
+belong in *this* codebase.
 
 ## Device frames (vendored assets)
 
