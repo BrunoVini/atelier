@@ -250,8 +250,13 @@ def _load_tw_palette():
 
 
 _TW_COLORS = {**_TW_COLORS_FALLBACK, **_load_tw_palette()}
+_TW_COLORS.setdefault("white", "#ffffff")
+_TW_COLORS.setdefault("black", "#000000")
 _TW_COLOR_CLASS = re.compile(
-    r"\b(?:bg|text|border|ring|fill|stroke|from|to|via)-([a-z]+-\d{2,3})\b")
+    r"\b(?:bg|text|border|ring|fill|stroke|from|to|via)-([a-z]+-\d{2,3}|white|black)\b")
+# React Native style objects use unitless numbers (density-independent px).
+_RN_SPACE = re.compile(r"\b(?:padding|margin|gap|rowGap|columnGap|inset)\w*\s*:\s*(\d{1,3})\b")
+_RN_RADIUS = re.compile(r"\bborderRadius\w*\s*:\s*(\d{1,3})\b")
 _TW_FONT_BLOCK = re.compile(r"fontFamily\s*:\s*\{([^}]*)\}", re.S)
 _FONTS_KV = re.compile(r"(?:display|body|sans|serif|mono|heading)\s*:\s*\[?\s*['\"]([^'\"]+)['\"]")
 _TS_FONT = re.compile(r"(?:display|body|heading|font)\s*:\s*['\"]([A-Z][A-Za-z0-9 ]+)['\"]")
@@ -282,6 +287,26 @@ def extract_tailwind_named_colors(code):
         if hexv:
             out.append(_hex_to_rgb(hexv))
     return out
+
+
+def extract_rn_spacing(code):
+    """Unitless spacing in RN/JSX style objects (padding/margin/gap: 16 -> 16px)."""
+    counter = Counter()
+    for num in _RN_SPACE.findall(code):
+        n = int(num)
+        if 0 < n <= 256:
+            counter[f"{n}px"] += 1
+    return _scale_from(counter)
+
+
+def extract_rn_radius(code):
+    """Unitless borderRadius in RN/JSX style objects (borderRadius: 12 -> 12px)."""
+    counter = Counter()
+    for num in _RN_RADIUS.findall(code):
+        n = int(num)
+        if 0 < n <= 256:
+            counter[f"{n}px"] += 1
+    return _scale_from(counter)
 
 
 def extract_code_fonts(code):
@@ -393,8 +418,10 @@ def scan_directory(root):
     # code) + Tailwind utility steps, merged + sorted.
     spacing = _merge_scales(extract_spacing(style_blob + "\n" + code_blob),
                             extract_tailwind_spacing(code_blob))
+    spacing = _merge_scales(spacing, extract_rn_spacing(code_blob))
     radius = _merge_scales(extract_radius(style_blob + "\n" + code_blob),
                            extract_tailwind_radius(code_blob))
+    radius = _merge_scales(radius, extract_rn_radius(code_blob))
 
     return {
         "framework": detect_framework(pkg),

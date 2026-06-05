@@ -9,6 +9,11 @@ component census** (`design/components.json` via `workflows/census.md`): reuse t
 repo's real components/variants before inventing new UI — it makes the output
 belong in *this* codebase.
 
+**Writing real UI code into an existing repo** (not a standalone mockup)? First
+run the **architecture-fit** pass (`references/workflows/architecture-fit.md`):
+match the repo's styling approach, file conventions, and component patterns, and
+improve only the frontend weakness you touch. (Backend is out of scope — ignore it.)
+
 ## Device frames (vendored assets)
 
 - `assets/frames/ios.jsx` — iPhone 15 Pro frame (exact dimensions, notch/home bar)

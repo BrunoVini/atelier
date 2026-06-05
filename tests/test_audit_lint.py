@@ -30,6 +30,20 @@ def test_audit_enforces_on_token_against_its_base():
     assert row["informational"] is False  # on-primary on primary IS enforced
 
 
+def test_survey_is_frontend_scoped_and_ignores_backend(tmp_path):
+    from survey_repo import survey
+    (tmp_path / "src" / "components").mkdir(parents=True)
+    (tmp_path / "server").mkdir()
+    (tmp_path / "package.json").write_text('{"dependencies":{"react":"^18","tailwindcss":"^3","express":"^4"}}')
+    (tmp_path / "server" / "api.ts").write_text("// backend\n" + "const x=1;\n" * 600)   # big backend
+    (tmp_path / "src" / "components" / "Huge.tsx").write_text("export const H=()=>null;\n" + "// ui\n" * 500)
+    s = survey(str(tmp_path))
+    files = [f["file"] for f in s["oversized_files"]]
+    assert any("Huge.tsx" in f for f in files)            # UI file flagged
+    assert not any("api.ts" in f for f in files)          # backend NEVER flagged
+    assert "tailwind" in s["styling"]
+
+
 def test_migrate_rewrites_tailwind_arbitrary_and_css():
     contract = {"#0b3d2e": "primary", "#c9a227": "accent"}
     code, n = migrate_code_text('<div className="bg-[#0b3d2e] text-[#c9a227] p-4"/>', contract)

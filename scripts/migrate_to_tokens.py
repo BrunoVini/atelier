@@ -24,6 +24,12 @@ DELTA_E = 4.0  # only rewrite values that are essentially a token (tight match)
 
 # Tailwind arbitrary color value, e.g. bg-[#2563eb] -> bg-[var(--color-primary)].
 _TW_ARBITRARY = re.compile(r"(-\[)#([0-9a-fA-F]{3,8})(\])")
+# JSX/RN inline-style color values keyed by a known style prop (safe: the key
+# constrains it to a color), e.g. color: "#2563eb" -> color: "var(--color-primary)".
+_STYLE_PROP_HEX = re.compile(
+    r"((?:background|backgroundColor|color|borderColor|border[A-Za-z]*Color|"
+    r"outlineColor|fill|stroke|shadowColor|tintColor|placeholderTextColor)"
+    r"\s*:\s*['\"])#([0-9a-fA-F]{3,8})(['\"])")
 
 
 def _token_for(rgb, contract_colors):
@@ -50,8 +56,9 @@ def migrate_text(text, contract_colors):
 
 
 def migrate_code_text(text, contract_colors):
-    """Rewrite only Tailwind ARBITRARY color values in code (safe): bracketed
-    `-[#hex]` is unambiguously a styling context, unlike a bare hex in JS."""
+    """Rewrite color hex in code only where it's unambiguously styling: Tailwind
+    arbitrary values `-[#hex]`, and inline-style color props (`color: "#hex"`).
+    A bare hex elsewhere in JS (config arrays, etc.) is left alone, by design."""
     count = [0]
 
     def repl(m):
@@ -61,7 +68,9 @@ def migrate_code_text(text, contract_colors):
             return f"{m.group(1)}var(--color-{name}){m.group(3)}"
         return m.group(0)
 
-    return _TW_ARBITRARY.sub(repl, text), count[0]
+    text = _TW_ARBITRARY.sub(repl, text)
+    text = _STYLE_PROP_HEX.sub(repl, text)
+    return text, count[0]
 
 
 def migrate_repo(root, contract_path, apply=False):

@@ -56,6 +56,7 @@ purple gradient. This applies no matter how "quick" the request seems.
 | The user wants… | Read | Key assets / scripts |
 |---|---|---|
 | Plan a robust / multi-surface design effort (multi-page, redesign, rollout) | `references/workflows/design-plan.md` | contract + council |
+| Write real UI code into an existing repo (fit its frontend architecture) | `references/workflows/architecture-fit.md` | `scripts/survey_repo.py` |
 | A DESIGN.md / design system / "map our design" | `references/workflows/generate-design-md.md` | `scripts/scan_repo.py`, `scripts/export_tokens.py` |
 | "Make it like this" / import a reference / cold start | `references/workflows/generate-design-md.md` | `scripts/import_reference.py` |
 | Realistic content / fill a mockup / test empty·loading states | `references/capabilities/content.md` | `scripts/seed_content.py` |
