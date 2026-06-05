@@ -5,16 +5,20 @@ a "design lint". Use on demand, in review of changed files, or before a release.
 
 ## Steps
 
-1. Load the contract's allowed colors and fonts (from `design/design-tokens.json`
-   or by parsing `DESIGN.md`).
-2. Scan the target (whole repo or just changed files):
+The primary tool is the **design linter** — it reports drift with file, line,
+severity, and a suggested fix, and exits non-zero (so it works in CI / #9):
 
 ```bash
-python3 scripts/scan_repo.py /path/to/repo > /tmp/scan.json
-# then compare scan.json colors/fonts against the contract
+python3 scripts/lint_design.py /path/to/repo --contract design/design-tokens.json
+# text report; or add --json for a CI/editor-consumable list
 ```
 
-3. Report drift with `check_drift(report, allowed)` from `scan_repo.py`:
+It reads the same surface as the scanner (stylesheets + Tailwind/JSX/theme.ts/
+CSS-in-JS), compares colors perceptually (ΔE, so near-duplicates of a contract
+color don't false-positive), and suggests the nearest token for each rogue value.
+
+For a repo-wide summary (not per-line), or to script your own checks, use the
+`check_drift` library directly:
 
 ```python
 import sys; sys.path.insert(0, "scripts")  # the atelier scripts dir
@@ -25,8 +29,10 @@ drift = check_drift(report, allowed)
 #  -> {"off_palette_colors": ["#ff00ff"], "off_contract_fonts": ["Roboto"]}
 ```
 
-4. For each drift item, propose the fix: map the off-palette color to the nearest
-   token, or replace the rogue font with the contract's display/body font.
+For each finding, propose the fix the linter suggests: map the off-palette color
+to the nearest token, or replace the rogue font with the contract's fonts. To
+rewrite at scale, hand off to the token-migration codemod
+(`scripts/migrate_to_tokens.py`).
 
 ## What counts as drift
 
