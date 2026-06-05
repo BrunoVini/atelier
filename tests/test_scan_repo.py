@@ -128,6 +128,39 @@ def test_spacing_radius_from_css_in_js():
     assert "12px" in extract_radius(code)
 
 
+def test_modern_color_formats():
+    from scan_repo import _oklch_to_rgb, _lab_to_rgb, extract_colors
+    assert _oklch_to_rgb("1", "0", "0") == (255, 255, 255)
+    assert _oklch_to_rgb("0", "0", "0") == (0, 0, 0)
+    assert _lab_to_rgb("100", "0", "0") == (255, 255, 255)
+    # oklch/lab/color-mix all parse without crashing and yield colors
+    assert len(extract_colors("a{color:oklch(.6 .2 250)} b{color:lab(50 20 -30)}")) >= 2
+
+
+def test_token_props_harvest_theme_and_scss():
+    from scan_repo import extract_token_props
+    theme = ("@theme { --color-brand: oklch(0.6 0.2 250); --spacing-4: 1rem; "
+             "--radius-lg: 12px; --font-display: 'Clash Display'; --breakpoint-md: 768px; }")
+    tp = extract_token_props(theme)
+    assert len(tp["colors"]) == 1 and "1rem" in tp["spacing"] and "12px" in tp["radius"]
+    assert tp["fonts"] == ["Clash Display"] and "768px" in tp["breakpoints"]
+    assert extract_token_props("--font-size-lg: 1.25rem;")["fonts"] == []  # size != family
+    assert "8px" in extract_token_props("$space-2: 8px;")["spacing"]
+
+
+def test_monorepo_aggregates_and_astro(tmp_path):
+    (tmp_path / "apps" / "web").mkdir(parents=True)
+    (tmp_path / "package.json").write_text('{"devDependencies":{"turbo":"^2"}}')
+    (tmp_path / "apps" / "web" / "package.json").write_text('{"dependencies":{"next":"^14","@mui/material":"^5"}}')
+    r = scan_directory(str(tmp_path))
+    assert r["framework"] == "next" and r["component_lib"] == "mui"
+    (tmp_path / "astro.txt").write_text("")  # noop
+    astro = tmp_path / "astro_app"
+    astro.mkdir()
+    (astro / "package.json").write_text('{"dependencies":{"astro":"^4"}}')
+    assert scan_directory(str(astro))["framework"] == "astro"
+
+
 def test_extract_breakpoints_from_media_and_tailwind():
     from scan_repo import extract_breakpoints
     css = "@media (min-width: 768px){} @media (max-width: 1024px){}"

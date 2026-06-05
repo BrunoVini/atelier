@@ -13,19 +13,81 @@ Usage:
     python3 scan_repo.py <repo-root>      # prints a JSON design report
 """
 import json
+import math
 import os
 import re
 import sys
 from collections import Counter
 
-# --- color parsing (hex 3/6/8, rgb/rgba, hsl/hsla, common named) ------------
+# --- color parsing (hex 3/6/8, rgb/rgba, hsl/hsla, oklch/oklab/lab/lch, named) -
 
 _HEX = re.compile(r"#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 _RGB = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", re.I)
 _HSL = re.compile(r"hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%", re.I)
+# Modern CSS color() functions (Tailwind v4, design tokens). Numbers may carry %.
+_OKLCH = re.compile(r"oklch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+)", re.I)
+_OKLAB = re.compile(r"oklab\(\s*([\d.]+%?)\s+(-?[\d.]+%?)\s+(-?[\d.]+%?)", re.I)
+_LAB = re.compile(r"\blab\(\s*([\d.]+%?)\s+(-?[\d.]+%?)\s+(-?[\d.]+%?)", re.I)
+_LCH = re.compile(r"\blch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+)", re.I)
+_COLOR_MIX = re.compile(r"color-mix\([^)]*\)", re.I)
 _NAMED = {  # only the few that genuinely appear as design choices
     "white": (255, 255, 255), "black": (0, 0, 0),
 }
+
+
+def _num(v, scale=1.0):
+    """Parse a CSS number that may be a percentage."""
+    v = v.strip()
+    return float(v[:-1]) / 100 * scale if v.endswith("%") else float(v)
+
+
+def _lin_to_srgb255(*lin):
+    out = []
+    for c in lin:
+        c = max(0.0, min(1.0, c))
+        c = 12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055
+        out.append(round(max(0.0, min(1.0, c)) * 255))
+    return tuple(out)
+
+
+def _oklab_to_rgb(L, a, b):
+    l_ = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m_ = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s_ = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    r = 4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_
+    g = -1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_
+    bl = -0.0041960863 * l_ - 0.7034186147 * m_ + 1.7076147010 * s_
+    return _lin_to_srgb255(r, g, bl)
+
+
+def _oklch_to_rgb(L, C, H):
+    L = _num(L)  # 0..1 (or %)
+    C = _num(C, 0.4) if str(C).endswith("%") else float(C)
+    H = float(H)
+    return _oklab_to_rgb(L, C * math.cos(math.radians(H)), C * math.sin(math.radians(H)))
+
+
+def _lab_to_rgb(L, a, b):
+    L = _num(L, 100) if str(L).endswith("%") else float(L)
+    a = _num(a, 125) if str(a).endswith("%") else float(a)
+    b = _num(b, 125) if str(b).endswith("%") else float(b)
+    fy = (L + 16) / 116
+    fx, fz = fy + a / 500, fy - b / 200
+    xr = fx ** 3 if fx ** 3 > 0.008856 else (116 * fx - 16) / 903.3
+    yr = ((L + 16) / 116) ** 3 if L > 8 else L / 903.3
+    zr = fz ** 3 if fz ** 3 > 0.008856 else (116 * fz - 16) / 903.3
+    x, y, z = xr * 0.95047, yr, zr * 1.08883
+    r = x * 3.2406 - y * 1.5372 - z * 0.4986
+    g = -x * 0.9689 + y * 1.8758 + z * 0.0415
+    bl = x * 0.0557 - y * 0.2040 + z * 1.0570
+    return _lin_to_srgb255(r, g, bl)
+
+
+def _lch_to_rgb(L, C, H):
+    C = float(C[:-1]) * 1.5 if str(C).endswith("%") else float(C)
+    H = float(H)
+    Ln = float(L[:-1]) if str(L).endswith("%") else float(L)
+    return _lab_to_rgb(str(Ln), str(C * math.cos(math.radians(H))), str(C * math.sin(math.radians(H))))
 
 
 def _hex_to_rgb(h):
@@ -54,7 +116,9 @@ def _rgb_to_hex(r, g, b):
 
 
 def _parse_colors(text):
-    """Yield (r, g, b) for every color occurrence in any common CSS format."""
+    """Yield (r, g, b) for every color occurrence in any common CSS format,
+    including modern oklch/oklab/lab/lch and color-mix (mainstream in Tailwind v4
+    and design-token systems)."""
     out = []
     for m in _HEX.findall(text):
         out.append(_hex_to_rgb(m))
@@ -62,6 +126,20 @@ def _parse_colors(text):
         out.append((int(r), int(g), int(b)))
     for h, s, l in _HSL.findall(text):
         out.append(_hsl_to_rgb(h, s, l))
+    for conv, rx in ((_oklch_to_rgb, _OKLCH), (_oklab_to_rgb, _OKLAB),
+                     (_lab_to_rgb, _LAB), (_lch_to_rgb, _LCH)):
+        for parts in rx.findall(text):
+            try:
+                out.append(conv(*parts))
+            except Exception:
+                pass
+    # color-mix: capture the colors mentioned inside (don't compute the blend).
+    for mix in _COLOR_MIX.findall(text):
+        inner = mix[mix.index("(") + 1:]
+        for m in _HEX.findall(inner):
+            out.append(_hex_to_rgb(m))
+        for r, g, b in _RGB.findall(inner):
+            out.append((int(r), int(g), int(b)))
     lowered = text.lower()
     for name, rgb in _NAMED.items():
         out.extend([rgb] * len(re.findall(r"[:\s]" + name + r"\b", lowered)))
@@ -215,7 +293,8 @@ _TW_SCREENS = re.compile(r"screens\s*:\s*\{([^}]*)\}", re.S)
 
 
 def extract_breakpoints(text):
-    """Breakpoints actually used: CSS @media (min/max-width) + Tailwind `screens`."""
+    """Breakpoints actually used: CSS @media (min/max-width) + Tailwind `screens`
+    + `--breakpoint-*` custom properties (Tailwind v4 @theme)."""
     nums = set()
     for n in _MEDIA_BP.findall(text):
         nums.add(int(n))
@@ -223,6 +302,38 @@ def extract_breakpoints(text):
         for n in re.findall(r"(\d+)px", block):
             nums.add(int(n))
     return [f"{n}px" for n in sorted(n for n in nums if 200 <= n <= 2560)]
+
+
+# --- token harvesting from custom properties / SCSS vars / Tailwind v4 @theme --
+# Modern repos keep their scale in `--space-*`, `--radius-*`, `--font-*`,
+# `--color-*` (incl. Tailwind v4 `@theme { ... }`) or SCSS `$space`, not in
+# literal padding/font-family declarations. Harvest those as first-class tokens.
+_CUSTOM_PROP = re.compile(r"--([a-z]+)[\w-]*\s*:\s*([^;{}]+)", re.I)
+_SCSS_VAR = re.compile(r"\$([a-z]+)[\w-]*\s*:\s*([^;{}]+)", re.I)
+
+
+def extract_token_props(text):
+    """Return {'colors':[hex], 'spacing':[], 'radius':[], 'fonts':[], 'breakpoints':[]}
+    harvested from --custom-property and $scss token declarations."""
+    colors, spacing, radius, fonts, bps = [], [], [], [], []
+    for prefix, value in list(_CUSTOM_PROP.findall(text)) + list(_SCSS_VAR.findall(text)):
+        p = prefix.lower()
+        lens = _LEN.findall(value)
+        if p in ("color", "colour"):
+            colors.extend(_rgb_to_hex(*c) for c in _parse_colors(value))
+        elif p in ("space", "spacing", "gap", "gutter") and lens:
+            spacing.extend(f"{n}{u}" for n, u in lens)
+        elif p in ("radius", "rounded", "rounding") and lens:
+            radius.extend(f"{n}{u}" for n, u in lens)
+        elif p in ("breakpoint", "screen", "bp") and lens:
+            bps.extend(int(n) for n, u in lens if u == "px")
+        elif p == "font":
+            # font-family token, not a font-size — skip pure lengths.
+            v = value.strip().strip("'\"")
+            if not lens and v and v.split(",")[0].strip().strip("'\"").lower() not in _GENERIC_FONTS:
+                fonts.append(v.split(",")[0].strip().strip("'\""))
+    return {"colors": colors, "spacing": spacing, "radius": radius,
+            "fonts": fonts, "breakpoints": [f"{n}px" for n in bps if 200 <= n <= 2560]}
 
 
 # --- Tailwind / code-file extraction ----------------------------------------
@@ -346,15 +457,21 @@ def extract_code_fonts(code):
 
 # --- dependency inference ---------------------------------------------------
 
-_FRAMEWORKS = ["react", "vue", "svelte", "@angular/core", "solid-js", "preact"]
+# Ordered: meta-frameworks before their base lib (so Next beats React, etc.).
+_FRAMEWORKS = [
+    ("next", "next"), ("nuxt", "nuxt"), ("@sveltejs/kit", "sveltekit"),
+    ("astro", "astro"), ("@builder.io/qwik", "qwik"), ("@remix-run/react", "remix"),
+    ("gatsby", "gatsby"), ("@angular/core", "angular"), ("react", "react"),
+    ("vue", "vue"), ("svelte", "svelte"), ("solid-js", "solid"), ("preact", "preact"),
+]
 
 
 def detect_framework(pkg):
-    """Infer the frontend framework from a parsed package.json dict."""
+    """Infer the frontend framework from a parsed package.json dict (or merged deps)."""
     deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
-    for f in _FRAMEWORKS:
-        if f in deps:
-            return f.split("/")[0].replace("@", "")
+    for dep, name in _FRAMEWORKS:
+        if dep in deps:
+            return name
     return "unknown"
 
 
@@ -395,15 +512,19 @@ def scan_directory(root):
       "radius":  ["8px"]
     }
     """
-    style_text, code_text, pkg = [], [], {}
+    style_text, code_text, merged_deps = [], [], {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
         for fn in filenames:
             p = os.path.join(dirpath, fn)
-            if fn == "package.json" and not pkg:
+            if fn == "package.json":
+                # Monorepo: merge deps from EVERY package.json (not just the first),
+                # so framework/lib living in apps/* or packages/* are detected.
                 try:
                     with open(p, encoding="utf-8") as fh:
-                        pkg = json.loads(fh.read())
+                        j = json.loads(fh.read())
+                    merged_deps.update(j.get("dependencies", {}))
+                    merged_deps.update(j.get("devDependencies", {}))
                 except Exception:
                     pass
             elif fn.endswith(_STYLE_EXT) or fn.endswith(_CODE_EXT) or fn.startswith("tailwind.config"):
@@ -415,29 +536,40 @@ def scan_directory(root):
                     (style_text if fn.endswith(_STYLE_EXT) else code_text).append(text)
                 except Exception:
                     pass
+    pkg = {"dependencies": merged_deps}
     style_blob = "\n".join(style_text)
     code_blob = "\n".join(code_text)
+    token_props = extract_token_props(style_blob + "\n" + code_blob)
 
-    # Colors: hex/rgb/hsl from styles + code (config brand colors, inline styles,
-    # arbitrary `bg-[#hex]`), plus default-palette utility classes, clustered once.
+    # Colors: hex/rgb/hsl/oklch/lab from styles + code (config brand colors, inline
+    # styles, `bg-[#hex]`) + default-palette utility classes + `--color-*` token
+    # props (Tailwind v4 @theme / design tokens), clustered once.
     color_src = style_blob + "\n" + code_blob
     extra_named = extract_tailwind_named_colors(code_blob)
-    colors = extract_colors(color_src + "\n" + " ".join(_rgb_to_hex(*c) for c in extra_named))
+    colors = extract_colors(color_src + "\n"
+                            + " ".join(_rgb_to_hex(*c) for c in extra_named) + "\n"
+                            + " ".join(token_props["colors"]))
 
-    # Fonts: style declarations + Google imports + config/theme fonts.
+    # Fonts: style declarations + Google imports + config/theme fonts + token props.
     fonts = []
-    for f in extract_fonts(style_blob) + extract_code_fonts(code_blob):
+    for f in extract_fonts(style_blob) + extract_code_fonts(code_blob) + token_props["fonts"]:
         if f not in fonts:
             fonts.append(f)
 
-    # Spacing / radius: CSS values (stylesheets AND CSS-in-JS / inline styles in
-    # code) + Tailwind utility steps, merged + sorted.
+    # Spacing / radius: CSS values (stylesheets AND CSS-in-JS / inline styles) +
+    # Tailwind utility steps + RN unitless + `--space-*`/`--radius-*` token props.
     spacing = _merge_scales(extract_spacing(style_blob + "\n" + code_blob),
                             extract_tailwind_spacing(code_blob))
     spacing = _merge_scales(spacing, extract_rn_spacing(code_blob))
+    spacing = _merge_scales(spacing, token_props["spacing"])
     radius = _merge_scales(extract_radius(style_blob + "\n" + code_blob),
                            extract_tailwind_radius(code_blob))
     radius = _merge_scales(radius, extract_rn_radius(code_blob))
+    radius = _merge_scales(radius, token_props["radius"])
+
+    breakpoints = sorted(
+        set(extract_breakpoints(style_blob + "\n" + code_blob)) | set(token_props["breakpoints"]),
+        key=lambda t: int(t[:-2]))
 
     return {
         "framework": detect_framework(pkg),
@@ -446,7 +578,7 @@ def scan_directory(root):
         "fonts": fonts,
         "spacing": spacing,
         "radius": radius,
-        "breakpoints": extract_breakpoints(style_blob + "\n" + code_blob),
+        "breakpoints": breakpoints,
     }
 
 
