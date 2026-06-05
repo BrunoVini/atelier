@@ -99,7 +99,9 @@ def test_typography_extraction_excludes_labels(tmp_path):  # regression: bugs 6 
         "- **Body:** `Kalam`\n")
     c = _from_design_md(str(tmp_path / "DESIGN.md"))
     assert set(c["fonts"]) == {"Caveat", "Kalam"}            # labels excluded
-    assert "primary" in c["colors"] and len(c["colors"]) == 2  # 2nd hex kept, clean key
+    # table row's 2nd hex is the "On (contrast pair)" of a DIFFERENT role, not a
+    # second swatch — only the Hex column (first) becomes the role color.
+    assert c["colors"] == {"primary": "#2563eb"}
 
 
 def test_strip_does_not_treat_hash_as_comment():  # regression: bug 7

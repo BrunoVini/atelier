@@ -32,6 +32,7 @@ async function withPlaywright() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport });
   await page.goto(url, { waitUntil: 'networkidle' });
+  await page.evaluate(() => (document.fonts ? document.fonts.ready : null)).catch(() => {});
   await page.screenshot({ path: out, fullPage });
   await browser.close();
 }
@@ -42,6 +43,7 @@ async function withPuppeteer() {
   const page = await browser.newPage();
   await page.setViewport(viewport);
   await page.goto(url, { waitUntil: 'networkidle0' });
+  await page.evaluate(() => (document.fonts ? document.fonts.ready : null)).catch(() => {});
   await page.screenshot({ path: out, fullPage });
   await browser.close();
 }

@@ -20,4 +20,4 @@ jobs:
         env:
           ATELIER: ${{ github.workspace }}/.atelier/scripts
         run: |
-          python3 "$ATELIER/check.py" . --contract design/design-tokens.json
+          python3 "$ATELIER/check.py" .

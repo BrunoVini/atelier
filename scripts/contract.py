@@ -55,13 +55,20 @@ def _from_design_md(path):
     text = open(path, encoding="utf-8").read()
     colors = {}
     for line in text.splitlines():
+        # Skip WCAG/contrast prose notes — their hexes are examples, not palette roles.
+        if re.search(r"\bwcag\b|contrast", line, re.I):
+            continue
         hexes = _HEX.findall(line)
         if not hexes:
             continue
-        # Prefer the table's Role cell (col 0) — it's the semantic role the contrast
-        # audit needs (background/foreground/primary...). Fall back to a --token name.
+        is_table = "|" in line
+        # In a palette table, the FIRST hex is the role's own color (the "Hex"
+        # column); later hexes are the "On (contrast pair)" reference — a DIFFERENT
+        # role's color, NOT a second swatch for this role. Taking them created
+        # phantom ink-on-ink roles and false contrast FAILs, so use only the first.
+        row_hexes = hexes[:1] if is_table else hexes
         name = None
-        if "|" in line:
+        if is_table:
             cells = [c.strip(" `*|") for c in line.split("|") if c.strip(" `*|")]
             if cells and not _HEX.fullmatch(cells[0].strip()):
                 name = cells[0]
@@ -69,9 +76,8 @@ def _from_design_md(path):
             mtok = re.search(r"--(?:color-)?([a-zA-Z][\w-]*)", line)
             if mtok:
                 name = mtok.group(1)
-        base = _slug(name) if name else f"color{len(colors)}"  # compute ONCE per line
-        base = base or f"color{len(colors)}"
-        for i, h in enumerate(hexes):
+        base = (_slug(name) if name else "") or f"color{len(colors)}"
+        for i, h in enumerate(row_hexes):
             key = base if i == 0 else f"{base}-{i + 1}"
             colors.setdefault(key, _norm_hex(h))
     # Fonts: backticked names in the Typography section, ON A FONT-CONTEXT line

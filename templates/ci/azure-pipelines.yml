@@ -15,6 +15,5 @@ steps:
     inputs:
       versionSpec: '3.12'
   - script: |
-      python3 "$(Build.SourcesDirectory)/.atelier/scripts/check.py" . \
-        --contract design/design-tokens.json
+      python3 "$(Build.SourcesDirectory)/.atelier/scripts/check.py" .
     displayName: 'atelier check (drift lint + contrast audit)'

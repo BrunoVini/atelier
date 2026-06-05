@@ -12,7 +12,7 @@
  *
  * Diff metric: uses pixelmatch+pngjs if installed (exact % changed), else falls
  * back to a content hash (changed / unchanged). Degrades gracefully with no
- * headless browser. Baselines live in .atelier-baseline/.
+ * headless browser. Baselines + scratch live in the OS tmp dir (never the repo).
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';

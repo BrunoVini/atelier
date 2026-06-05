@@ -4,8 +4,10 @@ Make the contract enforceable on every change: run `atelier check` (drift lint +
 contrast audit) as a merge gate, like tests.
 
 ```bash
-python3 scripts/check.py . --contract design/design-tokens.json
-# exits non-zero on drift or contrast failure; honors design/atelier.config.json
+python3 scripts/check.py .
+# resolves the contract from design/design-tokens.json OR DESIGN.md automatically;
+# exits non-zero on drift / contrast / house-rule failure; honors design/atelier.config.json
+# (pass --contract <path> only to force a specific tokens file)
 ```
 
 ## Config (optional) — `design/atelier.config.json`
