@@ -17,6 +17,16 @@ It reads the same surface as the scanner (stylesheets + Tailwind/JSX/theme.ts/
 CSS-in-JS), compares colors perceptually (ΔE, so near-duplicates of a contract
 color don't false-positive), and suggests the nearest token for each rogue value.
 
+To enforce the project's **house rules** (DESIGN.md §9 — e.g. "no flyouts, only
+modals"):
+
+```bash
+python3 scripts/check_rules.py /path/to/repo
+# parses [forbid: … | prefer: …] directives and flags forbidden patterns in UI files
+```
+
+Both are bundled into the `atelier check` CI gate (`check.py`).
+
 For a repo-wide summary (not per-line), or to script your own checks, use the
 `check_drift` library directly:
 

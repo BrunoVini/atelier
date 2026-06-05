@@ -13,6 +13,7 @@ import sys
 
 from lint_design import lint_repo
 from audit_contrast import audit, _load_colors
+from check_rules import check as check_house_rules
 
 
 def run(repo, contract, max_drift=0, allow_contrast_fail=False):
@@ -29,8 +30,18 @@ def run(repo, contract, max_drift=0, allow_contrast_fail=False):
     results["steps"].append({"step": "contrast-audit", "fails": len(fails), "ok": contrast_ok})
     results["ok"] &= contrast_ok
 
+    # House rules from DESIGN.md §9 (e.g. "no flyouts, only modals").
+    rule_violations = []
+    design = os.path.join(repo, "DESIGN.md")
+    if os.path.exists(design):
+        rule_violations, _requires, _forbids = check_house_rules(repo, design)
+    rules_ok = not rule_violations
+    results["steps"].append({"step": "house-rules", "violations": len(rule_violations), "ok": rules_ok})
+    results["ok"] &= rules_ok
+
     results["drift"] = drift
     results["contrast_fails"] = [f"{r['text']} on {r['surface']} ({r['ratio']}:1)" for r in fails]
+    results["rule_violations"] = rule_violations
     return results
 
 
@@ -55,5 +66,8 @@ if __name__ == "__main__":
         print(f"    drift {d['file']}:{d['line']} {d['value']} → {d['fix']}")
     for c in res["contrast_fails"]:
         print(f"    contrast {c}")
+    for v in res.get("rule_violations", [])[:20]:
+        tip = f" → use {v['prefer']}" if v.get("prefer") else ""
+        print(f"    house-rule {v['file']}:{v['line']} forbidden '{v['forbidden']}'{tip}")
     print("\natelier check:", "PASS" if res["ok"] else "FAIL")
     sys.exit(0 if res["ok"] else 1)

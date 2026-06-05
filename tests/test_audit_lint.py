@@ -30,6 +30,23 @@ def test_audit_enforces_on_token_against_its_base():
     assert row["informational"] is False  # on-primary on primary IS enforced
 
 
+def test_house_rules_forbid_and_require():
+    from check_rules import parse_rules, scan_violations
+    import tempfile, os
+    design = ("## 9. House rules\n"
+              "- Use a modal. [forbid: flyout, popover | prefer: Modal]\n"
+              "- Icon buttons need a label. [require: aria-label on icon buttons]\n")
+    forbids, requires = parse_rules(design)
+    assert forbids == {"flyout": "Modal", "popover": "Modal"}
+    assert requires == ["aria-label on icon buttons"]
+    with tempfile.TemporaryDirectory() as d:
+        os.makedirs(os.path.join(d, "src"))
+        open(os.path.join(d, "src", "Menu.tsx"), "w").write("<Flyout/>")
+        open(os.path.join(d, "src", "Ok.tsx"), "w").write("<Modal/>")
+        v = scan_violations(d, forbids)
+        assert len(v) == 1 and v[0]["forbidden"] == "flyout" and v[0]["prefer"] == "Modal"
+
+
 def test_survey_is_frontend_scoped_and_ignores_backend(tmp_path):
     from survey_repo import survey
     (tmp_path / "src" / "components").mkdir(parents=True)

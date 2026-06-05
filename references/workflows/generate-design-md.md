@@ -41,6 +41,13 @@ Fill `templates/DESIGN.md.template` with the measured + enriched values and writ
 it to the repo root. Be specific: name the exact fonts, hex values, and the
 project-specific anti-slop blocklist (e.g. "display = Sora; never Inter").
 
+**Scale §7–§9 to the repo (design-md-spec → "Scale the contract"):** populate
+**component standards** (§7) from the census, **data/chart standards** (§8) for
+data-heavy products, and leave **house rules** (§9) for the team to add their
+conventions (e.g. "no flyouts, only modals" → `[forbid: flyout | prefer: Modal]`).
+A portfolio stays light here; a large/standardized repo gets the full treatment.
+Tell the user §9 is where to drop company rules so atelier obeys + enforces them.
+
 ### 5. Export the tokens
 
 Build a token dict (see `references/design-md-spec.md` for the shape) from the

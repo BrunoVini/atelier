@@ -76,5 +76,16 @@ the assumptions, then generate the three as variants the user can pick from
 
 When `DESIGN.md` exists, it OVERRIDES the defaults above with project-specific
 law: the locked palette, the chosen fonts, the spacing/radius scale, the allowed
-motion, and an explicit anti-slop blocklist for *this* project. Read it, obey it,
-and only deviate when the user explicitly asks.
+motion, and an explicit anti-slop blocklist for *this* project. It also carries:
+
+- **Component standards** (§7) — the canonical components to reuse and "use X,
+  not Y" rules. Reuse before inventing.
+- **Data & chart standards** (§8) — how this project presents data (chart choices,
+  tables vs cards, empty/loading/error states).
+- **House rules** (§9) — the interaction/pattern law, e.g. "use a modal, never a
+  flyout/popover". These are often hand-added by the team to encode a company
+  standard; `check_rules.py` enforces the machine-checkable ones.
+
+Read all of it, obey it, and only deviate when the user explicitly asks. On a
+large/standardized repo these sections are extensive; on a small one they're
+light or empty — respect whatever the contract says.

@@ -41,12 +41,31 @@ _WCAG: {{WCAG_NOTES}}_
 - {{ANTISLOP_RULE_2}}
 - {{ANTISLOP_RULE_3}}
 
-## 7. Components
+## 7. Components & standards
 - **Library:** {{COMPONENT_LIB}}
-- **Inventory / reuse conventions:** {{COMPONENT_NOTES}}
+- **Canonical components (reuse before inventing):** {{COMPONENT_NOTES}}
+- **Standardization ("use X, not Y"):** {{COMPONENT_STANDARDS}}
+  <!-- e.g. "Use <Button variant>, never a raw <button>"; "one <DataTable>, not ad-hoc tables".
+       Scale this up for large/standardized repos; a small repo can leave it light. -->
 
-## 8. Accessibility
+## 8. Data & charts
+- **Charts:** {{CHART_STANDARDS}}
+  <!-- e.g. "trends -> Line (Recharts); comparisons -> Bar; never pie >5 slices". -->
+- **Dense data:** {{DATA_PRESENTATION}}
+  <!-- e.g. "tabular data -> DataTable with sort/paginate; never card grids for >8 rows". -->
+- **Empty / loading / error states:** {{STATE_PATTERNS}}
+
+## 9. House rules (project-specific conventions)
+<!-- The interaction/pattern law for THIS project. Each rule may carry a machine-
+     checkable directive `[forbid: a, b | prefer: X]` (or `[require: ...]`) so
+     scripts/check_rules.py can flag violations. atelier MUST obey these when
+     generating, and they OVERRIDE its defaults. Example:
+     - Overlays: use a modal for any blocking choice. [forbid: flyout, popover, drawer | prefer: Modal] -->
+- {{HOUSE_RULE_1}}
+- {{HOUSE_RULE_2}}
+
+## 10. Accessibility
 - **Target:** {{WCAG_TARGET}}  · **Min contrast:** {{MIN_CONTRAST}}  · **Reduced motion:** {{REDUCED_MOTION}}
 
-## 9. Overrides
+## 11. Overrides
 - {{OVERRIDES}}  <!-- e.g. DESIGN.marketing.md inherits this and overrides the palette -->

@@ -49,6 +49,13 @@ Never invent a palette, font, or spacing scale while a repo already declares one
 with `scripts/scan_repo.py` and obey it. If no contract exists, OFFER to generate
 one before generating polished output — do not silently default to Inter +
 purple gradient. This applies no matter how "quick" the request seems.
+
+Also OBEY the project's own rules in `DESIGN.md` when present: the **house rules**
+(§9 — e.g. "use a modal, never a flyout"), the **component standards** (§7), and
+the **data/chart standards** (§8) are LAW for this repo and OVERRIDE atelier's
+defaults. They scale with the repo — a portfolio may have none; a large/design-
+system repo will have many. Honor them when generating; `scripts/check_rules.py`
+flags violations.
 </HARD-GATE>
 
 ## Routing — pick the capability, then read its reference
@@ -69,6 +76,7 @@ purple gradient. This applies no matter how "quick" the request seems.
 | A hard call / "weigh the options" / decide a direction | `references/capabilities/council.md` | (5-agent council) |
 | Check the repo doesn't drift from DESIGN.md (design lint) | `references/workflows/enforce-coherence.md` | `scripts/lint_design.py` |
 | Migrate hardcoded values to tokens (codemod) | `references/workflows/enforce-coherence.md` | `scripts/migrate_to_tokens.py` |
+| Enforce project house rules ("no flyouts, only modals") | `references/workflows/enforce-coherence.md` | `scripts/check_rules.py` |
 | A design-debt report / coherence score / trend | `references/workflows/design-debt.md` | `scripts/design_report.py` |
 | Gate design in CI / pre-commit | `references/workflows/ci.md` | `scripts/check.py` |
 | Onboard the team to the design language | `references/workflows/onboarding.md` | `scripts/build_onboarding.py` |

@@ -41,9 +41,13 @@ For dimensions 1 and 4, back the score with **measured evidence**, not vibes:
 ```bash
 python3 scripts/audit_contrast.py design/design-tokens.json   # WCAG per pairing
 python3 scripts/lint_design.py . --contract design/design-tokens.json  # drift
+python3 scripts/check_rules.py .                              # house-rule violations
 ```
 
-Cite the contrast ratios and any drift findings in the report.
+Cite the contrast ratios, any drift findings, and any **house-rule** violations
+(DESIGN.md §9 — e.g. a flyout where the project mandates modals) in the report.
+Honoring the project's component/data/interaction standards (§7–9) is part of
+dimension 1 (contract fit).
 
 ## 3. Report — scorecard + actionable fixes
 

@@ -32,6 +32,8 @@ headless browser; keep the always-on gate to lint + contrast.
 
 - **design-lint** — file+line drift vs the token contract (perceptual ΔE).
 - **contrast-audit** — every text/surface token pairing vs WCAG AA-large.
+- **house-rules** — violations of DESIGN.md §9 directives (e.g. a flyout where the
+  project mandates modals), via `check_rules.py`.
 
 Both are dependency-light (stdlib Python), so the gate is fast and reliable.
 Generate `design/design-tokens.json` (via `generate-design-md`) before enabling.

@@ -19,10 +19,42 @@ lives at the repo root. Generated artifacts must obey it.
 6. **Anti-slop rules** — project-specific prohibitions (e.g. "display font is
    Sora; never Inter", "no purple gradients", "cards are flat, no left-border
    accent").
-7. **Components** — inventory of existing components + reuse conventions
-   (prefer reuse over reinvention).
-8. **Accessibility** — WCAG target (AA/AAA), minimum contrast, motion-reduction.
-9. **Overrides** — pointers to per-route/feature overrides (see below).
+7. **Components & standards** — the canonical components to reuse, PLUS
+   standardization rules ("use `<Button variant>`, never a raw `<button>`"; "one
+   `<DataTable>`, not ad-hoc tables").
+8. **Data & charts** — how the project presents data: chart choices ("trends →
+   Line; never pie > 5 slices"), dense-data patterns ("tabular → DataTable, not
+   card grids"), and empty/loading/error state conventions.
+9. **House rules** — the project's interaction/pattern law (see below).
+10. **Accessibility** — WCAG target (AA/AAA), minimum contrast, motion-reduction.
+11. **Overrides** — pointers to per-route/feature overrides (see below).
+
+## Scale the contract to the repo
+
+A small repo (a portfolio, a landing page) keeps §7–§9 light — a short inventory
+and maybe no house rules. A **large or standardized** repo (a design system, an
+enterprise app) is where these earn their keep: a full component standardization
+list, chart/data-presentation standards, and explicit house rules. Don't bloat a
+small project; don't under-specify a big one. Measure what exists, then write the
+sections the repo actually needs.
+
+## House rules (machine-checkable)
+
+§9 captures conventions atelier MUST obey and that `scripts/check_rules.py` can
+enforce. A user adds these by hand (e.g. a company standard like "no flyouts").
+Each rule may carry an inline directive so it's checkable, not just prose:
+
+```md
+- Overlays: use a modal for any blocking choice. [forbid: flyout, popover, drawer | prefer: Modal]
+- Dense data uses the shared table. [forbid: ad-hoc <table> | prefer: DataTable]
+- Icon-only buttons need a label. [require: aria-label on icon buttons]
+```
+
+`check_rules.py` parses `[forbid: a, b | prefer: X]` directives and flags
+occurrences of the forbidden terms in UI files (with the preferred alternative).
+`[require: ...]` is advisory (shown to the agent/reviewer). atelier obeys house
+rules when generating; they OVERRIDE its defaults; the design-review and CI gate
+check them.
 
 ## Hierarchy (global + overrides)
 
