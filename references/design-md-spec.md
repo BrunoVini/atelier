@@ -86,7 +86,7 @@ check them.
   "color":  { "primary": "#2563eb", "accent": "#ea580c", "background": "#f8fafc" },
   "space":  { "1": "4px", "2": "8px", "4": "16px", "6": "24px" },
   "radius": { "sm": "4px", "md": "8px", "lg": "16px" },
-  "font":   { "display": "Sora", "body": "Inter" }
+  "font":   { "display": "Sora", "body": "Newsreader" }
 }
 ```
 

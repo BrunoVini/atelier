@@ -160,6 +160,22 @@ def test_token_props_harvest_theme_and_scss():
     assert "8px" in extract_token_props("$space-2: 8px;")["spacing"]
 
 
+def test_e2e_tailwind_v4_theme_oklch_repo(tmp_path):
+    # Adversarial fixture: a modern repo whose whole design lives in a Tailwind v4
+    # @theme block using oklch — the case that returned a blank contract before.
+    (tmp_path / "package.json").write_text('{"dependencies":{"next":"^15","tailwindcss":"^4"}}')
+    (tmp_path / "app.css").write_text(
+        "@theme {\n  --color-brand: oklch(0.55 0.2 255);\n  --color-bg: oklch(0.98 0 0);\n"
+        "  --font-display: 'Clash Display';\n  --spacing-4: 1rem;\n  --radius-lg: 12px;\n"
+        "  --breakpoint-lg: 1280px;\n}\n@media (prefers-color-scheme: dark){body{}}")
+    r = scan_directory(str(tmp_path))
+    assert r["framework"] == "next"
+    assert len(r["colors"]) >= 1          # oklch parsed, not blank
+    assert "Clash Display" in r["fonts"] and "1rem" in r["spacing"]
+    assert "12px" in r["radius"] and "1280px" in r["breakpoints"]
+    assert r["dark_mode"] is True
+
+
 def test_monorepo_aggregates_and_astro(tmp_path):
     (tmp_path / "apps" / "web").mkdir(parents=True)
     (tmp_path / "package.json").write_text('{"devDependencies":{"turbo":"^2"}}')

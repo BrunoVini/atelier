@@ -65,43 +65,54 @@ flags violations.
 
 ## Routing — pick the capability, then read its reference
 
+Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coherence.
+
+### MEASURE — understand the repo's real design first
+| The user wants… | Read | Key scripts |
+|---|---|---|
+| A DESIGN.md / design system / "map our design" | `references/workflows/generate-design-md.md` | `scan_repo.py`, `export_tokens.py` |
+| Is the repo too inconsistent to auto-generate a contract? | `references/workflows/generate-design-md.md` | `assess.py` |
+| "Make it like this" / import a reference / cold start | `references/workflows/generate-design-md.md` | `import_reference.py` |
+| Survey the frontend architecture before writing code | `references/workflows/architecture-fit.md` | `survey_repo.py` |
+| Reuse existing components / component inventory | `references/workflows/census.md` | `census.py` |
+| Palette / font / product-type recommendations | `references/knowledge/` | `search_kb.py` |
+| The design philosophy / why "no generic look" | `references/design-philosophy.md` | — |
+
+### GENERATE — produce artifacts that obey the contract
 | The user wants… | Read | Key assets / scripts |
 |---|---|---|
-| Plan a robust / multi-surface design effort (multi-page, redesign, rollout) | `references/workflows/design-plan.md` | contract + council |
-| Write real UI code into an existing repo (fit its frontend architecture) | `references/workflows/architecture-fit.md` | `scripts/survey_repo.py` |
-| A DESIGN.md / design system / "map our design" | `references/workflows/generate-design-md.md` | `scripts/scan_repo.py`, `scripts/export_tokens.py` |
-| Is the repo too inconsistent to auto-generate a contract? | `references/workflows/generate-design-md.md` | `scripts/assess.py` |
-| "Make it like this" / import a reference / cold start | `references/workflows/generate-design-md.md` | `scripts/import_reference.py` |
-| Realistic content / fill a mockup / test empty·loading states | `references/capabilities/content.md` | `scripts/seed_content.py` |
-| A live preview / demo / "show me" / pick between options | `references/capabilities/preview.md` | `scripts/preview/start.sh` |
+| Plan a robust / multi-surface effort (redesign, rollout) | `references/workflows/design-plan.md` | contract + council |
+| Write real UI code into an existing repo | `references/workflows/architecture-fit.md` | `survey_repo.py`, `census.py` |
 | A hi-fi prototype / app mockup / device frame | `references/capabilities/prototypes.md` | `assets/frames/*.jsx` |
-| Slides / a deck / presentation | `references/capabilities/slides.md` | `assets/engines/deck.js` |
-| An animation / explainer / narrated video / MP4·GIF | `references/capabilities/animations.md` (+ `capabilities/animation/` craft refs) | `assets/engines/narration.jsx`, `scripts/export_video.sh` |
-| Icons / decorative SVG / diagrams / animated SVG | `references/capabilities/svg.md` | `assets/engines/sprites.jsx` |
+| A live preview / demo / "show me" / pick between options | `references/capabilities/preview.md` | `scripts/preview/start.sh` |
 | 2-3 design directions to choose from | `references/capabilities/variants.md` | `assets/engines/canvas.jsx` |
-| A critique / review / score a layout / "is this good?" | `references/capabilities/review.md` | `scripts/screenshot.mjs` |
 | A hard call / "weigh the options" / decide a direction | `references/capabilities/council.md` | (5-agent council) |
-| Check the repo doesn't drift from DESIGN.md (design lint) | `references/workflows/enforce-coherence.md` | `scripts/lint_design.py` |
-| Migrate hardcoded values to tokens (codemod) | `references/workflows/enforce-coherence.md` | `scripts/migrate_to_tokens.py` |
-| Enforce project house rules ("no flyouts, only modals") | `references/workflows/enforce-coherence.md` | `scripts/check_rules.py` |
-| A design-debt report / coherence score / trend | `references/workflows/design-debt.md` | `scripts/design_report.py` |
-| Gate design in CI / pre-commit | `references/workflows/ci.md` | `scripts/check.py` |
-| Onboard the team to the design language | `references/workflows/onboarding.md` | `scripts/build_onboarding.py` |
-| Design-review a pull request | `references/workflows/pr-review.md` | `scripts/lint_design.py` |
-| Audit accessibility / contrast against the palette | `references/capabilities/review.md` | `scripts/audit_contrast.py` |
-| A living style guide page (swatches, scale, components) | `references/workflows/generate-design-md.md` | `scripts/build_styleguide.py` |
-| Make a layout work across screens / fix the tablet mid-range / responsive | `references/capabilities/responsive.md` | `scripts/responsive_check.mjs` |
-| Verify a change didn't regress (visual/responsive diff) | `references/capabilities/review.md` | `scripts/diff_screens.mjs` |
-| A performance / weight budget for a page | `references/capabilities/review.md` | `scripts/perf_budget.py` |
-| Verify output isn't generic AI slop | `references/capabilities/review.md` | `scripts/slop_check.py` |
-| Reuse existing components / component inventory | `references/workflows/census.md` | `scripts/census.py` |
-| A motion / interaction spec | `references/capabilities/motion-spec.md` | `scripts/export_tokens.py` |
-| Multi-brand / dark mode / white-label theming | `references/workflows/cross-platform.md` | `scripts/export_tokens.py` |
-| Native theme handoff (SwiftUI / Flutter / React Native) | `references/workflows/cross-platform.md` | `scripts/export_native.py` |
-| i18n / RTL support / logical-properties lint | `references/capabilities/i18n-rtl.md` | `scripts/check_rtl.py` |
-| The same design across web + mobile + slides | `references/workflows/cross-platform.md` | `scripts/export_tokens.py` |
-| The design philosophy / why "no generic look" | `references/design-philosophy.md` | — |
-| Palette / font / product-type recommendations | `references/knowledge/` | `scripts/search_kb.py` |
+| Slides / a deck / presentation | `references/capabilities/slides.md` | `assets/engines/deck.js` |
+| An animation / explainer / narrated video / MP4·GIF | `references/capabilities/animations.md` (+ `capabilities/animation/`) | `assets/engines/narration.jsx`, `export_video.sh` |
+| Icons / decorative SVG / diagrams / animated SVG | `references/capabilities/svg.md` | `assets/engines/sprites.jsx` |
+| A living style guide page (swatches, scale, components) | `references/workflows/generate-design-md.md` | `build_styleguide.py` |
+| Realistic content / empty·loading·error states | `references/capabilities/content.md` | `seed_content.py` |
+| A motion / interaction spec | `references/capabilities/motion-spec.md` | `export_tokens.py` |
+| Make a layout work across screens / fix the tablet mid-range | `references/capabilities/responsive.md` | `responsive_check.mjs` |
+| Multi-brand / dark mode / white-label theming | `references/workflows/cross-platform.md` | `export_tokens.py` |
+| Native theme handoff (SwiftUI / Flutter / React Native) | `references/workflows/cross-platform.md` | `export_native.py` |
+| i18n / RTL support | `references/capabilities/i18n-rtl.md` | `check_rtl.py` |
+
+### GOVERN — keep it coherent, accessible, on-contract
+| The user wants… | Read | Key scripts |
+|---|---|---|
+| A critique / review / score a layout / "is this good?" | `references/capabilities/review.md` | `screenshot.mjs` |
+| Audit accessibility / contrast against the palette | `references/capabilities/review.md` | `audit_contrast.py` |
+| Verify output isn't generic AI slop | `references/capabilities/review.md` | `slop_check.py` |
+| Verify a change didn't regress (visual diff) | `references/capabilities/review.md` | `diff_screens.mjs` |
+| A performance / weight budget for a page | `references/capabilities/review.md` | `perf_budget.py` |
+| Check the repo doesn't drift from DESIGN.md (design lint) | `references/workflows/enforce-coherence.md` | `lint_design.py` |
+| Enforce project house rules ("no flyouts, only modals") | `references/workflows/enforce-coherence.md` | `check_rules.py` |
+| Migrate hardcoded values to tokens (codemod) | `references/workflows/enforce-coherence.md` | `migrate_to_tokens.py` |
+| A design-debt report / coherence score / trend | `references/workflows/design-debt.md` | `design_report.py` |
+| Gate design in CI / pre-commit | `references/workflows/ci.md` | `check.py` |
+| Design-review a pull request | `references/workflows/pr-review.md` | `lint_design.py` |
+| Onboard the team to the design language | `references/workflows/onboarding.md` | `build_onboarding.py` |
 
 ## Quick start
 
