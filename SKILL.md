@@ -144,3 +144,7 @@ scripts/preview/start.sh --project-dir /path/to/repo
   you generate, copy, narration) follows the **user's language and request**.
 - Progressive disclosure: this file routes; depth lives in `references/`. Read the
   one reference you need — don't preload everything.
+- **User-facing voice:** internal scaffolding is for you, not the user. Never
+  surface section numbers (`§2`, `§9`), script names, or file paths in what you say
+  to the user — refer to things by plain name ("house rules", "the palette", "the
+  design contract", "the style guide"). The user shouldn't see atelier's internals.

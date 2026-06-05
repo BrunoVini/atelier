@@ -75,7 +75,8 @@ project-specific anti-slop blocklist (e.g. "display = Sora; never Inter").
 data-heavy products, and leave **house rules** (§9) for the team to add their
 conventions (e.g. "no flyouts, only modals" → `[forbid: flyout | prefer: Modal]`).
 A portfolio stays light here; a large/standardized repo gets the full treatment.
-Tell the user §9 is where to drop company rules so atelier obeys + enforces them.
+Tell the user (in plain language — not "§9") that the **House rules** section is
+where they drop company conventions so atelier obeys and enforces them.
 
 ### 5. Export the tokens
 
