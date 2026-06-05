@@ -22,6 +22,12 @@
 
 _WCAG: {{WCAG_NOTES}}_
 
+**Dark mode:** {{DARK_MODE}}
+<!-- If the repo ships dark mode (scan_repo reports `dark_mode: true`), state the
+     dark palette here (the overrides under [data-theme="dark"] / prefers-color-scheme)
+     and AUDIT it for contrast too — a dark override can silently break AA.
+     Export with export_tokens.to_themed_css(base, {"dark": dark_overrides}). -->
+
 ## 3. Typography
 - **Display:** {{FONT_DISPLAY}}
 - **Body:** {{FONT_BODY}}

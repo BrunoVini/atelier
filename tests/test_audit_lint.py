@@ -30,6 +30,26 @@ def test_audit_enforces_on_token_against_its_base():
     assert row["informational"] is False  # on-primary on primary IS enforced
 
 
+def test_export_native_codegen():
+    from export_native import swiftui, flutter, react_native
+    cols, fonts = {"primary": "#2563eb"}, ["Sora", "Inter"]
+    assert "Color(red:" in swiftui(cols, fonts)
+    assert "Color(0xFF2563EB)" in flutter(cols, fonts)
+    assert 'primary: "#2563eb"' in react_native(cols, fonts)
+
+
+def test_rtl_lint_and_dark_detection(tmp_path):
+    from check_rtl import declares_rtl, lint_rtl
+    from scan_repo import detect_dark_mode
+    (tmp_path / "a.css").write_text(".x{margin-left:8px; text-align:left}")
+    assert not declares_rtl(str(tmp_path))                    # LTR -> skip
+    (tmp_path / "b.tsx").write_text('<html dir="rtl">')
+    assert declares_rtl(str(tmp_path))
+    uses = {f["use"] for f in lint_rtl(str(tmp_path))}
+    assert "margin-inline-start" in uses and "text-align: start" in uses
+    assert detect_dark_mode("@media (prefers-color-scheme: dark){}") and not detect_dark_mode("body{}")
+
+
 def test_slop_check_flags_tells_but_respects_contract():
     from slop_check import check_html
     slop = ('<style>body{font-family:Inter,sans-serif}'

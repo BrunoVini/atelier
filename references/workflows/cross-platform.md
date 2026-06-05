@@ -19,9 +19,18 @@ consumes them in its own dialect.
 
 ## Rule
 
-`design-tokens.json` (W3C) is the **portable canonical form**. To support a new
-platform, generate that platform's theme file from the JSON — never re-pick
-colors per platform. A per-surface override (e.g. a denser mobile spacing scale)
+`design-tokens.json` (W3C) is the **portable canonical form**. Don't re-pick colors
+per platform — **generate** each platform's theme file from the contract:
+
+```bash
+python3 scripts/export_native.py <repo>   # -> design/native/{AppColors.swift, app_colors.dart, theme.native.ts}
+```
+
+This emits idiomatic SwiftUI (`Color` extension), Flutter (`AppColors`/`AppFonts`),
+and React Native (`theme` object) from the tokens. **Honest scope:** atelier does
+*token + theme handoff* for native — it does NOT produce native-fidelity UI (the
+device frames and engines are HTML/React). For native UI, hand these theme files to
+the native team / agent; for web/RN, generate the components too. A per-surface override (e.g. a denser mobile spacing scale)
 belongs in a `DESIGN.<surface>.md` that inherits the global contract
 (`design-md-spec.md` → Hierarchy), not in ad-hoc values.
 

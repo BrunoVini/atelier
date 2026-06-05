@@ -97,6 +97,8 @@ flags violations.
 | Reuse existing components / component inventory | `references/workflows/census.md` | `scripts/census.py` |
 | A motion / interaction spec | `references/capabilities/motion-spec.md` | `scripts/export_tokens.py` |
 | Multi-brand / dark mode / white-label theming | `references/workflows/cross-platform.md` | `scripts/export_tokens.py` |
+| Native theme handoff (SwiftUI / Flutter / React Native) | `references/workflows/cross-platform.md` | `scripts/export_native.py` |
+| i18n / RTL support / logical-properties lint | `references/capabilities/i18n-rtl.md` | `scripts/check_rtl.py` |
 | The same design across web + mobile + slides | `references/workflows/cross-platform.md` | `scripts/export_tokens.py` |
 | The design philosophy / why "no generic look" | `references/design-philosophy.md` | — |
 | Palette / font / product-type recommendations | `references/knowledge/` | `scripts/search_kb.py` |

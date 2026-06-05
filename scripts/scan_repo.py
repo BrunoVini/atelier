@@ -296,6 +296,18 @@ def extract_radius(text):
     return _scale_from(counter) + (["9999px"] if "9999px" in counter else [])
 
 
+# --- dark mode ---------------------------------------------------------------
+_DARK = re.compile(
+    r"prefers-color-scheme\s*:\s*dark|\[data-theme=[\"']?dark|\.dark\b|"
+    r"darkMode\s*:|dark:[\w-]", re.I)
+
+
+def detect_dark_mode(text):
+    """True if the repo already ships a dark theme (media query, [data-theme],
+    .dark class, Tailwind darkMode / dark: variants)."""
+    return bool(_DARK.search(text))
+
+
 # --- responsive breakpoints --------------------------------------------------
 _MEDIA_BP = re.compile(r"@media[^{]*\((?:min|max)-width:\s*(\d+)px", re.I)
 _TW_SCREENS = re.compile(r"screens\s*:\s*\{([^}]*)\}", re.S)
@@ -593,6 +605,7 @@ def scan_directory(root):
         "spacing": spacing,
         "radius": radius,
         "breakpoints": breakpoints,
+        "dark_mode": detect_dark_mode(style_blob + "\n" + code_blob),
     }
 
 
