@@ -55,6 +55,15 @@ Fix:   ⚠️ critical  / ⚡ important / 💡 polish   (each: what + where + ho
 Quick wins: <top 3 doable in ~5 min>
 ```
 
+## 3b. Regression & weight checks (when editing an existing page)
+
+```bash
+node scripts/diff_screens.mjs <page.html>     # vs saved baseline; proves "nothing else moved"
+python3 scripts/perf_budget.py <page.html>    # font/image/CSS/motion weight vs budget
+```
+Cite "diff: hero changed, rest unchanged" and any over-budget metric in the report.
+First run with `--baseline` to record the reference.
+
 ## 4. Adversarial pass (high-stakes)
 
 For important work, run the critique as a skeptic trying to REFUTE that the design

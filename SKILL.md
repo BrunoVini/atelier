@@ -65,6 +65,9 @@ purple gradient. This applies no matter how "quick" the request seems.
 | A hard call / "weigh the options" / decide a direction | `references/capabilities/council.md` | (5-agent council) |
 | Check the repo doesn't drift from DESIGN.md (design lint) | `references/workflows/enforce-coherence.md` | `scripts/lint_design.py` |
 | Audit accessibility / contrast against the palette | `references/capabilities/review.md` | `scripts/audit_contrast.py` |
+| A living style guide page (swatches, scale, components) | `references/workflows/generate-design-md.md` | `scripts/build_styleguide.py` |
+| Verify a change didn't regress (visual/responsive diff) | `references/capabilities/review.md` | `scripts/diff_screens.mjs` |
+| A performance / weight budget for a page | `references/capabilities/review.md` | `scripts/perf_budget.py` |
 | Reuse existing components / component inventory | `references/workflows/census.md` | `scripts/census.py` |
 | A motion / interaction spec | `references/capabilities/motion-spec.md` | `scripts/export_tokens.py` |
 | Multi-brand / dark mode / white-label theming | `references/workflows/cross-platform.md` | `scripts/export_tokens.py` |

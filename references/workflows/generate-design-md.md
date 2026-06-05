@@ -54,10 +54,20 @@ python3 scripts/export_tokens.py /tmp/atelier-tokens.json
 If the repo already has a token location (e.g. a `theme.ts`, a tailwind config),
 prefer writing there / wiring the preset in, rather than imposing `design/`.
 
-### 6. Offer to commit
+### 6. Build the living style guide (offer)
 
-Show the user the `DESIGN.md` + token files and offer to commit them. Remind them
-the tokens can be imported by the build (CSS `@import`, tailwind `presets`).
+```bash
+python3 scripts/census.py <repo> --out design/components.json   # populate §7
+python3 scripts/build_styleguide.py design/design-tokens.json   # -> design/styleguide.html
+```
+The style guide renders the measured palette (with contrast labels), type scale,
+spacing/radius, and the component inventory — serve it via the preview server.
+
+### 7. Offer to commit
+
+Show the user the `DESIGN.md` + token files (+ style guide) and offer to commit
+them. Remind them the tokens can be imported by the build (CSS `@import`, tailwind
+`presets`).
 
 ## Notes
 
