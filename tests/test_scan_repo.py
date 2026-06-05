@@ -137,6 +137,18 @@ def test_modern_color_formats():
     assert len(extract_colors("a{color:oklch(.6 .2 250)} b{color:lab(50 20 -30)}")) >= 2
 
 
+def test_oklab_and_4digit_hex_parse():  # regression: bugs 1 & 2
+    from scan_repo import _parse_colors, _hex_to_rgb
+    assert len(_parse_colors("oklab(0.6 0.1 -0.05)")) == 1   # was silently dropped
+    assert _hex_to_rgb("#abcd") == _hex_to_rgb("#aabbcc")    # #rgba shorthand
+
+
+def test_font_token_rejects_weights():  # regression: bug 5
+    from scan_repo import extract_token_props
+    assert extract_token_props("--font-weight-bold: 700;")["fonts"] == []
+    assert extract_token_props("--font-display: 'Clash Display';")["fonts"] == ["Clash Display"]
+
+
 def test_token_props_harvest_theme_and_scss():
     from scan_repo import extract_token_props
     theme = ("@theme { --color-brand: oklch(0.6 0.2 250); --spacing-4: 1rem; "

@@ -16,6 +16,13 @@ import re
 from scan_repo import _HEX, _hex_to_rgb, _rgb_to_hex
 
 _TYPO_HEADING = re.compile(r"##[^\n]*typograph.*?(?=\n##\s|\Z)", re.I | re.S)
+# Backticked phrases in a typography section that are labels, not font families.
+_FONT_LABEL_DENY = {
+    "line height", "letter spacing", "type scale", "major third", "minor third",
+    "perfect fourth", "golden ratio", "tailwind", "tailwind css", "css", "scale",
+    "weight", "weights", "tracking", "leading", "size", "sizes", "ratio", "rem",
+    "em", "px", "base", "small", "large", "xl", "lg", "md", "sm",
+}
 
 
 def _norm_hex(h):
@@ -62,17 +69,24 @@ def _from_design_md(path):
             mtok = re.search(r"--(?:color-)?([a-zA-Z][\w-]*)", line)
             if mtok:
                 name = mtok.group(1)
+        base = _slug(name) if name else f"color{len(colors)}"  # compute ONCE per line
+        base = base or f"color{len(colors)}"
         for i, h in enumerate(hexes):
-            base = _slug(name or f"color{len(colors)}") or f"color{len(colors)}"
             key = base if i == 0 else f"{base}-{i + 1}"
             colors.setdefault(key, _norm_hex(h))
-    # Fonts: backticked PascalCase names inside the Typography section.
+    # Fonts: backticked names in the Typography section, ON A FONT-CONTEXT line
+    # (mentions font/display/body/...), excluding typography label phrases — so
+    # `Line Height`, `Tailwind`, `Major Third` are not mistaken for font families.
     fonts = []
     seg = _TYPO_HEADING.search(text)
-    for fm in re.findall(r"`([A-Z][A-Za-z0-9 ]+)`", seg.group(0) if seg else ""):
-        fm = fm.strip()
-        if fm and fm not in fonts:
-            fonts.append(fm)
+    cue = re.compile(r"(?i)font|typeface|display|body|heading|serif|sans|mono")
+    for line in (seg.group(0).splitlines() if seg else []):
+        if not cue.search(line):
+            continue
+        for fm in re.findall(r"`([A-Z][A-Za-z0-9 ]+)`", line):
+            fm = fm.strip()
+            if fm and not fm.startswith("--") and fm.lower() not in _FONT_LABEL_DENY and fm not in fonts:
+                fonts.append(fm)
     return {"source": path, "colors": colors, "fonts": fonts, "spacing": []}
 
 

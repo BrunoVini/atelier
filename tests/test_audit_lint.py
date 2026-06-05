@@ -60,6 +60,22 @@ def test_contract_resolves_from_design_md(tmp_path):
     assert "Caveat" in c["fonts"] and "Kalam" in c["fonts"]
 
 
+def test_typography_extraction_excludes_labels(tmp_path):  # regression: bugs 6 & 4
+    from contract import _from_design_md
+    (tmp_path / "DESIGN.md").write_text(
+        "## 2. Palette\n| primary | `#2563eb` | `#1e40af` |\n"
+        "## 3. Typography\n- **Display:** `Caveat`. Set `Line Height` 1.5 with `Tailwind`.\n"
+        "- **Body:** `Kalam`\n")
+    c = _from_design_md(str(tmp_path / "DESIGN.md"))
+    assert set(c["fonts"]) == {"Caveat", "Kalam"}            # labels excluded
+    assert "primary" in c["colors"] and len(c["colors"]) == 2  # 2nd hex kept, clean key
+
+
+def test_strip_does_not_treat_hash_as_comment():  # regression: bug 7
+    from check_rules import _strip
+    assert "#flyout" in _strip("#flyout { } .modal {}")
+
+
 def test_house_rule_ignores_comments_imports_strings(tmp_path):
     from check_rules import scan_violations
     (tmp_path / "X.tsx").write_text(

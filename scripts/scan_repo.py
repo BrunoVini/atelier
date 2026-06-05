@@ -21,7 +21,7 @@ from collections import Counter
 
 # --- color parsing (hex 3/6/8, rgb/rgba, hsl/hsla, oklch/oklab/lab/lch, named) -
 
-_HEX = re.compile(r"#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
+_HEX = re.compile(r"#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})\b")
 _RGB = re.compile(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", re.I)
 _HSL = re.compile(r"hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%", re.I)
 # Modern CSS color() functions (Tailwind v4, design tokens). Numbers may carry %.
@@ -94,9 +94,18 @@ def _hex_to_rgb(h):
     h = h.lower().lstrip("#")
     if len(h) == 3:
         h = "".join(c * 2 for c in h)
-    if len(h) == 8:  # #rrggbbaa -> drop alpha
+    elif len(h) == 4:  # #rgba -> expand rgb, drop alpha
+        h = "".join(c * 2 for c in h[:3])
+    elif len(h) == 8:  # #rrggbbaa -> drop alpha
         h = h[:6]
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+
+def _oklab_css_to_rgb(L, a, b):
+    """oklab() from raw CSS string args (handles % on L/a/b) -> rgb."""
+    def comp(v, scale):
+        return _num(v, scale) if str(v).endswith("%") else float(v)
+    return _oklab_to_rgb(_num(L), comp(a, 0.4), comp(b, 0.4))
 
 
 def _hsl_to_rgb(h, s, l):
@@ -126,7 +135,7 @@ def _parse_colors(text):
         out.append((int(r), int(g), int(b)))
     for h, s, l in _HSL.findall(text):
         out.append(_hsl_to_rgb(h, s, l))
-    for conv, rx in ((_oklch_to_rgb, _OKLCH), (_oklab_to_rgb, _OKLAB),
+    for conv, rx in ((_oklch_to_rgb, _OKLCH), (_oklab_css_to_rgb, _OKLAB),
                      (_lab_to_rgb, _LAB), (_lch_to_rgb, _LCH)):
         for parts in rx.findall(text):
             try:
@@ -328,10 +337,15 @@ def extract_token_props(text):
         elif p in ("breakpoint", "screen", "bp") and lens:
             bps.extend(int(n) for n, u in lens if u == "px")
         elif p == "font":
-            # font-family token, not a font-size — skip pure lengths.
-            v = value.strip().strip("'\"")
-            if not lens and v and v.split(",")[0].strip().strip("'\"").lower() not in _GENERIC_FONTS:
-                fonts.append(v.split(",")[0].strip().strip("'\""))
+            # font-family token only — reject sizes/weights/leading/tracking, i.e.
+            # any numeric or unit/keyword value (--font-weight, --font-leading, ...).
+            v = value.split(",")[0].strip().strip("'\"")
+            if (v and not lens
+                    and not re.fullmatch(r"[\d.]+(?:px|rem|em|%|vw|vh|fr|deg)?", v)
+                    and v.lower() not in _GENERIC_FONTS
+                    and v.lower() not in ("bold", "bolder", "lighter", "normal",
+                                          "inherit", "initial", "unset", "none")):
+                fonts.append(v)
     return {"colors": colors, "spacing": spacing, "radius": radius,
             "fonts": fonts, "breakpoints": [f"{n}px" for n in bps if 200 <= n <= 2560]}
 

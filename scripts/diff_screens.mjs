@@ -28,7 +28,8 @@ if (!input) {
 }
 const url = /^https?:\/\//.test(input) ? input : 'file://' + path.resolve(input);
 const slug = path.basename(input).replace(/\W+/g, '_');
-const BREAKPOINTS = [{ name: 'desktop', w: 1440, h: 900 }, { name: 'mobile', w: 390, h: 844 }];
+const BREAKPOINTS = [{ name: 'desktop', width: 1440, height: 900 },
+                     { name: 'mobile', width: 390, height: 844 }];
 // Scratch (baseline + current) lives in the OS tmp dir — never in the user's repo.
 // Keyed by slug so a later run finds the same baseline to compare against.
 const baseDir = path.join(os.tmpdir(), 'atelier-baseline', slug);
@@ -36,7 +37,8 @@ const curDir = path.join(baseDir, '_current');
 fs.mkdirSync(baseDir, { recursive: true });
 fs.mkdirSync(curDir, { recursive: true });
 
-async function capture(viewport, outPath) {
+async function capture(bp, outPath) {
+  const viewport = { width: bp.width, height: bp.height };  // Playwright/Puppeteer keys
   let browser, page;
   try {
     const { chromium } = await import('playwright');

@@ -37,7 +37,7 @@ def parse_rules(design_md):
     return forbids, requires
 
 
-_LINE_COMMENT = re.compile(r"//.*$|#.*$", re.M)
+_LINE_COMMENT = re.compile(r"//.*$", re.M)  # # is an id selector / JSX / private field, not a comment
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.S)
 _STRINGS = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"|`(?:[^`\\]|\\.)*`", re.S)
 

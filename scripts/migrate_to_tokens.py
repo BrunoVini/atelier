@@ -46,7 +46,10 @@ def migrate_text(text, contract_colors):
     count = [0]
 
     def repl(m):
-        name, d = _token_for(_hex_to_rgb(m.group(0)), contract_colors)
+        try:
+            name, d = _token_for(_hex_to_rgb(m.group(0)), contract_colors)
+        except Exception:
+            return m.group(0)  # unparseable hex length -> leave it alone
         if name:
             count[0] += 1
             return f"var(--color-{name})"
@@ -62,7 +65,10 @@ def migrate_code_text(text, contract_colors):
     count = [0]
 
     def repl(m):
-        name, d = _token_for(_hex_to_rgb("#" + m.group(2)), contract_colors)
+        try:
+            name, d = _token_for(_hex_to_rgb("#" + m.group(2)), contract_colors)
+        except Exception:
+            return m.group(0)  # unparseable hex length -> leave it alone
         if name:
             count[0] += 1
             return f"{m.group(1)}var(--color-{name}){m.group(3)}"
