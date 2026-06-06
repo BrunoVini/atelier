@@ -3,13 +3,17 @@
  * responsive_check.mjs — sweep a page across widths and catch layout breaks,
  * especially in the tablet mid-range (768–1024) where endpoint-only designs fail.
  *
- * For each width it flags horizontal overflow (scrollWidth > viewport) and lists
- * the elements wider than the viewport, then screenshots it into a contact sheet.
+ * For each width it flags TWO classes of break, then screenshots a contact sheet:
+ *   • horizontal overflow — scrollWidth > viewport, lists the offending elements;
+ *   • element collision   — text-bearing elements whose boxes overlap (one piece of
+ *     text sitting on top of another). Overlaps are usually width-dependent, so the
+ *     sweep is where they surface — a fix at 1440 often re-collides at ~834.
  *
  * Usage:
  *   node responsive_check.mjs <page.html|url> [--widths 360,768,834,1024,1280,1440,1920]
  *
- * Exits non-zero if any width overflows. Degrades gracefully without a browser.
+ * Exits non-zero if any width overflows OR has a severe (≥60%) text collision.
+ * Degrades gracefully without a browser.
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -43,42 +47,87 @@ async function launch() {
   }
 }
 
-// Runs in the browser: is the doc wider than the viewport? which elements overflow?
+// Runs in the browser: doc wider than viewport (overflow) + text boxes that
+// collide (overlap). Both are layout breaks; both are width-dependent.
 const PROBE = `(() => {
+  const selOf = (el) => el.tagName.toLowerCase() +
+    (el.id ? '#' + el.id : '') +
+    (el.className && typeof el.className === 'string'
+      ? '.' + el.className.trim().split(/\\s+/).slice(0,2).join('.') : '');
+
   const vw = document.documentElement.clientWidth;
   const docW = document.documentElement.scrollWidth;
+
   const offenders = [];
   for (const el of document.querySelectorAll('body *')) {
     const r = el.getBoundingClientRect();
     if (r.width > vw + 1 || r.right > vw + 1) {
-      const sel = el.tagName.toLowerCase() +
-        (el.id ? '#' + el.id : '') +
-        (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\\s+/).slice(0,2).join('.') : '');
-      offenders.push({ sel, w: Math.round(r.width), right: Math.round(r.right) });
+      offenders.push({ sel: selOf(el), w: Math.round(r.width), right: Math.round(r.right) });
     }
   }
   offenders.sort((a,b) => b.w - a.w);
-  return { vw, docW, overflow: docW > vw + 1, offenders: offenders.slice(0, 6) };
+
+  // Collision: visible, text-bearing leaf elements whose boxes overlap and where
+  // neither contains the other. That is the damaging case — text over text.
+  const leaves = [];
+  for (const el of document.querySelectorAll('body *')) {
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'script' || tag === 'style' || tag === 'svg' || tag === 'path') continue;
+    let direct = '';
+    for (const n of el.childNodes) if (n.nodeType === 3) direct += n.textContent;
+    if (!direct.trim()) continue;                       // must hold its own text
+    const r = el.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) === 0) continue;
+    leaves.push({ el, r, sel: selOf(el) });
+  }
+  const overlaps = [];
+  if (leaves.length <= 400) {                           // O(n^2) guard for huge pages
+    for (let i = 0; i < leaves.length; i++) {
+      for (let j = i + 1; j < leaves.length; j++) {
+        const a = leaves[i], b = leaves[j];
+        if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+        const ix = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
+        const iy = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
+        if (ix <= 1 || iy <= 1) continue;
+        const inter = ix * iy;
+        const minArea = Math.min(a.r.width * a.r.height, b.r.width * b.r.height);
+        const pct = Math.round((inter / minArea) * 100);
+        if (pct >= 50) overlaps.push({ a: a.sel, b: b.sel, pct });
+      }
+    }
+    overlaps.sort((x,y) => y.pct - x.pct);
+  }
+  const severeOverlap = overlaps.some(o => o.pct >= 60);
+  return { vw, docW, overflow: docW > vw + 1, offenders: offenders.slice(0, 6),
+           overlaps: overlaps.slice(0, 6), severeOverlap };
 })()`;
 
 function contactSheet(rows) {
-  const cells = rows.map(r => `
+  const cells = rows.map(r => {
+    const tags = [];
+    if (r.overflow) tags.push(`⚠ OVERFLOW (doc ${r.docW}px)`);
+    if (r.severeOverlap) tags.push('⚠ COLLISION');
+    return `
     <figure>
-      <figcaption>${r.width}px — ${r.overflow ? `⚠ OVERFLOW (doc ${r.docW}px)` : 'ok'}</figcaption>
+      <figcaption>${r.width}px — ${tags.length ? tags.join(' · ') : 'ok'}</figcaption>
       <img src="${path.basename(r.png)}" style="width:${Math.min(r.width, 480)}px">
-      ${r.offenders?.length ? '<ul>' + r.offenders.map(o => `<li>${o.sel} — ${o.w}px</li>`).join('') + '</ul>' : ''}
-    </figure>`).join('');
+      ${r.offenders?.length ? '<ul class="of">' + r.offenders.map(o => `<li>overflow: ${o.sel} — ${o.w}px</li>`).join('') + '</ul>' : ''}
+      ${r.overlaps?.length ? '<ul class="ov">' + r.overlaps.map(o => `<li>overlap ${o.pct}%: ${o.a} ↔ ${o.b}</li>`).join('') + '</ul>' : ''}
+    </figure>`;
+  }).join('');
   return `<!DOCTYPE html><meta charset="utf-8"><title>atelier — responsive sweep</title>
 <style>body{font-family:ui-serif,Georgia,serif;margin:0 auto;max-width:1100px;padding:32px}
 figure{margin:0 0 28px;border:1px solid #0002;padding:12px}figcaption{font-weight:600;margin-bottom:8px}
-img{display:block;border:1px solid #0001}ul{color:#b00;font:13px/1.5 monospace}</style>
+img{display:block;border:1px solid #0001}ul{font:13px/1.5 monospace}ul.of{color:#b00}ul.ov{color:#a60}</style>
 <h1>Responsive sweep — ${slug}</h1>${cells}`;
 }
 
 try {
   const { b, mk } = await launch();
   const rows = [];
-  let anyOverflow = false;
+  let anyOverflow = false, anyCollision = false;
   for (const width of WIDTHS) {
     const page = await mk({ width, height: 900 });
     await page.goto(url, { waitUntil: 'networkidle' });
@@ -90,19 +139,30 @@ try {
     await page.screenshot({ path: png, fullPage: true });
     await page.close();
     anyOverflow = anyOverflow || probe.overflow;
+    anyCollision = anyCollision || probe.severeOverlap;
     rows.push({ width, png, ...probe });
-    const tag = probe.overflow
-      ? `⚠ OVERFLOW (doc ${probe.docW}px > ${probe.vw}px): ` +
-        probe.offenders.map(o => `${o.sel}(${o.w}px)`).join(', ')
-      : 'ok';
-    console.error(`  ${String(width).padStart(4)}px  ${tag}`);
+    const tags = [];
+    if (probe.overflow) {
+      tags.push(`⚠ OVERFLOW (doc ${probe.docW}px > ${probe.vw}px): ` +
+        probe.offenders.map(o => `${o.sel}(${o.w}px)`).join(', '));
+    }
+    if (probe.overlaps.length) {
+      tags.push(`⚠ COLLISION: ` +
+        probe.overlaps.map(o => `${o.a}↔${o.b}(${o.pct}%)`).join(', '));
+    }
+    console.error(`  ${String(width).padStart(4)}px  ${tags.length ? tags.join('  ') : 'ok'}`);
   }
   await b.close();
   const sheet = path.join(outDir, `${slug}-sweep.html`);
   fs.writeFileSync(sheet, contactSheet(rows));
   console.error(`\n✓ contact sheet: ${sheet}`);
-  console.error(anyOverflow ? '✗ overflow found — fix the flagged widths.' : '✓ no horizontal overflow across the sweep.');
-  process.exit(anyOverflow ? 1 : 0);
+  if (anyOverflow || anyCollision) {
+    const what = [anyOverflow && 'overflow', anyCollision && 'text collision'].filter(Boolean).join(' + ');
+    console.error(`✗ ${what} found — fix the flagged widths, then re-run to confirm the fix holds across the whole sweep.`);
+  } else {
+    console.error('✓ no horizontal overflow and no text collision across the sweep.');
+  }
+  process.exit(anyOverflow || anyCollision ? 1 : 0);
 } catch (e) {
   if (e?.code === 'ERR_MODULE_NOT_FOUND') {
     console.error('⚠ responsive_check: no headless browser. Install: npm i -D playwright && npx playwright install chromium');

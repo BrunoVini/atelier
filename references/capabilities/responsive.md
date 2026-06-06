@@ -56,12 +56,16 @@ having been designed.
 This is what turns "many tablet errors" into "the tool told me":
 ```bash
 node scripts/responsive_check.mjs <page.html|url>
-# loads the page at 360/768/834/1024/1280/1440/1920, flags horizontal overflow
-# and any element wider than the viewport, and writes a contact sheet to review.
+# loads the page at 360/768/834/1024/1280/1440/1920 and flags two break classes:
+#   • horizontal overflow (element/doc wider than the viewport), and
+#   • text collision (one text box overlapping another) — usually width-dependent,
+#     so a fix at 1440 can silently re-collide at ~834. It writes a contact sheet.
 ```
-Run it before delivery (and in review). Fix every width that reports overflow
-before calling it done. Pair with `diff_screens.mjs` to confirm a fix at one width
-didn't regress another. **Needs a renderable target** — for a backend-dependent app
+Run it before delivery (and in review). Fix every width that reports overflow OR
+collision before calling it done — and fix the **cause**, not the symptom (see
+`review.md` §3c). Then re-run the sweep: the fix only counts when it's clean at
+*every* width, not just the one you were looking at. Pair with `diff_screens.mjs`
+to confirm a fix at one width didn't regress another. **Needs a renderable target** — for a backend-dependent app
 that won't run standalone, sweep the component in isolation or a user-provided URL
 (see preview.md → "When the app can't run standalone").
 

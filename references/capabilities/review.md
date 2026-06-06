@@ -93,12 +93,32 @@ Quick wins: <top 3 doable in ~5 min>
 ## 3b. Regression & weight checks (when editing an existing page)
 
 ```bash
-node scripts/responsive_check.mjs <page.html> # sweep widths; flags tablet/mid-range overflow
+node scripts/responsive_check.mjs <page.html> # sweep widths; flags overflow AND text collision
 node scripts/diff_screens.mjs <page.html>     # vs saved baseline; proves "nothing else moved"
 python3 scripts/perf_budget.py <page.html>    # font/image/CSS/motion weight vs budget
 ```
 Cite "diff: hero changed, rest unchanged" and any over-budget metric in the report.
 First run with `--baseline` to record the reference.
+
+## 3c. Overlaps & collisions — diagnose the cause, don't nudge (and re-verify)
+
+The sweep reports **element collisions** (text sitting on top of text) as well as
+overflow. When you find one — or spot one by eye — do not "fix" it with a blind
+nudge (a margin bump, a `top` tweak, a `z-index` bump). That hides it at one width
+and lets it re-collide at another. Work the **root cause** instead:
+
+| Cause | The real fix (not a nudge) |
+|---|---|
+| `position: absolute` child with no space reserved | Give the flow a real box (height/min-height/grid area), or make the layout flow instead of overlapping. |
+| Missing `position: relative` on the parent | Anchor the coordinate system (animation-pitfalls §1) so the child positions against the box you mean. |
+| Negative margin / fixed px width that doesn't reflow | Replace with `clamp()` / intrinsic layout (`responsive.md`) so the mid-range interpolates instead of stacking. |
+| Two layers fighting in one cell | Decide the stacking explicitly (grid `place-items`, or separate rows) — overlap should be intentional, never accidental. |
+| Label placed over same-colored / busy art | Move it onto a contrasting surface or outside the shape; never rely on it "usually" clearing. |
+
+Then **re-verify the fix visually** — re-run `responsive_check.mjs` across the
+whole sweep and re-screenshot the affected breakpoint. A fix you didn't re-render
+is a guess. The collision is only resolved when the sweep is clean at *every*
+width and the screenshot confirms it — not when one viewport happens to look right.
 
 ## 4. Adversarial pass (high-stakes)
 

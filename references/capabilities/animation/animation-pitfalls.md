@@ -360,6 +360,83 @@ Spinning up an HTTP server doesn't always save you either — a global proxy on 
 
 The insidiousness of this pitfall: **there's no bug alarm**. Only human eyes or OCR catch it.
 
+## 17. Element-follows-path motion looks broken unless the tip rides the path
+
+**The bug (real incident — a "pencil drawing a line" on a portfolio)**: an SVG pencil
+was meant to draw a red stroke. First attempt: the pencil just wiggled in place while
+a `stroke-dashoffset` line drew itself separately. Second attempt: the pencil moved,
+but its tip floated ~5px *off* the line and the motion stuttered — the user (correctly)
+called it "not fluid" and "not following the line." Three independent faults caused it:
+
+1. **The visual tip wasn't the transform origin.** The pencil group had a `rotate(42°)`,
+   so the graphite tip was nowhere near the element's geometric anchor. Translating the
+   group moved the *anchor* along the path while the *tip* rode 5px above it.
+2. **Coarse keyframes.** 3–4 keyframes can't approximate a curve; the follower cut
+   corners the drawn line didn't.
+3. **Eased timing + mismatched duration.** `ease-in-out` on the follower while the line
+   drew at a different rate desynced them — the tip raced ahead, then waited.
+
+**Rule** — to make one element *trace* a path (pencil on a stroke, dot on a route, comet
+on an arc) so it reads as fluid:
+
+- **Anchor the active point onto the path.** Whatever visual point should touch the line
+  (the graphite tip, the dot's center) must land exactly on the path. If the element is
+  rotated/scaled, add a compensating `translate(...)` so the *visual* tip — not the
+  bounding-box origin — sits on the path's end/point. Verify by eye on a static frame.
+- **Sample the real path, densely.** Derive the follower's keyframes from the *same*
+  geometry as the drawn path — 8–10+ points sampled along the curve, not 3 guesses. The
+  follower must visit the points the line actually passes through.
+- **Pair the draw with the follower: same duration, same easing, `linear`.** Draw the
+  line with `stroke-dasharray/​stroke-dashoffset` (use `pathLength="100"` so the dash math
+  is path-length-independent) and run the follower on the identical duration. Use **linear**
+  timing on both so velocity is constant and they stay locked together — eased timing is
+  what makes a tracer look like it's "catching up."
+- **One pass, then hold; rest state complete.** Trigger on hover / `is-flourishing`
+  (scroll-in / tap on mobile) with `forwards` so it draws once and stays. At rest the
+  stroke should already be fully drawn (`stroke-dashoffset: 0`) so the no-JS / no-trigger
+  state is correct, and `prefers-reduced-motion` freezes to that complete state.
+
+```css
+/* line + follower share duration + linear so the tip stays on the stroke */
+.draw .stroke   { stroke-dasharray: 100; stroke-dashoffset: 0; }          /* rest: complete */
+.draw:hover .stroke,
+.draw.is-flourishing .stroke   { animation: draw 1.6s linear forwards; }
+.draw:hover .pencil,
+.draw.is-flourishing .pencil   { animation: trace 1.6s linear forwards; } /* same 1.6s, linear */
+@keyframes draw  { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@keyframes trace {            /* 9 points sampled along the SAME path the stroke draws */
+  0%{transform:translate(-42px,3px)} 12.5%{transform:translate(-36px,0)}
+  25%{transform:translate(-30px,-1px)} 37.5%{transform:translate(-24px,-1px)}
+  50%{transform:translate(-18px,2px)} 62.5%{transform:translate(-13px,4px)}
+  75%{transform:translate(-8px,4px)} 87.5%{transform:translate(-4px,3px)}
+  100%{transform:translate(0,0)} }
+@media (prefers-reduced-motion: reduce){ .draw *{animation:none !important} }
+```
+
+**Verification (this is the step that was skipped)**: capture frames *mid-animation*
+(e.g. 12% / 50% / 94% of the way through), not just the rest frame, and confirm the tip
+is on the line at every sample. "It looks right at the end" is not the same as "fluid."
+
+**General fluidity reminders**: animate `transform`/`opacity` (compositor-driven), not
+`top`/`left`/`width`; keep the follower and what it touches on one shared clock; bind
+durations to the contract's motion tokens, not magic numbers.
+
+## 18. Labels that move or sit on art must stay legible at every frame
+
+**The bug (same portfolio)**: a hand-lettered "SHIPPED!" stamp was placed over a rocket.
+It was red text on the rocket's **red** nose — it vanished. Moved onto the white body, it
+then clipped the fin edge and the leading letters were unreadable. It took three rounds to
+land it cleanly *outside* the shape on the paper background.
+
+**Rule**:
+
+- A text label over artwork must sit on a surface that **contrasts** with the label color
+  for its whole length — never red-on-red, never text straddling a busy/edge region.
+- When in doubt, place the label **outside** the shape (on the page background), not on it.
+- This is the static-art cousin of pitfall §16 (cross-scene inverse colors) and of the
+  collision discipline in `review.md` §3c. The same self-check applies: **screenshot it and
+  read every letter** — against the actual rendered art, not your mental model of it.
+
 ## Pre-flight self-check (5 seconds before starting)
 
 - [ ] Every parent of a `position: absolute` element has `position: relative`?
@@ -378,3 +455,5 @@ The insidiousness of this pitfall: **there's no bug alarm**. Only human eyes or 
 - [ ] Involves a specific brand (Stripe/Anthropic/Lovart/...): did you run the Core Asset Protocol (SKILL.md §1.a, five steps)? Is `brand-spec.md` written?
 - [ ] Single-file delivery HTML: is `animations.jsx` inlined, not `src="..."`? (External .jsx under file:// causes a CORS black screen)
 - [ ] Cross-scene elements (chapter label / watermark / scene number) have no hard-coded colors? Visible against every scene's background?
+- [ ] Element-follows-path motion: the visual tip is anchored ON the path (rotation compensated), keyframes sampled densely from the real path, draw + follower share duration and `linear` timing? Verified on mid-animation frames, not just the end?
+- [ ] Any text label over artwork contrasts with what's behind it for its whole length (no red-on-red, no edge-clipping)? Read every letter on the rendered screenshot?

@@ -66,7 +66,10 @@ huashu-design, MIT):
 
 - **`animation/animation-pitfalls.md`** — the failure modes: fallback-font width
   measurement (wrap DOM measurement in `document.fonts.ready`), first-frame jumps,
-  timing drift. Read this BEFORE shipping motion.
+  timing drift, **element-follows-path tracing** (§17 — anchor the visual tip on the
+  path, sample it densely, draw + follower on one `linear` clock; this is the fluidity
+  fix) and **label legibility over art** (§18). Read this BEFORE shipping motion, and
+  verify motion on *mid-animation* frames, not just the rest frame.
 - **`animation/cinematic-patterns.md`** — the vocabulary of good motion (entrances,
   holds, transitions as one continuous narrative).
 - **`animation/scene-templates.md`** — ready scene structures to adapt.
