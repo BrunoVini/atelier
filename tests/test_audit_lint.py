@@ -61,6 +61,62 @@ def test_slop_check_flags_tells_but_respects_contract():
     assert check_html('<style>body{font-family:Fraunces,serif}</style>') == []
 
 
+def test_slop_copy_and_editorial_tells():
+    from slop_check import check_html
+    html = ('<p>We build software — fast, reliable — and we love it. '
+            'Quietly trusted by teams.</p>'
+            '<span>01 — Discovery</span>'
+            '<a href="#">Learn more</a>'
+            '<div>Scroll to explore</div>'
+            '<footer>v1.0</footer>')
+    kinds = {f["kind"] for f in check_html(html)}
+    assert {"em-dash-cadence", "marketing-cliche", "vague-cta", "scroll-cue",
+            "section-number-label", "version-stamp"} <= kinds
+    # clean editorial copy trips none of them
+    assert not ({"em-dash-cadence", "marketing-cliche", "scroll-cue"} &
+                {f["kind"] for f in check_html("<p>A studio for serious products.</p>")})
+
+
+def test_slop_oklch_warm_neutral_default_ban():
+    from slop_check import check_html
+    warm = '<style>body{background:oklch(0.96 0.02 80)}</style>'
+    assert "oklch-warm-neutral-default" in {f["kind"] for f in check_html(warm)}
+    # a --paper/--cream token used as the ground is the same monoculture
+    assert any(f["kind"] == "oklch-warm-neutral-default"
+               for f in check_html('<style>body{background:var(--paper)}</style>'))
+    # but if the CONTRACT declares a warm-paper ground, it's law for that repo, not slop
+    paper_contract = {"colors": {"background": "#faf7ee", "foreground": "#1a1a1a"}}
+    assert not any(f["kind"] == "oklch-warm-neutral-default"
+                   for f in check_html(warm, contract=paper_contract))
+    # a saturated/cool oklch is not the warm-neutral tell
+    assert not any(f["kind"] == "oklch-warm-neutral-default"
+                   for f in check_html('<style>body{background:oklch(0.6 0.18 250)}</style>'))
+
+
+def test_slop_model_profiles_are_opt_in():
+    from slop_check import check_html
+    codex = ('<style>.c{border-radius:40px}'
+             '.s{background:repeating-linear-gradient(45deg,#000,#000 4px)}</style>'
+             '<svg><filter><feTurbulence baseFrequency="0.9"/></filter></svg>')
+    codex_kinds = {"codex-big-radius", "codex-stripe-gradient", "codex-sketchy-svg"}
+    assert not (codex_kinds & {f["kind"] for f in check_html(codex)})        # off by default
+    assert codex_kinds <= {f["kind"] for f in check_html(codex, profile="codex")}
+    gemini = '<img src="x"><style>.card:hover{transform:scale(1.05)}</style>'
+    assert any(f["kind"] == "gemini-img-hover-scale"
+               for f in check_html(gemini, profile="gemini"))
+
+
+def test_slop_layout_variance_flags_template_rhythm():
+    from slop_check import check_html, layout_variance
+    sec = "<section><h2>T</h2><article>card</article><article>card</article></section>"
+    assert layout_variance(sec * 3)        # 3 identical section shapes -> monotony
+    assert not layout_variance(sec * 2)    # only 2 -> not enough to call it a template
+    varied = ("<section><h2>A</h2><article>c</article><article>c</article></section>"
+              "<section><h1>B</h1><p>x</p></section>"
+              "<section><ul><li>1</li><li>2</li><li>3</li><li>4</li></ul></section>")
+    assert not any(f["kind"] == "layout-monotony" for f in check_html(varied))
+
+
 def test_assess_consistency_levels():
     from assess import assess
     clean = {"colors": [{"hex": "#2563eb", "count": 9}, {"hex": "#ea580c", "count": 4},

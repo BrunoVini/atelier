@@ -1,17 +1,31 @@
 """Slop check — verify generated output isn't generic AI slop (don't just prompt it).
 
 frontend-design's anti-slop rules are a *prompt*; this makes them a *check* that
-runs on the produced HTML. It flags the signature tells from design-philosophy.md
-§3: overused fonts (Inter/Roboto/system-ui as a primary face), the purple/indigo
-gradient hero, gratuitous glassmorphism, the rounded-card+left-border cliché, and
-too many font families. Contract-sanctioned fonts (in DESIGN.md) are NOT flagged.
+runs on the produced HTML. It covers three layers of the 2026 AI tell-set:
+
+  • visual    — overused fonts, the purple/indigo gradient, gratuitous glassmorphism,
+                the rounded-card+left-border cliché, too many fonts, AND the current
+                monoculture: the OKLCH warm-neutral ("paper/cream/sand") default;
+  • copy      — em-dash cadence, marketing clichés ("quietly trusted by"), vague CTAs,
+                all-caps body, scroll cues, fake locale/weather strips, version stamps;
+  • structural— numbered section eyebrows, eyebrow-label over-use, fake window chrome,
+                decorative-dot filler, and intra-page layout monotony (every section
+                the same shape).
+
+Contract-sanctioned choices are NOT flagged: fonts the DESIGN.md declares, and — for
+the warm-neutral ban — a background the contract itself declares warm (a paper/ink
+brand is law for that repo, not slop). Model profiles add the tells specific to a
+given generator: `--profile codex` (huge radii, sketchy SVG, stripe gradients),
+`--profile gemini` (image hover-scale).
 
 Usage:
-    python3 slop_check.py <page.html> [--contract <repo|tokens.json>] [--json]
+    python3 slop_check.py <page.html> [--contract <repo|tokens.json>]
+                          [--profile codex|gemini] [--json]
 """
 import json
 import re
 import sys
+from collections import Counter
 
 _SLOP_FONTS = {"inter", "roboto", "arial", "helvetica", "system-ui",
                "-apple-system", "blinkmacsystemfont", "segoe ui", "open sans", "lato"}
@@ -23,16 +37,243 @@ _GFONT = re.compile(r"family=([A-Za-z0-9+]+)", re.I)
 _BACKDROP = re.compile(r"backdrop-filter\s*:\s*blur", re.I)
 _LEFT_BORDER = re.compile(r"border-left\s*:[^;}]*\b(solid|#|rgb|var)", re.I)
 
+# --- text extraction (run copy tells on what the user actually reads) ---
+_SCRIPT_STYLE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.I | re.S)
+_TAG = re.compile(r"<[^>]+>")
+_LINKLABEL = re.compile(r"<(a|button)\b[^>]*>(.*?)</\1>", re.I | re.S)
+_ENTITIES = (("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&nbsp;", " "),
+             ("&mdash;", "—"), ("&#8212;", "—"), ("&copy;", "©"))
 
-def check_html(html, allowed_fonts=None):
+
+def _visible_text(html):
+    txt = _TAG.sub(" ", _SCRIPT_STYLE.sub(" ", html))
+    for a, b in _ENTITIES:
+        txt = txt.replace(a, b)
+    return re.sub(r"\s+", " ", txt).strip()
+
+
+def _cta_labels(html):
+    out = []
+    for m in _LINKLABEL.finditer(html):
+        t = re.sub(r"\s+", " ", _TAG.sub(" ", m.group(2))).strip()
+        if t:
+            out.append(t)
+    return out
+
+
+# --- copy clichés ---
+_CLICHES = re.compile(
+    r"\b(quietly trusted by|trusted by (?:thousands|millions|teams|leading)|loved by|"
+    r"backed by|powering the (?:world|future|next)|join (?:thousands|millions|\d[\d,]*\+?)|"
+    r"the future of|reimagine|reimagining|supercharge|unlock the (?:power|potential)|"
+    r"take your .{0,30}? to the next level|effortlessly|seamlessly|game[- ]?changer|"
+    r"best[- ]in[- ]class|cutting[- ]edge|world[- ]class|say goodbye to|"
+    r"built for the modern|delight your (?:users|customers))\b", re.I)
+_VAGUE_CTA = {"learn more", "read more", "click here", "discover", "explore",
+              "find out more", "see more", "see how"}
+_SCROLL_CUE = re.compile(
+    r"\b(scroll (?:to (?:explore|discover)|down|for more)|keep scrolling)\b", re.I)
+_SECTION_NUM = re.compile(r"(?<!\d)0[0-9]\s*[—–/·|]|"
+                          r"[—–/·|]\s*0[0-9](?!\d)|\(\s*0[0-9]\s*\)|№\s*0?\d")
+_VERSION = re.compile(r"(?<![\w.])v\d+\.\d+(?:\.\d+)?\b")
+_CLOCK = re.compile(r"\b\d{1,2}:\d{2}\b")
+# canonical macOS "traffic light" window-chrome dots faked with divs
+_TRAFFIC = ("#ff5f56", "#ffbd2e", "#27c93f", "#febc2e", "#28c840", "#ff5f57")
+
+# --- OKLCH warm-neutral monoculture ---
+_OKLCH = re.compile(r"oklch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+)", re.I)
+_WARM_BG = re.compile(
+    r"background(?:-color)?\s*:\s*[^;{}]*var\(\s*--(?:paper|cream|sand|linen|bone|"
+    r"ivory|parchment|oat|oatmeal|almond|porcelain|eggshell|bisque)\b", re.I)
+
+# --- intra-page layout monotony ---
+_SECTION = re.compile(r"<section\b[^>]*>(.*?)</section>", re.I | re.S)
+
+
+def _num(s):
+    return float(str(s).replace("%", "").strip())
+
+
+def _is_warm_neutral_hex(s):
+    """A pale, low-chroma, warm-hued ground (paper/cream/sand) — perceptual, not HSL."""
+    s = str(s).strip().lstrip("#")
+    if len(s) == 3:
+        s = "".join(c * 2 for c in s)
+    if len(s) != 6:
+        return False
+    try:
+        r, g, b = int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16)
+    except ValueError:
+        return False
+    mx, mn = max(r, g, b), min(r, g, b)
+    if mx == mn:                                  # pure achromatic — not "warm"
+        return False
+    light = (mx + mn) / 2 / 255
+    chroma = (mx - mn) / 255                       # absolute spread (near-whites read low)
+    d = mx - mn
+    if mx == r:
+        h = ((g - b) / d) % 6
+    elif mx == g:
+        h = (b - r) / d + 2
+    else:
+        h = (r - g) / d + 4
+    h *= 60
+    return light > 0.85 and chroma < 0.10 and 25 <= h <= 100
+
+
+def _contract_declares_warm(contract):
+    if not contract:
+        return False
+    cols = contract.get("colors", {}) if isinstance(contract, dict) else {}
+    for role in ("background", "surface", "paper", "base", "bg"):
+        v = cols.get(role)
+        if v and _is_warm_neutral_hex(v):
+            return True
+    return False
+
+
+def _section_signature(inner):
+    headings = len(re.findall(r"<h[1-3]\b", inner, re.I))
+    paras = len(re.findall(r"<p\b", inner, re.I))
+    cards = len(re.findall(r"<(?:article|li)\b", inner, re.I)) or inner.lower().count("card")
+    cards_bucket = 0 if cards <= 1 else (1 if cards <= 3 else 2)
+    grid = 1 if re.search(r"\bgrid\b|display\s*:\s*grid", inner, re.I) else 0
+    return (min(headings, 3), min(paras, 4), grid, cards_bucket)
+
+
+def layout_variance(html):
+    """Flag intra-page monotony: 3+ sections sharing the same structural shape."""
+    sections = _SECTION.findall(html)
+    if len(sections) < 3:
+        return []
+    sig, n = Counter(_section_signature(s) for s in sections).most_common(1)[0]
+    if n >= 3 and sig[0] >= 1 and sig[3] >= 1:     # a heading + a repeated card row
+        return [{"severity": "polish", "kind": "layout-monotony",
+                 "detail": f"{n} sections share one shape (heading + card grid) — vary "
+                           "the section rhythm so the page doesn't read as a template"}]
+    return []
+
+
+def _copy_tells(html):
+    findings = []
+    vt = _visible_text(html)
+    if not vt:
+        return findings
+
+    if vt.count("—") >= 3:
+        findings.append({"severity": "polish", "kind": "em-dash-cadence",
+                         "detail": "3+ em-dashes in body copy — a recognizable AI writing tell; "
+                                   "vary the sentence rhythm"})
+    m = _CLICHES.search(vt)
+    if m:
+        findings.append({"severity": "polish", "kind": "marketing-cliche",
+                         "detail": f"marketing-cliché copy (“{m.group(0)}”) — say "
+                                   "something specific instead", "tell": m.group(0)})
+    vague = sorted({c.lower() for c in _cta_labels(html) if c.lower() in _VAGUE_CTA})
+    if vague:
+        findings.append({"severity": "polish", "kind": "vague-cta",
+                         "detail": f"vague call-to-action(s): {', '.join(vague)} — name the action "
+                                   "(“Start a project”, not “Learn more”)"})
+    # a whole clause in ALL CAPS (≥6 consecutive caps words) reads as shouting filler
+    caps_run, longest = 0, 0
+    for w in re.findall(r"[A-Za-zÀ-ſ][\w'’]+", vt):
+        if len(w) >= 2 and w.upper() == w:
+            caps_run += 1
+            longest = max(longest, caps_run)
+        else:
+            caps_run = 0
+    if longest >= 6:
+        findings.append({"severity": "polish", "kind": "all-caps-body",
+                         "detail": "a long all-caps run in body copy — reserve caps for short labels"})
+    if _SCROLL_CUE.search(vt):
+        findings.append({"severity": "polish", "kind": "scroll-cue",
+                         "detail": "“scroll to explore”-style cue — a stock AI hero filler"})
+    if _SECTION_NUM.search(vt):
+        findings.append({"severity": "polish", "kind": "section-number-label",
+                         "detail": "numbered section eyebrows (“01 —”) — decorative "
+                                   "numbering is a template tell"})
+    if _CLOCK.search(vt) and "°" in vt:
+        findings.append({"severity": "polish", "kind": "decorative-locale-strip",
+                         "detail": "fake locale/time/weather strip (clock + temperature) — "
+                                   "decorative chrome that carries no real info"})
+    if _VERSION.search(vt):
+        findings.append({"severity": "polish", "kind": "version-stamp",
+                         "detail": "decorative version stamp (“v1.0”) — filler unless "
+                                   "it's a real, meaningful version"})
+    if (vt.count("•") + vt.count("·") + vt.count("◦")) >= 6:
+        findings.append({"severity": "polish", "kind": "decorative-dots",
+                         "detail": "many decorative dots/bullets used as filler separators"})
+    return findings
+
+
+def _structural_tells(html):
+    findings = []
+    if len(re.findall(r"text-transform\s*:\s*uppercase", html, re.I)) >= 4:
+        findings.append({"severity": "polish", "kind": "eyebrow-overuse",
+                         "detail": "uppercase “eyebrow” labels used 4+ times — a template "
+                                   "rhythm; let headings carry the page"})
+    low = html.lower()
+    if sum(1 for t in _TRAFFIC if t in low) >= 2:
+        findings.append({"severity": "polish", "kind": "fake-window-chrome",
+                         "detail": "faux macOS traffic-light window chrome — a generic “app "
+                                   "screenshot” cliché"})
+    findings.extend(layout_variance(html))
+    return findings
+
+
+def _warm_neutral_default(html, contract):
+    if _contract_declares_warm(contract):
+        return []                                   # the repo declares it — law, not slop
+    warm = _WARM_BG.search(html) is not None
+    if not warm:
+        for m in _OKLCH.finditer(html):
+            light = _num(m.group(1)) / (100 if "%" in m.group(1) else 1)
+            chroma = _num(m.group(2))
+            hue = float(m.group(3))
+            if 0.84 <= light <= 0.975 and chroma < 0.06 and 40 <= hue <= 105:
+                warm = True
+                break
+    if warm:
+        return [{"severity": "important", "kind": "oklch-warm-neutral-default",
+                 "detail": "warm off-white “paper/cream/sand” ground — the 2026 AI-neutral "
+                           "monoculture (the way the purple gradient was the last one). Commit to a "
+                           "real, owned ground color unless the contract declares this paper."}]
+    return []
+
+
+def _profile_tells(html, profile):
+    if not profile:
+        return []
+    findings = []
+    p = profile.lower()
+    if p == "codex":
+        if re.search(r"border-radius\s*:\s*(?:3[2-9]|[4-9]\d|\d{3,})px|"
+                     r"border-radius\s*:\s*(?:[2-9](?:\.\d+)?|\d{2,})rem", html, re.I):
+            findings.append({"severity": "polish", "kind": "codex-big-radius",
+                             "detail": "very large card radius (≥32px) — a Codex default; size radius "
+                                       "to the contract"})
+        if re.search(r"feturbulence|basefrequency", html, re.I):
+            findings.append({"severity": "polish", "kind": "codex-sketchy-svg",
+                             "detail": "feTurbulence “sketchy/hand-drawn” SVG filter — a Codex tic"})
+        if re.search(r"repeating-linear-gradient", html, re.I):
+            findings.append({"severity": "polish", "kind": "codex-stripe-gradient",
+                             "detail": "repeating stripe gradient — a Codex decorative default"})
+    elif p == "gemini":
+        if re.search(r"<img\b", html, re.I) and \
+           re.search(r":hover[^{]*\{[^}]*transform\s*:\s*scale", html, re.I):
+            findings.append({"severity": "polish", "kind": "gemini-img-hover-scale",
+                             "detail": "image hover-scale zoom — a Gemini default interaction"})
+    return findings
+
+
+def check_html(html, allowed_fonts=None, profile=None, contract=None):
     allowed = {f.lower() for f in (allowed_fonts or [])}
     findings = []
 
     # 1. Overused/generic primary fonts (unless the contract sanctions them).
     used = []
     for decl in _FONT_DECL.findall(html):
-        first = decl.split(",")[0].strip().strip("'\"")
-        used.append(first)
+        used.append(decl.split(",")[0].strip().strip("'\""))
     for fam in _GFONT.findall(html):
         used.append(fam.replace("+", " "))
     for fam in used:
@@ -43,45 +284,61 @@ def check_html(html, allowed_fonts=None):
                              "tell": fam})
             break
 
-    # 2. The purple/indigo gradient hero — the single most recognizable AI tell.
+    # 2. The purple/indigo gradient hero — the previous era's most recognizable tell.
     if _PURPLE.search(html):
         findings.append({"severity": "important", "kind": "purple-gradient",
                          "detail": "purple/indigo gradient — the signature generic-AI look"})
 
-    # 3. Gratuitous glassmorphism (blur everywhere).
+    # 3. The 2026 warm-neutral default (unless the contract declares paper).
+    findings.extend(_warm_neutral_default(html, contract))
+
+    # 4. Gratuitous glassmorphism (blur everywhere).
     blur = len(_BACKDROP.findall(html))
     if blur >= 3:
         findings.append({"severity": "polish", "kind": "glassmorphism",
                          "detail": f"{blur} backdrop-blur uses — glassmorphism applied without reason"})
 
-    # 4. Rounded card + left colored border accent (2020–24 Material/Tailwind cliché).
+    # 5. Rounded card + left colored border accent (2020–24 Material/Tailwind cliché).
     if _LEFT_BORDER.search(html) and re.search(r"border-radius", html, re.I):
         findings.append({"severity": "polish", "kind": "card-left-border",
                          "detail": "rounded card + left colored border — a dated cliché combo"})
 
-    # 5. Too many distinct font families.
+    # 6. Too many distinct font families.
     distinct = {f.lower() for f in used if f and f.lower() not in
                 ("serif", "sans-serif", "monospace", "inherit")}
     if len(distinct) > 4:
         findings.append({"severity": "polish", "kind": "too-many-fonts",
                          "detail": f"{len(distinct)} font families — tighten to a display + body (+mono)"})
+
+    # 7–9. Copy, structural/editorial, and model-profile tells.
+    findings.extend(_copy_tells(html))
+    findings.extend(_structural_tells(html))
+    findings.extend(_profile_tells(html, profile))
     return findings
 
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a]
     if not args or args[0].startswith("-"):
-        print("usage: slop_check.py <page.html> [--contract <repo|tokens.json>] [--json]")
+        print("usage: slop_check.py <page.html> [--contract <repo|tokens.json>] "
+              "[--profile codex|gemini] [--json]")
         sys.exit(2)
     html = open(args[0], encoding="utf-8").read()
-    allowed = []
+    allowed, contract = [], None
     if "--contract" in args:
         try:
             from contract import resolve_contract
-            allowed = resolve_contract(args[args.index("--contract") + 1])["fonts"]
+            contract = resolve_contract(args[args.index("--contract") + 1])
+            allowed = contract.get("fonts", [])
         except Exception:
             pass
-    findings = check_html(html, allowed)
+    profile = None
+    if "--profile" in args:
+        try:
+            profile = args[args.index("--profile") + 1]
+        except IndexError:
+            pass
+    findings = check_html(html, allowed, profile=profile, contract=contract)
     if "--json" in args:
         print(json.dumps(findings, indent=2))
     else:

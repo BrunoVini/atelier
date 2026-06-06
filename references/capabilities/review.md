@@ -61,11 +61,22 @@ Compute a **total /50** and an overall verdict. The anti-slop check is mandatory
 and now backed by a script, not just judgement:
 
 ```bash
-python3 scripts/slop_check.py <page.html> --contract <repo>   # generic fonts, purple
-# gradient, gratuitous glassmorphism, card+left-border cliché, too many fonts
+python3 scripts/slop_check.py <page.html> --contract <repo>   # visual + copy + structural tells
+python3 scripts/slop_check.py <page.html> --profile codex     # add a generator's signature tells
 ```
-Contract-sanctioned fonts are not flagged. Treat an `important` finding as a fail
-of dimension 5 (Innovation). Still cross-check `design-philosophy.md` §3 by eye.
+It checks three layers of the current AI tell-set: **visual** (generic fonts, the
+purple gradient, glassmorphism, card+left-border, too many fonts, and the 2026
+**warm-neutral “paper/cream” default** — the monoculture the purple gradient used to
+be); **copy** (em-dash cadence, marketing clichés, vague CTAs, all-caps body, scroll
+cues, fake locale strips, version stamps); **structural** (numbered eyebrows, eyebrow
+over-use, faux window chrome, decorative-dot filler, and intra-page **layout
+monotony** — every section the same shape). `--profile codex|gemini` adds tells
+specific to a given generator.
+
+Contract-sanctioned choices are **not** flagged — fonts the DESIGN.md declares, and a
+warm-paper ground when the *contract itself* declares it (pass `--contract`; a paper/
+ink brand is law for that repo, not slop). Treat an `important` finding as a fail of
+dimension 5 (Innovation). Still cross-check `design-philosophy.md` §3 by eye.
 
 For dimensions 1 and 4, back the score with **measured evidence**, not vibes:
 
