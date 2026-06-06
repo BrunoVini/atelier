@@ -457,3 +457,26 @@ land it cleanly *outside* the shape on the paper background.
 - [ ] Cross-scene elements (chapter label / watermark / scene number) have no hard-coded colors? Visible against every scene's background?
 - [ ] Element-follows-path motion: the visual tip is anchored ON the path (rotation compensated), keyframes sampled densely from the real path, draw + follower share duration and `linear` timing? Verified on mid-animation frames, not just the end?
 - [ ] Any text label over artwork contrasts with what's behind it for its whole length (no red-on-red, no edge-clipping)? Read every letter on the rendered screenshot?
+
+## §19 — An explainer animation must EXPLAIN (legibility > minimalism)
+
+A product explainer is judged on whether the story *reads*, not on how minimal it is. The
+common failure is over-minimizing until the viewer has to watch the loop several times to
+infer what's happening. Gates:
+
+- **Verbal scaffolding.** Include a short title line and/or step captions ("Source → Relay →
+  Destination", "match · transform · route") so the narrative reads without re-watching. Pure
+  abstract motion forces the viewer to guess.
+- **Labels must be genuinely legible at viewing size** — not tiny, heavily letter-spaced,
+  low-contrast caps. AA-on-paper isn't enough if it's 9px tracked-out gray; size and weight it
+  so every label reads on the rendered frame. For an explainer, legibility beats minimalism.
+- **Concrete real-world names** (Email / Database / Webhook + `svc.notify`) beat flavorless
+  generic nouns (QUEUE / STORAGE) — they sell "this routes between real services".
+- **The processing/hub element must read as what it is.** A rotating ring/tri-blade reads as a
+  decorative spinner — the exact "CSS spinner" an explainer should not be. Make the hub look
+  like a router/relay (ports, a switch, an incoming+outgoing pair), not a loader.
+- **Topology must read on a SINGLE frame.** If it's "one of several destinations, it chose
+  this one," keep the idle paths visible enough (not 0.4-opacity ghosts) that the fan-out is
+  legible statically — don't make the structure depend on watching the rotation across loops.
+- [ ] Explainer: does the source→process→destination story read on a still frame, with legible
+  labels, concrete names, a hub that reads as a hub, and visible topology?
