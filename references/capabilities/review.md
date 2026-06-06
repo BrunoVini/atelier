@@ -155,6 +155,24 @@ absolutely-positioned card overlapping content AND a non-collapsing grid can bot
 once; don't let one tool's null result collapse a two-cause problem into one. Trust the
 rendered `responsive_check.mjs` sweep + the actual screenshot over any static null.
 
+**Floating overlays over text are the single most-missed collision — never wave them
+through.** A stat card, a status/“policy passed” badge, a toast, or a count pill positioned
+`absolute`/`fixed` over a panel that contains text will silently cover that text. The rendered
+sweep flags these (as a hard `COLLISION`, or as `◦ verify deco-over-text: <card> on <text>`),
+and the failure mode is treating that flag as "intentional layering" and shipping anyway. It is
+not intentional unless you have *looked* and confirmed the text underneath is fully clear.
+Resolve every one at root cause: make the overlay **straddle empty padding** (reserve bottom/edge
+space so it sits over a blank band, not over the last line — same principle as the sticky save
+bar in `forms-craft.md`), **reposition** it to a genuinely empty region, or **move the underlying
+text** out from under it. Re-render and confirm by eye that the covered text is now visible.
+
+**`◦ verify deco-over-text` is a TASK, not a pass.** The sweep lists decoration-over-text
+geometrically, regardless of z-index. You must look at each: a **blurred, edge-transparent
+decorative wash** (a soft radial blob whose opaque center is off-canvas) with the real content
+`z-index`-ed above it is fine — confirm the text reads cleanly. An **opaque card/badge/icon over
+real text** is a defect — fix it. Don't let "it's decorative" auto-clear the check; prove it by
+looking.
+
 The sweep reports **element collisions** (text sitting on top of text) as well as
 overflow. When you find one — or spot one by eye — do not "fix" it with a blind
 nudge (a margin bump, a `top` tweak, a `z-index` bump). That hides it at one width
