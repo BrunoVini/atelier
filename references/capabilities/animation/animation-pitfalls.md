@@ -283,7 +283,7 @@ ffmpeg -i video.mp4 -ss $DURATION-0.1 -vframes 1 frame-end.png
 ```
 The first frame must be the animation's t=0 initial state (not mid-animation, not black); the last frame must be the animation's terminal state (not some moment in a second loop).
 
-**Reference implementations**: `assets/animations.jsx`'s Stage component and `scripts/render-video.js` both implement this protocol. Hand-written HTML must use the starter tick template — every line guards against a specific bug.
+**Reference implementations**: `assets/engines/narration.jsx` / `sprites.jsx` implement this Stage protocol. atelier's bundled exporter (`scripts/export_video.sh`) captures by screenshot at a fixed fps — it does NOT inject the `__ready`/`__seek` handshake — so hand-written HTML must use the starter tick template and render a complete frame 0; every line guards against a specific bug.
 
 ## 13. No looping during recording — `window.__recording` signal
 
@@ -308,7 +308,7 @@ The first frame must be the animation's t=0 initial state (not mid-animation, no
 
 3. **Ending Sprite's fadeOut**: in the recording scenario, set `fadeOut={0}` — otherwise the video tail fades to transparent/dark. Users expect to stop on a clear final frame, not fade out. When hand-writing HTML, prefer `fadeOut={0}` for trailing Sprites.
 
-**Reference implementations**: `assets/animations.jsx`'s Stage / `scripts/render-video.js` have the handshake built in. Hand-written Stages must implement `__recording` detection — otherwise this pitfall is guaranteed.
+**Reference implementations**: `assets/engines/narration.jsx` / `sprites.jsx` Stage. NOTE: atelier's `scripts/export_video.sh` is screenshot-based and does NOT drive a `__recording` handshake, so a hand-written Stage must implement `__recording` detection (force loop=false on export) itself — otherwise this pitfall is guaranteed.
 
 **Verification**: after exporting MP4, run `ffmpeg -ss 19.8 -i video.mp4 -frames:v 1 end.png` and check that the last 0.2 seconds are still the expected final frame, not a sudden cut to another scene.
 

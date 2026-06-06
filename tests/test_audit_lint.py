@@ -204,6 +204,35 @@ def test_export_tokens_can_skip_tailwind_preset(tmp_path):
     assert any(p.endswith("tokens.css") for p in written)
 
 
+def test_contract_accepts_plural_token_keys_and_depth(tmp_path):  # review: schema footgun
+    from contract import resolve_contract
+    (tmp_path / "design").mkdir()
+    (tmp_path / "design" / "design-tokens.json").write_text(json.dumps({
+        "colors": {"primary": {"$value": "#2563eb", "$type": "color"}},
+        "fonts": {"display": {"$value": ["Sora"], "$type": "fontFamily"}},
+        "depth": "borders-only"}))
+    c = resolve_contract(str(tmp_path))     # plural keys must NOT yield an empty contract
+    assert c["colors"]["primary"] == "#2563eb" and "Sora" in c["fonts"]
+    assert c["depth"] == "borders-only"
+
+
+def test_export_tokens_persists_depth_so_json_contract_lints(tmp_path):
+    from export_tokens import write_all
+    d = str(tmp_path / "design")
+    write_all({"color": {"primary": "#2563eb"}}, d, depth="borders-only")
+    data = json.load(open(os.path.join(d, "design-tokens.json")))
+    assert data.get("depth") == "borders-only"
+
+
+def test_brand_exemplars_csv_parses_cleanly():  # review: was column-shifted
+    import csv
+    p = os.path.join(os.path.dirname(__file__), "..", "references", "knowledge", "brand-exemplars.csv")
+    rows = list(csv.DictReader(open(p, encoding="utf-8")))
+    assert all(None not in r for r in rows)     # no field overflow into the restkey
+    stripe = next(r for r in rows if r["brand"] == "Stripe")
+    assert stripe["depth"] == "layered-shadow (soft, low-spread)"   # comma cell stayed intact
+
+
 def test_scan_extracts_gradients_zindex_and_motion():
     from scan_repo import extract_gradients, extract_z_indexes, extract_motion
     css = (".hero{background:linear-gradient(135deg,#fff,#000)}"

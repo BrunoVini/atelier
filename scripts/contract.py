@@ -36,18 +36,23 @@ def _slug(s):
 def _from_tokens_json(path):
     data = json.load(open(path, encoding="utf-8"))
 
-    def vals(group):
+    def vals(*groups):
+        # Accept BOTH singular ("color") and plural ("colors") group keys — a
+        # hand-written or scan-shaped tokens.json often uses the plural, and silently
+        # returning an empty contract would flag every color as off-palette.
         out = {}
-        for name, node in (data.get(group, {}) or {}).items():
-            v = node.get("$value", node) if isinstance(node, dict) else node
-            out[name] = v
+        for group in groups:
+            for name, node in (data.get(group, {}) or {}).items():
+                v = node.get("$value", node) if isinstance(node, dict) else node
+                out.setdefault(name, v)
         return out
 
-    colors = {n: v for n, v in vals("color").items() if isinstance(v, str) and v.startswith("#")}
+    colors = {n: v for n, v in vals("color", "colors").items()
+              if isinstance(v, str) and v.startswith("#")}
     fonts = []
-    for v in vals("font").values():
+    for v in vals("font", "fonts", "fontFamily").values():
         fonts.extend(v if isinstance(v, list) else [v])
-    spacing = [str(v) for v in vals("space").values()]
+    spacing = [str(v) for v in vals("space", "spaces", "spacing").values()]
     depth = data.get("depth")
     if not depth:
         depth = (data.get("$extensions", {}) or {}).get("atelier", {}).get("depth")

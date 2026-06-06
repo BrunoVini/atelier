@@ -31,7 +31,7 @@ _SLOP_FONTS = {"inter", "roboto", "arial", "helvetica", "system-ui",
                "-apple-system", "blinkmacsystemfont", "segoe ui", "open sans", "lato"}
 _PURPLE = re.compile(
     r"linear-gradient\([^)]*(purple|indigo|violet|#a855f7|#8b5cf6|#7c3aed|#6d28d9|"
-    r"#6366f1|#4f46e5|#9333ea|#7e22ce|rebeccapurple)", re.I)
+    r"#6366f1|#4f46e5|#9333ea|#7e22ce|#667eea|#764ba2|rebeccapurple)", re.I)
 _FONT_DECL = re.compile(r"font-family\s*:\s*([^;{}]+)", re.I)
 _GFONT = re.compile(r"family=([A-Za-z0-9+]+)", re.I)
 _BACKDROP = re.compile(r"backdrop-filter\s*:\s*blur", re.I)

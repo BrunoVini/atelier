@@ -2,6 +2,15 @@
 
 Once an animation HTML is done, users often ask "can you export this as a video?" This guide gives you the full pipeline.
 
+> **atelier script names (this doc is vendored from huashu — map the names):**
+> the actual exporter is **`scripts/export_video.sh`** (`render-video.js` below → it),
+> plus **`scripts/convert-formats.sh`** (60fps + GIF) and **`scripts/add-music.sh`** (BGM).
+> The engine files are **`assets/engines/sprites.jsx`** and **`assets/engines/narration.jsx`**
+> (`animations.jsx` below → those). atelier's `export_video.sh` captures frames by
+> screenshot at a fixed fps; the `window.__recording`/`__seek` handshake described here
+> is the responsibility of a **hand-written Stage** using the narration engine, not of
+> the bundled exporter. Ignore the old `/path/to/claude-design/...` paths — use `scripts/`.
+
 ## When to Export
 
 **Timing**:
@@ -175,7 +184,7 @@ For fade transitions, `dither=bayer` is smoother than `none` but produces a slig
 - [ ] The duration flag matches the actual animation length in the HTML
 - [ ] Stage in the HTML detects `window.__recording` and forces loop=false (must verify on hand-written Stages; bundled with `assets/animations.jsx`)
 - [ ] The closing Sprite has `fadeOut={0}` (no fade-out on the last frame of the video)
-- [ ] "Created by Huashu-Design" watermark is present (mandatory for animation scenes only; for third-party brand work, prefix with "Unofficial · ". See SKILL.md §"Skill promo watermark")
+- [ ] Watermark/signature is OPT-IN only — atelier never stamps its own or a third party's brand into the user's export. Add one only if the USER asks, and then it's the user's/their project's mark.
 
 ## Standard Delivery Notes
 

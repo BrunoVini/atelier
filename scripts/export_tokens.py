@@ -118,11 +118,13 @@ def to_tailwind_preset(tokens):
     return "module.exports = " + json.dumps({"theme": theme}, indent=2) + ";\n"
 
 
-def write_all(tokens, out_dir="design", tailwind=True):
+def write_all(tokens, out_dir="design", tailwind=True, depth=None):
     """Write the token artifacts into out_dir, creating it if needed.
 
     `tailwind=False` skips the Tailwind preset — don't emit one for a repo that
     isn't Tailwind (e.g. styled-components / CSS-modules); it's just noise there.
+    `depth` (a strategy string) is persisted into design-tokens.json so the depth
+    lint rules work off a JSON contract, not just a prose DESIGN.md.
 
     NOTE: only call this when the repo has NO existing authoritative token source.
     If `scan_repo.detect_token_source` found one, point DESIGN.md at it instead of
@@ -136,22 +138,28 @@ def write_all(tokens, out_dir="design", tailwind=True):
         with open(os.path.join(out_dir, "tailwind-preset.js"), "w", encoding="utf-8") as f:
             f.write(to_tailwind_preset(tokens))
         written.append(os.path.join(out_dir, "tailwind-preset.js"))
+    w3c = to_w3c_tokens(tokens)
+    if depth:                                   # contract reads data["depth"] -> depth lint
+        w3c["depth"] = depth
     with open(os.path.join(out_dir, "design-tokens.json"), "w", encoding="utf-8") as f:
-        json.dump(to_w3c_tokens(tokens), f, indent=2)
+        json.dump(w3c, f, indent=2)
     written.append(os.path.join(out_dir, "design-tokens.json"))
     return written
 
 
 if __name__ == "__main__":
-    # usage: export_tokens.py <tokens.json> [out_dir]   (out_dir default: ./design)
-    args = [a for a in sys.argv[1:] if a]
+    # usage: export_tokens.py <tokens.json> [out_dir] [--no-tailwind] [--depth <strategy>]
+    raw = sys.argv[1:]
+    tailwind = "--no-tailwind" not in raw
+    depth = raw[raw.index("--depth") + 1] if "--depth" in raw else None
+    args = [a for a in raw if a and not a.startswith("-") and a != depth]
     out_dir = "design"
-    if args and not args[0].startswith("-"):
+    if args:
         with open(args[0], encoding="utf-8") as fh:
             tokens = json.load(fh)
         if len(args) > 1:
             out_dir = args[1]
     else:
         tokens = json.load(sys.stdin)
-    written = write_all(tokens, out_dir)
+    written = write_all(tokens, out_dir, tailwind=tailwind, depth=depth)
     print("Wrote " + ", ".join(written))
