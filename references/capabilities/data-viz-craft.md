@@ -46,11 +46,16 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 
 ## 4. Interactive chart controls must actually work
 
-- A date-range / granularity control toggles real state and updates the visible range label
-  (it may honestly note it doesn't refetch on a static demo — but it must not be inert chrome).
+- **The date range IS the dashboard's core interaction — make it actually re-slice.** On a
+  data dashboard, a date-range/granularity control must re-render the series (slice the
+  existing data array to the window) and update the KPIs, not just rewrite labels. A
+  label-only toggle reads as broken on the one control that matters most. (Relabeling alone
+  is acceptable only on a non-data marketing page.)
 - **Chart tooltips sit on the data point**, with a vertical crosshair so "nearest point" is
   visible — not parked at a fixed y. Position from the point's own coordinates, not fragile
-  `scrollY` math. Provide a keyboard/focus path, not mouse-only.
+  `scrollY` math, and **clamp/edge-flip** so the tip never clips off the panel at the last
+  data point. Provide a keyboard/focus path (not mouse-only) and announce value changes via
+  a polite `aria-live` region (a changing `aria-valuetext` alone isn't reliably read).
 - `:focus-visible` on every control; `aria-label` text equivalents on each SVG chart
   ("rising from ~37k to 52.8k over 30 days"); `prefers-reduced-motion` honored.
 
