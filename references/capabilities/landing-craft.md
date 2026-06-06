@@ -95,6 +95,11 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
 - **A control that exists must work and work correctly.** A "Copy" button must copy the
   real payload (strip comment lines / fix whitespace), not `innerText` verbatim. If you
   won't wire it, don't ship it as an actionable control.
+- **Don't `aria-hidden` real content.** A marquee/ticker of services, a row of client
+  names, or a stat strip carries information — hiding it from assistive tech to "reduce
+  noise" deletes content for screen-reader users. Reserve `aria-hidden` for purely
+  decorative glyphs/shapes; if a moving strip is real content, let it read (once) or mirror
+  it in a visually-hidden list.
 - **Don't half-implement ARIA.** A `role="tablist"` needs real keyboard operation
   (arrow-key roving `tabindex`); a `role="img"` on a structured/interactive region hides
   all its content from assistive tech. Partial ARIA can be worse than none — match the
