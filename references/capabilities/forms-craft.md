@@ -119,6 +119,28 @@ per-component build can still lose to a plainer one.
 - **Design the empty, loading, disabled, and error states,** not just the happy filled form.
   A disabled Save needs a reason; a loading region needs a placeholder, not a layout jump.
 
+## 4b. Checkout, address & multi-step wizards
+
+- **An address form needs a country field, and validation must follow it.** Don't hard-code a
+  US ZIP regex (`^\d{5}$`) — that silently locks out every Canadian (`A1A 1A1`), UK (`SW1A 1AA`),
+  and other international buyer, and is the kind of exclusion a senior reviewer catches instantly.
+  Include a country selector and make postal-code / state validation country-aware (or at minimum
+  accept the common formats and don't fail-hard on non-US input). Use the right `autocomplete`
+  tokens (`country-name`, `postal-code`, `address-level1/2`).
+- **Seeded data must be internally plausible — match tax to the jurisdiction.** A "Tax (13%)"
+  line on an Oregon (0% sales tax) US address reads as Ontario HST pasted onto the wrong country;
+  it undermines trust even though the arithmetic is correct. Pick a shipping locale and a tax rate
+  that actually go together, and label the tax with its basis.
+- **A multi-step stepper must keep its orientation on mobile.** Collapsing the stepper to bare
+  numbered dots (hiding every step label) at narrow widths leaves the only "you are here" cue as
+  a 30px colored circle — borderline for low-vision users and worse than just keeping at least the
+  *current* step's label visible. Show the active step's name on mobile; abbreviate the others if
+  space is tight, but don't go label-less.
+- **Order math reconciles across every surface** — subtotal = Σ items; total = subtotal + shipping
+  + tax; and the sidebar, the review step, the CTA, and the success screen must all show the SAME
+  total (surfacing it on the primary button — "Place order · $338.57" — makes the reconciliation
+  provable at a glance). See `data-viz-craft.md` for the integrity mindset.
+
 ## 5. Accessibility & input is the baseline, not an extra (utility surfaces live or die here)
 
 - **Visible focus on every control** (`:focus-visible`), keyboard-operable everything: tab order
