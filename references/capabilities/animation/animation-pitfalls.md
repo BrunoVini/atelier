@@ -480,3 +480,18 @@ infer what's happening. Gates:
   legible statically — don't make the structure depend on watching the rotation across loops.
 - [ ] Explainer: does the source→process→destination story read on a still frame, with legible
   labels, concrete names, a hub that reads as a hub, and visible topology?
+
+### §19b — explainer legibility & semantic color (follow-ups)
+- **Node NAMES in a legible sans, not tiny mono.** Reserve monospace for technical sub-captions
+  (`svc.notify`); set the actual node names in a larger, higher-contrast sans so they hold even
+  at a reduced viewport. All-mono chip labels are the smallest, least-legible text — don't.
+- **Add a plain-English payoff line.** A one-line human caption ("One event in, the right
+  service out.") lands the story on a cold still frame far better than abstract motion + a
+  breadcrumb alone.
+- **Use SEMANTIC color in a diagram — monochrome can erase meaning.** One-accent restraint is
+  right for UI chrome, but an explainer diagram benefits from coding roles by hue (source =
+  input hue, relay = process hue, destinations = output hue). A monochrome diagram looks
+  tasteful but flattens the input→process→output semantics; let color do explanatory work here.
+- **The processing beat must read as processing** (a bright ring/core pulse), not a faint halo
+  bump — on a still frame it should be obvious the hub is doing work. And size destination icons
+  enough that each glyph's meaning reads.
