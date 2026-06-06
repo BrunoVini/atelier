@@ -28,6 +28,49 @@ pages, components, slides, animations, previews, variants, reviews, layout score
 (no install needed); `screenshot.mjs` / `diff_screens.mjs` / `responsive_check.mjs`
 and video export are optional and need Node + a headless browser.
 
+## Gallery
+
+Every artifact below was produced by atelier from a **one-line brief**, then put
+through its own self-QA loop (slop / contrast / overlap / a11y / font-load) and
+**fixed until clean** — no hand-tuning after the fact. One self-contained file each,
+inline everything, no page builder.
+
+<table>
+<tr>
+<td width="50%"><img src="assets/gallery/landing.png" alt="AI agent control-plane landing page"><br><sub><b>Marketing landing</b> — an AI-agent control plane. Confident dark system, live run-graph, honest controls.</sub></td>
+<td width="50%"><img src="assets/gallery/dashboard.png" alt="Analytics dashboard"><br><sub><b>Analytics dashboard</b> — KPI row, charts, and tables where every number reconciles and color is an encoding, not decoration.</sub></td>
+</tr>
+<tr>
+<td><img src="assets/gallery/prototype.png" alt="Clickable iOS app prototype"><br><sub><b>Clickable iOS prototype</b> — real iPhone frame, 4 tap-navigable screens, ≥44px targets, boots offline (no CDN runtime).</sub></td>
+<td><img src="assets/gallery/deck.png" alt="Launch keynote slide"><br><sub><b>Keynote deck</b> — a real slide engine + speaker notes, exportable to <b>vector PDF</b> and <b>editable PPTX</b> (real text frames).</sub></td>
+</tr>
+<tr>
+<td><img src="assets/gallery/infographic.png" alt="Print-grade infographic poster"><br><sub><b>Print infographic</b> — magazine typography, hand-built SVG charts, data that reconciles; exports to vector PDF.</sub></td>
+<td><img src="assets/gallery/variations.png" alt="Three design directions side by side"><br><sub><b>Design directions</b> — 3 genuinely distinct, internally-coherent languages for one brief; same copy, design varies.</sub></td>
+</tr>
+<tr>
+<td><img src="assets/gallery/icons.png" alt="Cohesive icon set"><br><sub><b>Cohesive icon set</b> — 16 icons on one grid/stroke/weight system, legible to 16px, <code>currentColor</code> + <code>&lt;use&gt;</code>.</sub></td>
+<td><img src="assets/gallery/illustration.png" alt="Stylized SVG hero illustration"><br><sub><b>SVG illustration</b> — a full-bleed hero scene with atmospheric depth, a lead-line to the focal point, and a copy plate.</sub></td>
+</tr>
+</table>
+
+**Motion** — explainer animations export to MP4 **and** palette-optimized GIF:
+
+<img src="assets/gallery/explainer.gif" alt="Animated explainer" width="60%">
+
+### With the skill vs. without
+
+Same brief, same model — left is vanilla Claude in isolation, right is the same model
+using atelier. The skill steers away from the generic-AI defaults (violet gradient,
+Inter, decorative color) and toward a measured, self-QA'd system:
+
+<table>
+<tr>
+<td width="50%"><img src="assets/gallery/landing-vanilla.png" alt="Vanilla output"><br><sub>⟵ <b>without atelier</b> — generic violet/teal + Inter, decorative accent</sub></td>
+<td width="50%"><img src="assets/gallery/landing.png" alt="atelier output"><br><sub><b>with atelier</b> ⟶ owned palette, characterful type, honest live UI, zero slop tells</sub></td>
+</tr>
+</table>
+
 ## The core idea
 
 Measure before you generate. The design already living in the repo wins over
