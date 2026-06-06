@@ -74,6 +74,17 @@ per-component build can still lose to a plainer one.
 - **Validate inline, on blur or submit — not on every keystroke,** and never block typing.
   Show the error *at the field*, in text + an accessible association (`aria-describedby`,
   `aria-invalid`), not color alone. Re-validate and clear the error as the user fixes it.
+- **No validation theatre — enforce exactly what the copy promises.** If the helper says "minimum
+  10 characters", the submit must actually reject 9. If it's a security surface (password change,
+  2FA), do the real checks the UI implies (require + verify the current password before allowing a
+  new one). Stating a rule you don't enforce is worse than stating none — it teaches the user the
+  form lies. Match the regex/length/required logic to the literal promise on screen.
+- **Every control does something or is honestly disabled — no dead affordances.** Secondary
+  buttons (Upload, Remove, Manage billing, View invoices, Set up SMS…) and links must either work,
+  show a visible stub response (a toast/inline state, like the toggles do), or be `disabled` with a
+  reason. Never ship `href="#"` placeholders — they jump-scroll the page and read as broken. A page
+  that *looks* fully wired but where most buttons are inert fails the "finish interactions honestly"
+  bar (see `landing-craft.md`).
 - **Every mutating control has a visible result.** A toggle flips and *shows* it took (state +
   text). A Save shows pending → success/failure. A control that changes nothing visible reads
   as broken — the #1 "is this thing on?" anxiety.
@@ -83,6 +94,19 @@ per-component build can still lose to a plainer one.
   height so the last field clears it, (c) be keyboard-reachable and announced
   (`role="region"` + `aria-live` on appearance), (d) actually wire Discard to reset. A save bar
   that covers the control you just changed is worse than no bar.
+- **ONE save affordance per context — never two primary Saves on screen at once.** If a sticky
+  bar owns the dirty-state save, the in-card footer must NOT also be a second primary "Save"
+  button at the same time (two identical primary buttons = no primary). Pick one pattern per
+  panel: either the footer button, or the floating bar — not both lit simultaneously.
+- **Verify the save bar at MOBILE width, not just desktop.** A bar that clears the last field at
+  1440px often *wraps* on a 390px screen — its buttons stack, its height doubles, and the
+  reserved padding (sized for the desktop bar) is now too small, so it occludes the field. Either
+  measure the rendered bar height and set the spacer to match at every breakpoint, or dock the
+  bar in normal flow (not floating) on narrow screens. Render at 390px and confirm no occlusion.
+- **One consistent save model, and signpost it.** Mixing instant-save toggles with
+  explicit-save forms is fine, but the user must never have to guess which is which. Give every
+  auto-saving section the same visible cue ("Saved automatically") and every explicit-save
+  section the same Save affordance — don't let the mental model silently flip tab to tab.
 - **Dangerous actions confirm with proof, not a generic "Are you sure?"** Type-to-confirm
   (the workspace name) for account/data deletion; state exactly what will be lost.
 - **Design the empty, loading, disabled, and error states,** not just the happy filled form.
