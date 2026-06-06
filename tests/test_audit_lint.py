@@ -131,6 +131,19 @@ def test_scan_depth_strategy_and_known_gaps(tmp_path):
     assert any("shadow" in g.lower() or "elevation" in g.lower() for g in rep["known_gaps"])
 
 
+def test_import_reference_url_crawler_parses_html_and_css():
+    from import_reference import styles_from_blob
+    html = ('<html><head><style>body{color:#2563eb;font-family:Inter,sans-serif}'
+            '.hero{background:linear-gradient(135deg,#fff,#000)}'
+            '.card{box-shadow:0 1px 2px #0000001a;border-radius:8px}'
+            '@media (min-width:768px){.x{padding:16px}}</style></head><body></body></html>')
+    s = styles_from_blob(html)
+    assert any(c["hex"] == "#2563eb" for c in s["colors"])
+    assert "Inter" in s["fonts"]
+    assert s["shadows"] and any("linear-gradient" in g for g in s["gradients"])
+    assert "768px" in s["breakpoints"]
+
+
 def test_detect_token_source_recognizes_ts_theme_and_skips_design_folder(tmp_path):
     from scan_repo import detect_token_source, scan_directory
     # a TS theme module (the case CSS/Tailwind-only detection used to miss)

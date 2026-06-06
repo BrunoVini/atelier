@@ -5,20 +5,29 @@ like *this*" brief: derive *measured* colors (and, for URLs, real fonts) from a
 reference, so atelier can immediately turn them into a DESIGN.md + tokens.
 
 Usage:
-    python3 import_reference.py --image shot.png        # quantize dominant colors
-    python3 import_reference.py --url https://stripe.com # read live computed styles
+    python3 import_reference.py --image shot.png         # quantize dominant colors
+    python3 import_reference.py --url https://example.com # crawl HTML + linked CSS
+    python3 import_reference.py --url https://example.com --computed  # + browser pass
 
 Image mode decodes PNG in pure Python (8-bit truecolor / truecolor-alpha) and
-clusters the dominant colors perceptually (reusing scan_repo's ΔE). URL mode uses
-a headless browser to read computed styles; it degrades gracefully if none.
+clusters the dominant colors perceptually (reusing scan_repo's ΔE). URL mode is
+HTTP-first: it fetches the page and its linked stylesheets over plain HTTP and runs
+atelier's real extractors over all of it (colors / fonts / shadows / gradients /
+radius / spacing / breakpoints) — no browser required. `--computed` adds an optional
+headless-browser pass for accurate background/accent computed values.
 """
 import json
+import re
 import struct
 import subprocess
 import sys
+import urllib.request
 import zlib
+from urllib.parse import urljoin
 
-from scan_repo import extract_colors, _rgb_to_hex
+from scan_repo import (extract_colors, _rgb_to_hex, extract_fonts, extract_shadows,
+                       extract_gradients, extract_breakpoints, extract_radius,
+                       extract_spacing)
 
 
 def _decode_png(path):
@@ -114,6 +123,59 @@ def styles_from_url(url):
     return json.loads(out.stdout)
 
 
+# --- HTTP-first crawler (no browser needed) ----------------------------------
+# The browser pass above reads ~5 computed values from 3 elements and dies without
+# Playwright. This fetches the HTML + linked CSS over plain HTTP and runs the real
+# extractors across ALL of it — measured colors/fonts/shadows/gradients/scale —
+# degrading gracefully (it just needs network, not a browser).
+_UA = "Mozilla/5.0 (atelier import_reference; design-token extraction)"
+_LINK = re.compile(r"<link\b[^>]*\brel=['\"]?stylesheet['\"]?[^>]*>", re.I)
+_HREF = re.compile(r"\bhref=['\"]([^'\"]+)['\"]", re.I)
+_STYLE_BLOCK = re.compile(r"<style[^>]*>(.*?)</style>", re.I | re.S)
+
+
+def _fetch(url, timeout=15, max_bytes=2_000_000):
+    req = urllib.request.Request(url, headers={"User-Agent": _UA})
+    with urllib.request.urlopen(req, timeout=timeout) as r:   # nosec - user-requested fetch
+        return r.read(max_bytes).decode("utf-8", "replace")
+
+
+def styles_from_blob(html, extra_css=""):
+    """Pure extraction (no network) — run atelier's measurers over HTML + CSS text."""
+    css = "\n".join(_STYLE_BLOCK.findall(html)) + "\n" + extra_css
+    blob = css + "\n" + html
+    return {
+        "colors": extract_colors(blob),
+        "fonts": extract_fonts(css),
+        "shadows": extract_shadows(blob),
+        "gradients": extract_gradients(blob),
+        "radius": extract_radius(blob),
+        "spacing": extract_spacing(blob),
+        "breakpoints": extract_breakpoints(blob),
+    }
+
+
+def crawl_url(url, max_css=12):
+    """Fetch the page + its linked stylesheets over HTTP and measure them."""
+    try:
+        html = _fetch(url)
+    except Exception as e:                       # network/SSL/HTTP — degrade, don't crash
+        return {"error": f"could not fetch {url}: {e}"}
+    css_texts, fetched = [], 0
+    for tag in _LINK.findall(html):
+        if fetched >= max_css:
+            break
+        m = _HREF.search(tag)
+        if not m:
+            continue
+        try:
+            css_texts.append(_fetch(urljoin(url, m.group(1)), timeout=10, max_bytes=1_000_000))
+            fetched += 1
+        except Exception:
+            continue
+    return {"css_files_fetched": fetched, **styles_from_blob(html, "\n".join(css_texts))}
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     if "--image" in args:
@@ -123,7 +185,15 @@ if __name__ == "__main__":
         print("\nNext: assign roles (primary/accent/bg/fg) and feed into generate-design-md.", file=sys.stderr)
     elif "--url" in args:
         url = args[args.index("--url") + 1]
-        print(json.dumps({"source": url, "computed": styles_from_url(url)}, indent=2))
+        report = {"source": url, "measured": crawl_url(url)}   # HTTP-first, no browser
+        if "--computed" in args:                                # opt-in browser pass
+            cs = styles_from_url(url)
+            if "error" not in cs:
+                report["computed"] = cs
+        print(json.dumps(report, indent=2))
+        print("\nNext: assign roles (primary/accent/bg/fg) and feed into generate-design-md. "
+              "Add --computed for a headless-browser computed-style pass (needs playwright).",
+              file=sys.stderr)
     else:
-        print("usage: import_reference.py --image <png> | --url <url>")
+        print("usage: import_reference.py --image <png> | --url <url> [--computed]")
         sys.exit(2)

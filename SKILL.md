@@ -101,6 +101,7 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 | Slides / a deck / presentation | `references/capabilities/slides.md` | `assets/engines/deck.js` |
 | An animation / explainer / narrated video / MP4·GIF | `references/capabilities/animations.md` (+ `capabilities/animation/`) | `assets/engines/narration.jsx`, `export_video.sh` |
 | Scroll-driven motion (pin/scrub, horizontal hijack, scroll-reveal) | `references/capabilities/scroll-motion.md` | — |
+| A 3D / shader / WebGPU / Three.js hero (delegate + feed tokens) | `references/capabilities/3d-hero.md` | (routes to `webgpu-threejs-tsl`) |
 | Icons / decorative SVG / diagrams / animated SVG | `references/capabilities/svg.md` | `assets/engines/sprites.jsx` |
 | A living style guide page (swatches, scale, components) | `references/workflows/generate-design-md.md` | `build_styleguide.py` |
 | Realistic content / empty·loading·error states | `references/capabilities/content.md` | `seed_content.py` |
