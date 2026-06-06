@@ -66,6 +66,19 @@ illustration" from "a few flat shapes":
   A sunset sky is legitimately warm; do NOT add a dark mat or recolor the scene just to clear
   a UI-oriented flag (that's gaming the check at the cost of the art). Run slop_check against
   the page's chrome/caption, and judge the illustration on its own merits.
+- **Copy over busy artwork needs a plate.** A headline/dek sitting directly on a detailed
+  region (a panel grid, foliage) loses contrast and reads muddy. Back it with a scrim,
+  gradient plate, or a calm zone of the art reserved for type — never let copy fight a
+  texture. And proof the text: a stray "the. sun" / odd kerning on the hero line is a
+  credibility-killer.
+- **The lead-line must terminate AT the focal point.** If the road/river points toward the
+  buildings while the sun is the focal, the strongest line and the strongest light disagree
+  and the composition feels off. Route the lead-line to the focal element itself.
+- **When iterating, HOLD every prior win — don't trade.** Fixing the targeted dimension
+  (e.g. depth) must NOT regress headline legibility, lead-line→focal alignment, balance, or
+  the near→mid→far chain. They're not in tension — you can satisfy all at once. Before
+  shipping a revision, re-run the WHOLE illustration checklist against the render, not just
+  the thing you just changed; a fix that breaks two other dimensions is a net loss.
 - **Self-QA an illustration by LOOKING.** Screenshot it (`scripts/screenshot.mjs`), open the
   PNG, and critique your own composition, depth, focal clarity, flat/empty areas, gradient
   banding, and whether each element reads. Iterate on the render — code-reading isn't enough.
