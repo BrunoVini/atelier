@@ -20,6 +20,25 @@ Two modes — confirm which the user wants before spending effort:
   just confirm it's up on a reachable port). If they can't either, review the
   component in isolation with mock data (`preview.md` → "When the app can't run
   standalone").
+
+  <NEVER-COLLIDE>
+  If you DO start the project's dev server yourself, **never run the bare default
+  command** (`npm run dev`, `astro dev`, `vite`, `next dev`) — its default port is
+  very likely the one the user already has running, and starting a second instance
+  there fights or kills their session. Get a guaranteed-free port (one that is
+  never a framework default) and pass it explicitly:
+
+  ```bash
+  PORT=$(scripts/free_port.sh)            # e.g. 43110 — never 3000/5173/4321
+  npm run dev -- --port "$PORT"           # Vite / Astro
+  npx next dev -p "$PORT"                 # Next
+  npx vite --port "$PORT" --strictPort    # --strictPort = fail, don't silently hop
+  ```
+  Then screenshot `http://localhost:$PORT`. When finished, **stop only the server
+  you started** (kill that PID) — never the user's. Reusing a detected running
+  server is always preferred; start your own only when nothing is up or you need an
+  isolated instance.
+  </NEVER-COLLIDE>
 - **Non-visual review (faster, more limited).** Static, from the source + the
   contract — `lint_design` / `audit_contrast` / `slop_check` / structure. No
   rendering, so it CANNOT judge actual rendered hierarchy, spacing, or overflow;

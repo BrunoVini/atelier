@@ -7,6 +7,10 @@
 # Usage:
 #   detect_server.sh                 # probe the common ports
 #   detect_server.sh 3000 8080 9001  # probe specific ports
+#
+# REUSE whatever this finds. Only if it finds nothing should you start your own
+# server — and then on a guaranteed-free, non-default port from free_port.sh, so
+# you never collide with (and kill) the user's running dev server.
 PORTS="${*:-3000 3001 5173 5174 4321 8080 8000 4200 5000 1313 8788 3333 4000}"
 for p in $PORTS; do
   if curl -fsS -o /dev/null --max-time 1 "http://localhost:$p/" 2>/dev/null; then
