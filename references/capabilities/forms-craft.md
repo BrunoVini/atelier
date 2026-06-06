@@ -107,6 +107,13 @@ per-component build can still lose to a plainer one.
   explicit-save forms is fine, but the user must never have to guess which is which. Give every
   auto-saving section the same visible cue ("Saved automatically") and every explicit-save
   section the same Save affordance — don't let the mental model silently flip tab to tab.
+- **Pick ONE explicit-save mechanism for the whole surface — don't mix idioms.** A floating
+  dirty "Save changes / Discard" bar and per-panel in-card footer Save buttons are two *different*
+  save idioms; using both in one settings area (a bar for Profile, an in-card submit for Security)
+  forces the user to learn two patterns and puts two primary-styled Saves in the same document.
+  Choose one and apply it to every explicit-save panel: either each panel carries its own in-card
+  footer Save (the GitHub-settings idiom — simplest, scales cleanly), OR a single global dirty-bar
+  serves all panels. Consistency here is the senior tell.
 - **Dangerous actions confirm with proof, not a generic "Are you sure?"** Type-to-confirm
   (the workspace name) for account/data deletion; state exactly what will be lost.
 - **Design the empty, loading, disabled, and error states,** not just the happy filled form.
