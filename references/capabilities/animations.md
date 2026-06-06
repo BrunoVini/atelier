@@ -40,10 +40,16 @@ scripts/export_video.sh anim.html out.gif 8 30 960 15          # GIF: 960px-wide
   per-frame palette (`stats_mode=diff`) + Bayer dithering, in one filtergraph;
   defaults to 960px / 15fps for small, shareable files (override via args). This
   matches huashu's GIF quality.
-- **MP4**: H.264 CRF 18. For 60fps interpolation, auto-fade, and the BGM/SFX
-  pipeline, see `capabilities/animation/video-export.md` (and `assets/media/README.md`
-  for the audio library). Default delivery for a narrated piece is an MP4 *with*
-  audio — a silent version feels cheap.
+- **MP4**: H.264 CRF 18. Then derive the polished forms with one command each:
+  ```bash
+  scripts/convert-formats.sh out.mp4 960            # -> out-60fps.mp4 + out.gif
+  scripts/convert-formats.sh out.mp4 --minterpolate # true 60fps (test the player)
+  scripts/add-music.sh out.mp4 --mood=tech          # mix BGM (trim + 0.3s/1s fades)
+  ```
+  Default delivery for a narrated piece is an MP4 *with* audio — a silent version
+  feels cheap. The deep recipes/pitfalls (interpolation modes, fades, audio design)
+  are in `capabilities/animation/video-export.md`; the BGM library is download-on-
+  demand (`assets/media/README.md`).
 - Requires `ffmpeg` + a headless browser (playwright/puppeteer). If missing, the
   script warns and the HTML stays valid to open in a browser.
 
