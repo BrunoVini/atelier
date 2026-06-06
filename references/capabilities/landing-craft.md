@@ -101,7 +101,12 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
   role to the actual behavior.
 - **Don't fake the wiring.** Footer/nav links should point at real (or honestly distinct)
   targets — not all resolve to `#hero`. Clicking "Careers" landing on a testimonial reads
-  as filler.
+  as filler. And don't game it the other way: pointing eight distinct links all at one
+  real-looking anchor (`#start`) is still dishonest. Route honestly, or mark non-functional
+  demo links `aria-disabled="true"` / `href="#"` and say so.
+- **Never `display:none` real content at mobile — reflow it.** Hiding the 2nd/3rd columns
+  of a board, or the hero's signature visual, on phones deletes substance the page promised.
+  Stack, horizontally scroll, or condense instead, so small screens get the whole story.
 - **Tie in-view micro-motion to the reveal, not load.** Data-viz inside a below-the-fold
   section (bars growing, sparkline drawing) should animate when that section reveals —
   otherwise it finishes before the user scrolls to it and arrives dead. Trigger it from
