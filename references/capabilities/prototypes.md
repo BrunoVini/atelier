@@ -51,7 +51,14 @@ indicator — you only manage the content region.
   does something — no dead controls.
 - **iOS tap targets ≥ 44×44px** (Apple HIG); Android ≥ 48dp. A 30px check button
   is a real ergonomics miss on a device prototype — size the hit area up even if the
-  visual glyph is smaller.
+  visual glyph is smaller. **And mind the fit-to-viewport scale:** if you shrink the
+  whole device frame with `transform: scale(...)` to fit small windows, that scale
+  multiplies your tap targets too — a 44px control inside `scale(.84)` renders at 37px
+  and silently fails the bar. Only trigger the down-scale when the viewport is
+  *genuinely narrower than the frame's own CSS width* (e.g. `@media (max-width: 393px)`
+  for a 393px iPhone), not at some loose 460px breakpoint where the frame already fits;
+  and verify the *rendered* target size at the width you'll be judged on, not just the
+  CSS value.
 - **Images** — for a real brand/product, use real images (Wikimedia / the Met /
   press kits / generated), never hand-drawn faces or product photos as SVG. For a
   fictional app, an offline-self-contained build, or UI iconography, crisp **inline
