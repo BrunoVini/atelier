@@ -147,6 +147,14 @@ First run with `--baseline` to record the reference.
 
 ## 3c. Overlaps & collisions — diagnose the cause, don't nudge (and re-verify)
 
+**A static check reporting "clean" is NOT proof of absence — corroborate with the render.**
+`overlap_risk.py` is a *static* heuristic; it can't see a `position:absolute`/`fixed` element
+that only collides once laid out, so "no static patterns" must never downgrade what your eyes
+see in the screenshot. When a narrow width looks wrong, name EVERY distinct root cause — an
+absolutely-positioned card overlapping content AND a non-collapsing grid can both be true at
+once; don't let one tool's null result collapse a two-cause problem into one. Trust the
+rendered `responsive_check.mjs` sweep + the actual screenshot over any static null.
+
 The sweep reports **element collisions** (text sitting on top of text) as well as
 overflow. When you find one — or spot one by eye — do not "fix" it with a blind
 nudge (a margin bump, a `top` tweak, a `z-index` bump). That hides it at one width
@@ -186,6 +194,21 @@ await document.fonts.ready;
 
 If a family is `false`, fix the URL/declaration and re-render — don't ship a deck,
 prototype, or variants page whose intended type silently degraded to a fallback.
+
+## 3c. Structure the critique so it's act-on-able
+
+A review is only as useful as it is scannable and ordered. Deliver:
+- **A scored radar** — rate each dimension (visual hierarchy, typography, color & a11y,
+  layout/responsive, interaction/affordances, content, craft) 0–10 with a one-line reason,
+  plus an overall. Numbers make the verdict legible and comparable.
+- **A severity-tiered punch list, not a flat or two-tier list.** Rank findings into clear
+  tiers — **P0 blocker / P1 major / P2 minor / P3 polish** (or Keep / Fix-now / Quick-wins
+  *with* a blocker tier called out) — so the reader knows what to fix first. A two-bucket
+  "must / nice-to-have" split is weaker than granular severity ordering; an AA contrast
+  failure and a missing focus ring are not the same priority as a font-weight nit.
+- **Each item: element + measured value + root-cause fix.** Cite the selector/line, the
+  measured evidence (the contrast ratio, the collision width, the slop tell), and the fix at
+  its cause — ideally the token/system change, not a one-instance patch.
 
 ## 4. Adversarial pass (high-stakes)
 
