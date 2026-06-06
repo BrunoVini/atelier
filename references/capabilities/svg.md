@@ -42,6 +42,11 @@ illustration" from "a few flat shapes":
   layers saturate + darken. Vary element sizes by distance (big turbine near the focal point,
   tiny ghosted ones on far ridges). A flat, equally-saturated set of hills is the #1 tell that
   depth was faked; if the back ridge reads as "same paint, smaller", redo it hazier.
+  **Value discipline beats richness.** Depth reads from CLEAN separation between a few planes,
+  not from cramming elements into the middle distance — extra detail in the mid-ground muddies
+  the value steps and *destroys* the recession. Keep the mid-ground quiet and value-distinct;
+  let each plane be one clear tone lighter/hazier than the one in front. 3–4 crisply-stepped
+  planes beat 6 muddy ones. Don't fight your own focal sun with a second heavy attractor.
 - **Give the foreground a near-field hero anchor.** The closest row of repeated elements (the
   front solar panels, the nearest tree) should jump in size and carry the strongest detail +
   a real specular highlight — a clear near-field entry point for the eye, then recession behind.
