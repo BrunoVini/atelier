@@ -131,6 +131,33 @@ def test_scan_depth_strategy_and_known_gaps(tmp_path):
     assert any("shadow" in g.lower() or "elevation" in g.lower() for g in rep["known_gaps"])
 
 
+def test_detect_token_source_recognizes_ts_theme_and_skips_design_folder(tmp_path):
+    from scan_repo import detect_token_source, scan_directory
+    # a TS theme module (the case CSS/Tailwind-only detection used to miss)
+    theme = tmp_path / "src" / "theme"
+    theme.mkdir(parents=True)
+    (theme / "tokens.ts").write_text(
+        "import styled, { useTheme } from 'styled-components';\n"
+        "export const theme = { palette: { primary: '#2563eb', surface: '#1e293b' },\n"
+        "  spacing: { md: '8px' } };\n")
+    src = detect_token_source(str(tmp_path))
+    assert src and src["kind"] == "ts-theme"
+    # the full scan surfaces it so generate-design-md can skip creating design/
+    assert scan_directory(str(tmp_path))["token_source"]["kind"] == "ts-theme"
+    # a plain repo with no token source -> None (export path is allowed there)
+    other = tmp_path / "plain"
+    other.mkdir()
+    (other / "a.css").write_text(".x{color:#111;padding:8px}")
+    assert detect_token_source(str(other)) is None
+
+
+def test_export_tokens_can_skip_tailwind_preset(tmp_path):
+    from export_tokens import write_all
+    written = write_all({"color": {"primary": "#2563eb"}}, str(tmp_path / "d"), tailwind=False)
+    assert not any("tailwind" in p for p in written)
+    assert any(p.endswith("tokens.css") for p in written)
+
+
 def test_scan_extracts_gradients_zindex_and_motion():
     from scan_repo import extract_gradients, extract_z_indexes, extract_motion
     css = (".hero{background:linear-gradient(135deg,#fff,#000)}"

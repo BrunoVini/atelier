@@ -118,20 +118,28 @@ def to_tailwind_preset(tokens):
     return "module.exports = " + json.dumps({"theme": theme}, indent=2) + ";\n"
 
 
-def write_all(tokens, out_dir="design"):
-    """Write all three artifacts into out_dir, creating it if needed."""
+def write_all(tokens, out_dir="design", tailwind=True):
+    """Write the token artifacts into out_dir, creating it if needed.
+
+    `tailwind=False` skips the Tailwind preset — don't emit one for a repo that
+    isn't Tailwind (e.g. styled-components / CSS-modules); it's just noise there.
+
+    NOTE: only call this when the repo has NO existing authoritative token source.
+    If `scan_repo.detect_token_source` found one, point DESIGN.md at it instead of
+    writing a parallel design/ folder that will drift (generate-design-md §5)."""
     os.makedirs(out_dir, exist_ok=True)
+    written = []
     with open(os.path.join(out_dir, "tokens.css"), "w", encoding="utf-8") as f:
         f.write(to_css_vars(tokens) + "\n")
-    with open(os.path.join(out_dir, "tailwind-preset.js"), "w", encoding="utf-8") as f:
-        f.write(to_tailwind_preset(tokens))
+    written.append(os.path.join(out_dir, "tokens.css"))
+    if tailwind:
+        with open(os.path.join(out_dir, "tailwind-preset.js"), "w", encoding="utf-8") as f:
+            f.write(to_tailwind_preset(tokens))
+        written.append(os.path.join(out_dir, "tailwind-preset.js"))
     with open(os.path.join(out_dir, "design-tokens.json"), "w", encoding="utf-8") as f:
         json.dump(to_w3c_tokens(tokens), f, indent=2)
-    return [
-        os.path.join(out_dir, "tokens.css"),
-        os.path.join(out_dir, "tailwind-preset.js"),
-        os.path.join(out_dir, "design-tokens.json"),
-    ]
+    written.append(os.path.join(out_dir, "design-tokens.json"))
+    return written
 
 
 if __name__ == "__main__":

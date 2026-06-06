@@ -90,12 +90,11 @@ LOG_FILE="${STATE_DIR}/server.log"
 # Create fresh session directory with content and state peers
 mkdir -p "${SESSION_DIR}/content" "$STATE_DIR"
 
-# Keep atelier scratch dirs out of the user's commits.
+# Never silently edit the user's tracked files. Default mode scratches in /tmp and
+# writes nothing to the repo; only --project-dir scratches in-repo, and even then we
+# just REMIND the user — we don't touch their .gitignore for them.
 if [[ -n "$PROJECT_DIR" ]]; then
-  gi="${PROJECT_DIR}/.gitignore"
-  if [[ ! -f "$gi" ]] || ! grep -qxF ".atelier-*/" "$gi" 2>/dev/null; then
-    printf '\n.atelier-*/\n' >> "$gi" 2>/dev/null || true
-  fi
+  echo "note: preview scratch is under ${PROJECT_DIR}/.atelier-preview/ — add '.atelier-*/' to your .gitignore if you keep it (atelier won't edit it for you; omit --project-dir to scratch in /tmp instead)." >&2
 fi
 
 # Kill any existing server

@@ -50,6 +50,14 @@ with `scripts/scan_repo.py` and obey it. If no contract exists, OFFER to generat
 one before generating polished output — do not silently default to Inter +
 purple gradient. This applies no matter how "quick" the request seems.
 
+When the repo ALREADY owns its tokens (a TS/JS theme module, a CSS custom-property
+theme, or a Tailwind config — `scan_repo` reports this as `token_source`), DESIGN.md
+**points at that source**; do NOT create a parallel `design/` folder or re-transcribe
+the token values — a second copy silently drifts. Generate `design/` tokens only when
+there is no existing source (or the user explicitly asks for a portable mirror). Never
+silently write to the user's tracked files (e.g. their `.gitignore`); keep scratch in
+`/tmp`.
+
 When generating a DESIGN.md, first ASSESS consistency (`scripts/assess.py`). If the
 repo is **messy** (no dominant palette, mixed styling, duplicate components), do
 NOT write a confident contract — warn the user honestly, present the best options

@@ -114,14 +114,22 @@ contract to the machine half so they can't drift. `scripts/lint_design.py` check
 that every `{color.*}` / `{font.*}` reference resolves against the contract and
 flags any that don't — fix the reference or add the token.
 
-## Token artifacts (the enforceable half)
+## Token artifacts (the enforceable half) — only when the repo has no source
 
-`scripts/export_tokens.py` renders a token dict into three files under `design/`
-(or into whatever token location the repo already uses — detect first):
+**Detect first; don't duplicate.** `scan_repo` reports `token_source` — set when the
+repo ALREADY owns its tokens in a TS/JS theme module (styled-components / `useTheme`
+/ a token object), a CSS custom-property theme, or a Tailwind config. **If it is set,
+do NOT create a `design/` folder.** A second copy of the tokens silently drifts from
+the real source and contradicts the contract. Instead, point `DESIGN.md` at that
+source (the thin-contract mode — see generate-design-md §4) and export portable
+tokens only if the user explicitly asks, labelled a generated mirror.
+
+Only when there is **no** existing source, `scripts/export_tokens.py` renders a token
+dict into `design/` (skip the Tailwind preset when the repo isn't Tailwind):
 
 - **`design/tokens.css`** — `:root { --color-primary: #…; --space-2: 8px; … }`
-- **`design/tailwind-preset.js`** — `module.exports = { theme: { extend: { … } } }`,
-  consumed via `presets: [require('./design/tailwind-preset')]`.
+- **`design/tailwind-preset.js`** — *Tailwind repos only* —
+  `module.exports = { theme: { extend: { … } } }`, via `presets: [require('./design/tailwind-preset')]`.
 - **`design/design-tokens.json`** — W3C Design Tokens
   (`{ "color": { "primary": { "$value": "#…", "$type": "color" } } }`).
 

@@ -363,6 +363,65 @@ def extract_motion(text):
             "easings": [e for e, _ in easings.most_common()]}
 
 
+# --- existing authoritative token source (so atelier POINTS, never duplicates) -
+# atelier's core principle: the design already in the repo wins. If the repo
+# already owns its tokens — a CSS custom-property theme, a Tailwind theme config,
+# OR a TS/JS theme module (styled-components / useTheme / a token object) — atelier
+# must reference that source, NOT emit a parallel design/ folder that will drift.
+_TS_THEME_HINTS = re.compile(
+    r"DefaultTheme|styled-components|useTheme\s*\(|createTheme|ThemeProvider|"
+    r"createGlobalStyle|injectGlobal|export\s+(?:const|default)\s+\w*[Tt]heme\b|"
+    r"export\s+(?:const|default)\s+\w*[Tt]okens\b", re.I)
+_TOKEN_OBJ = re.compile(
+    r"(?:palette|tokens|colou?rs?|spacing|radi[iu]s|typography|elevation)\s*:\s*\{", re.I)
+_THEME_PATH = re.compile(r"(?:^|/)(theme|themes|tokens|design|styles?)/", re.I)
+
+
+def _classify_token_file(rel, fn, text):
+    """Return (kind, path) if this file looks like an authoritative token source."""
+    relslash = rel.replace("\\", "/")
+    low = fn.lower()
+    if fn.startswith("tailwind.config"):
+        return ("tailwind", rel)
+    if fn.endswith(_STYLE_EXT) and text.count("--") >= 8 and re.search(r":root|@theme", text):
+        if re.search(r"theme|token|variabl|global|design|palette", low):
+            return ("css-vars", rel)
+    if fn.endswith((".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs")):
+        if _TOKEN_OBJ.search(text) and (_TS_THEME_HINTS.search(text) or _THEME_PATH.search(relslash)):
+            if _HEX.search(text) or re.search(r"\b\d+px\b", text):     # carries real values
+                return ("ts-theme", os.path.dirname(rel) or rel)
+    return None
+
+
+_TOKEN_SRC_PRIORITY = {"ts-theme": 0, "css-vars": 1, "tailwind": 2}
+
+
+def detect_token_source(root):
+    """Walk the repo and return the most authoritative existing token source, or None.
+    {'kind': 'ts-theme'|'css-vars'|'tailwind', 'path': <rel>, 'confidence': ...}."""
+    best = None
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
+        for fn in filenames:
+            if not (fn.endswith(_STYLE_EXT) or fn.endswith(_CODE_EXT)
+                    or fn.startswith("tailwind.config")):
+                continue
+            p = os.path.join(dirpath, fn)
+            try:
+                if os.path.getsize(p) > _MAX_BYTES:
+                    continue
+                text = open(p, encoding="utf-8").read()
+            except Exception:
+                continue
+            sig = _classify_token_file(os.path.relpath(p, root), fn, text)
+            if sig and (best is None or _TOKEN_SRC_PRIORITY[sig[0]] < _TOKEN_SRC_PRIORITY[best[0]]):
+                best = sig
+    if not best:
+        return None
+    return {"kind": best[0], "path": best[1],
+            "confidence": "high" if best[0] in ("ts-theme", "css-vars") else "medium"}
+
+
 # --- dark mode ---------------------------------------------------------------
 _DARK = re.compile(
     r"prefers-color-scheme\s*:\s*dark|\[data-theme=[\"']?dark|\.dark\b|"
@@ -682,6 +741,9 @@ def scan_directory(root):
         "z_indexes": extract_z_indexes(style_blob + "\n" + code_blob),
         "motion": extract_motion(style_blob + "\n" + code_blob),
         "dark_mode": detect_dark_mode(style_blob + "\n" + code_blob),
+        # If set, the repo already owns its tokens — point DESIGN.md at this source;
+        # do NOT emit a parallel design/ folder (it would drift). See generate-design-md §5.
+        "token_source": detect_token_source(root),
     }
     report["known_gaps"] = known_gaps(report)
     return report

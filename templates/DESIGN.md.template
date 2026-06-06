@@ -1,8 +1,13 @@
 # DESIGN.md — {{PROJECT_NAME}}
 
 > The design constitution for this repo. atelier (and any contributor) must obey
-> it when producing visual work. Tokens in `design/` are the enforceable form of
-> the palette / type / spacing below. Regenerate tokens after editing this file.
+> it when producing visual work.
+> **Source of truth for tokens:** {{TOKEN_SOURCE}}
+> <!-- If the repo already owns its tokens (a theme module / CSS-var theme /
+>      Tailwind config), name that path here and edit tokens THERE — this file
+>      points at it and must not re-transcribe values. Only if the repo had no
+>      token source does atelier generate `design/` tokens; then regenerate them
+>      after editing the palette/type/spacing below. -->
 
 ## 1. Identity & tone
 - **Product type:** {{PRODUCT_TYPE}}

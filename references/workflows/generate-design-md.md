@@ -93,42 +93,71 @@ direction. These are SEEDS, not a contract: they NEVER override a repo that alre
 speaks, and the output still terminates in atelier's `DESIGN.md` (not a separate
 persistent file). The moment real signal exists, the empirical scan wins.
 
-### 4. Write DESIGN.md
+### 4. Write DESIGN.md — thin contract when the repo already owns its tokens
 
-Fill `templates/DESIGN.md.template` with the measured + enriched values and write
-it to the repo root. Be specific: name the exact fonts, hex values, and the
-project-specific anti-slop blocklist (e.g. "display = Sora; never Inter").
+First check `scan_repo`'s `token_source`. **If it is set** (the repo already owns
+its tokens in a TS/JS theme module, a CSS custom-property theme, or a Tailwind
+config — `kind` + `path`), write a **thin, pointer contract**, not a second copy of
+the theme:
 
-**Scale §7–§9 to the repo (design-md-spec → "Scale the contract"):** populate
-**component standards** (§7) from the census, **data/chart standards** (§8) for
-data-heavy products, and leave **house rules** (§9) for the team to add their
-conventions (e.g. "no flyouts, only modals" → `[forbid: flyout | prefer: Modal]`).
-A portfolio stays light here; a large/standardized repo gets the full treatment.
-Tell the user (in plain language — not "§9") that the **House rules** section is
-where they drop company conventions so atelier obeys and enforces them.
+- **KEEP (the real value — governance + analysis the code doesn't carry):** §1
+  identity/tone; §6 anti-slop rules; §7 canonical components + dedupe targets +
+  interaction-state gaps (from the census); §8 data/chart standards; §9 house rules;
+  §10 the *audited* contrast results/exceptions; §11 overrides; §12 known gaps. And
+  the **canonical-source pointer**: name the `token_source` path as the source of
+  truth and the access pattern (e.g. `useTheme()` / CSS vars).
+- **TRIM to pointers — do NOT re-transcribe token values:** for §2 palette, §3 type
+  scale/weights, §4 spacing/radius/depth, §5 motion, state the **roles/structure**
+  and point at the source ("Palette roles: `brand.*`, `severity.*`, `surface.*` —
+  values live in `<token_source.path>`; read via the theme. Don't duplicate hexes
+  here."). Re-typing values into prose just creates a copy that drifts (the same
+  failure as a stale CLAUDE.md).
 
-### 5. Export the tokens
+**If `token_source` is null** (no existing source), fill
+`templates/DESIGN.md.template` with the measured values directly — name the exact
+fonts, hex values, and the anti-slop blocklist.
 
-Build a token dict (see `references/design-md-spec.md` for the shape) from the
-agreed palette/type/spacing, then:
+Either way, **scale §7–§9 to the repo** (design-md-spec → "Scale the contract"):
+component standards (§7) from the census, data/chart standards (§8) for data-heavy
+products, house rules (§9) for the team's conventions. A portfolio stays light; a
+large/standardized repo gets the full governance treatment. Tell the user (in plain
+language — not "§9") that the **House rules** section is where they drop company
+conventions so atelier obeys and enforces them.
+
+### 5. Export the tokens — ONLY if there's no existing token source
+
+```dot
+"token_source set?" -> "DON'T create design/. Point DESIGN.md at it. Stop." [yes];
+"token_source set?" -> "export_tokens -> <repo>/design/" [no];
+```
+
+**Hard gate:** if `scan_repo` reported a `token_source`, do **NOT** run
+`export_tokens` / create a `design/` folder — that's a parallel copy that will
+drift from the real source, and it contradicts the contract you just wrote. Point
+DESIGN.md at the existing source and stop. Export portable tokens only if the user
+**explicitly asks** for them, and then label them a generated mirror.
+
+Only when there is **no** existing source, build a token dict (shape in
+`references/design-md-spec.md`) and export:
 
 ```bash
 python3 scripts/export_tokens.py /tmp/atelier-tokens.json <repo>/design
-# -> <repo>/design/{tokens.css, tailwind-preset.js, design-tokens.json}
+# -> <repo>/design/{tokens.css, design-tokens.json (+ tailwind-preset.js IF Tailwind)}
 # Always pass the repo's design dir explicitly — the default is the CWD.
 ```
-
-If the repo already has a token location (e.g. a `theme.ts`, a tailwind config),
-prefer writing there / wiring the preset in, rather than imposing `design/`.
+Pass `tailwind=False` to `write_all` (or skip the preset) when the repo isn't
+Tailwind (styled-components / CSS modules) — a Tailwind preset is noise there.
 
 ### 6. Build the living style guide (offer)
 
 ```bash
-python3 scripts/census.py <repo> --out <repo>/design/components.json   # populate §7
-python3 scripts/build_styleguide.py <repo>/design/design-tokens.json -o <repo>/design/styleguide.html
+python3 scripts/census.py <repo>                       # component inventory for §7 (prints; --out to save)
+python3 scripts/build_styleguide.py <tokens.json> -o /tmp/styleguide.html
 ```
-The style guide renders the measured palette (with contrast labels), type scale,
-spacing/radius, and the component inventory — serve it via the preview server.
+The style guide renders the palette (with contrast labels), type scale,
+spacing/radius, and the inventory — serve it via the preview server. Build it from
+the token dict (a `/tmp` JSON derived from the repo's token source is fine) — you do
+**not** need a `design/` folder, and don't create one just to render a preview.
 
 ### 7. Offer to commit
 
