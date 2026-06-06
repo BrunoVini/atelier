@@ -27,6 +27,10 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 - **Same color = same meaning, everywhere.** If green is "primary series", it is the
   primary series in every panel — not also a category dot, not also "positive delta" by
   coincidence. A hue that appears once and never reconnects is decoration, not an encoding.
+- **A categorical hue must not also signal delta direction.** If red already encodes a
+  category (e.g. the "fully remote" series), don't *also* paint the ▲ positive-delta arrows
+  red — now red means two things at once. Give delta direction its own consistent treatment
+  (e.g. up = ink/green ▲, down = gray ▼) kept distinct from any categorical palette.
 - **Don't use a status color as a category.** Amber/"warn" and red/"negative" are reserved
   for status. Using amber as the dot for a metric whose delta is *positive* contradicts the
   system. Use the neutral/series palette for categories; keep semantic colors for status.
