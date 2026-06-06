@@ -88,6 +88,25 @@ the definition of done, not optional.
 }
 ```
 
+## 6. Finish interactions honestly — half-wired is worse than omitted
+
+A marquee interaction that's broken or faked undercuts the whole page on close read:
+
+- **A control that exists must work and work correctly.** A "Copy" button must copy the
+  real payload (strip comment lines / fix whitespace), not `innerText` verbatim. If you
+  won't wire it, don't ship it as an actionable control.
+- **Don't half-implement ARIA.** A `role="tablist"` needs real keyboard operation
+  (arrow-key roving `tabindex`); a `role="img"` on a structured/interactive region hides
+  all its content from assistive tech. Partial ARIA can be worse than none — match the
+  role to the actual behavior.
+- **Don't fake the wiring.** Footer/nav links should point at real (or honestly distinct)
+  targets — not all resolve to `#hero`. Clicking "Careers" landing on a testimonial reads
+  as filler.
+- **Tie in-view micro-motion to the reveal, not load.** Data-viz inside a below-the-fold
+  section (bars growing, sparkline drawing) should animate when that section reveals —
+  otherwise it finishes before the user scrolls to it and arrives dead. Trigger it from
+  the same IntersectionObserver as the section.
+
 ## Definition of done for a landing surface
 
 Before you call a hero/landing page finished, all of these are "yes":
@@ -99,6 +118,8 @@ Before you call a hero/landing page finished, all of these are "yes":
 - [ ] Product shown more than once, with **different** surfaces
 - [ ] Primary CTA is the loudest pixel at rest (glow/fill/arrow); secondary is quiet
 - [ ] `:focus-visible` ring on every interactive control
+- [ ] Every shipped control actually works; ARIA matches behavior; links target real anchors
+- [ ] In-view micro-animations trigger on section reveal, not at page load
 - [ ] `slop_check.py` clean of `important` (incl. `no-focus-visible`); contrast AA
 
 This is the craft layer on top of anti-slop. Clean + crafted is how the page wins.
