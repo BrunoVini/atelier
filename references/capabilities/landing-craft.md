@@ -132,6 +132,29 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
   rapid re-trigger), and must store + clear its timer per element before starting a new one —
   otherwise fast toggling races overlapping intervals onto a stale number.
 
+## 7. Match the focal moment to the genre — restraint is editing, not thinness
+
+The hero's focal element depends on what's being sold, and "restrained" never means "sparse".
+
+- **When the product IS the hero (e-commerce, hardware, a watch/device), the product render
+  is the focal moment — invest in detail.** A hero watch needs a dense minute track, real
+  indices, subdials, a date aperture — gravitas. A near-empty dial reads cheap, not minimal.
+  A clean dev console still needs real rows and a live value. Don't ship a thin centerpiece
+  and call it restraint; restraint is *removing clutter around* a richly-made focal object.
+- **The hero artifact must match what's purchasable.** Showing a hero product (color/case/
+  finish) that matches none of the items in the collection below is a credibility-killer —
+  a real maison shows a flagship you can actually buy. Keep hero and catalog consistent.
+- **Pick the characterful face for the genre, not the safe one.** Luxury/editorial wants the
+  most characterful appropriate display cut (Cormorant Garamond, Fraunces, Newsreader) paired
+  with an editorial body, hierarchy carried by scale + whitespace, not weight. A plain
+  humanist body under a serif is a half-step below — commit to the pairing the genre rewards.
+- **Copy matches the register.** Luxury/editorial copy is *evocative*, not merely clear;
+  developer copy is terse and concrete; fintech is precise and trustworthy. Write to the
+  genre's voice, not a generic "benefit + adjective" line.
+- **No dead markup or dead controls.** Remove abandoned/empty element groups (a commented
+  "generated ticks" block with nothing in it), and never ship a control that does nothing
+  (a "Menu" button with no handler). It reads as unfinished on close inspection.
+
 ## Definition of done for a landing surface
 
 Before you call a hero/landing page finished, all of these are "yes":
