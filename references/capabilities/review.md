@@ -173,6 +173,23 @@ whole sweep and re-screenshot the affected breakpoint. A fix you didn't re-rende
 is a guess. The collision is only resolved when the sweep is clean at *every*
 width and the screenshot confirms it — not when one viewport happens to look right.
 
+## 3a2. Verify the rendered STRUCTURE matches intent (and the markup is well-formed)
+
+"It rendered and the numbers are right" is not "it looks right." A common silent failure: a
+**malformed closing tag** — `<//dd>`, `<//span>`, `<//b>` (a stray double-slash), or an unclosed
+tag — that the browser *error-recovers* by re-parenting later elements. The page still shows
+content, but a two-column grid can collapse to one column (e.g. the order-summary `<aside>` ends
+up nested in a stray `<b>` instead of the grid, so the sidebar stacks full-width below the form
+on desktop with a dead empty column). textContent still populates, so values look fine — the
+layout is quietly broken.
+
+So in self-QA: (1) **grep the source for malformed tags** — `<//`, and obvious unclosed/mismatched
+elements — before trusting the render. (2) **Confirm the intended layout STRUCTURE at the width it
+targets**, not just mobile: if you built a two-column grid, verify the sidebar actually sits beside
+the content at desktop width (check it's a child of the grid / its bounding box is to the right),
+not merely that "something rendered." Look at the desktop screenshot specifically and ask "is this
+the structure I authored?", because a recovered parse can look plausible in a thumbnail.
+
 ## 3b. Verify the web fonts actually LOADED (not just linked)
 
 A `<link>` to a font is not proof the font rendered. A single typo in a Google Fonts
