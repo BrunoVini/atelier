@@ -18,7 +18,7 @@ obey it. One bold, intentional aesthetic per project; never generic AI slop.
 In Claude Code, add the marketplace and install the plugin:
 
 ```text
-/plugin marketplace add BrunoVini/atelie
+/plugin marketplace add BrunoVini/atelier
 /plugin install atelier@atelier-dev
 ```
 
