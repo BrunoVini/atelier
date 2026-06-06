@@ -95,6 +95,9 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
 - **A control that exists must work and work correctly.** A "Copy" button must copy the
   real payload (strip comment lines / fix whitespace), not `innerText` verbatim. If you
   won't wire it, don't ship it as an actionable control.
+- **Click and keyboard must not diverge.** If a search box reveals/focuses its input on
+  `⌘K`, clicking the same affordance must do it too — don't leave the real input parked at
+  `left:-9999px` for mouse users. Every affordance works by both pointer and keyboard.
 - **Don't `aria-hidden` real content.** A marquee/ticker of services, a row of client
   names, or a stat strip carries information — hiding it from assistive tech to "reduce
   noise" deletes content for screen-reader users. Reserve `aria-hidden` for purely
