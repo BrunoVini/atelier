@@ -144,6 +144,9 @@ The hero's focal element depends on what's being sold, and "restrained" never me
 - **The hero artifact must match what's purchasable.** Showing a hero product (color/case/
   finish) that matches none of the items in the collection below is a credibility-killer —
   a real maison shows a flagship you can actually buy. Keep hero and catalog consistent.
+- **Product specs must be internally consistent.** Don't say "automatic" on the dial and
+  "hand-wound" in a spec chip, or quote one capacity in two places. Contradictory product
+  facts read as a copy-paste artifact and break trust on exactly the page meant to build it.
 - **Pick the characterful face for the genre, not the safe one.** Luxury/editorial wants the
   most characterful appropriate display cut (Cormorant Garamond, Fraunces, Newsreader) paired
   with an editorial body, hierarchy carried by scale + whitespace, not weight. A plain
