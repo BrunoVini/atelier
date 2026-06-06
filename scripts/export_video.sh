@@ -14,10 +14,12 @@ IN="${1:-}"
 OUT="${2:-}"
 SECONDS_LEN="${3:-8}"
 FPS="${4:-30}"
+GIF_WIDTH="${5:-960}"   # GIFs are downscaled + frame-reduced for small, shareable files
+GIF_FPS="${6:-15}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 if [[ -z "$IN" || -z "$OUT" ]]; then
-  echo "usage: export_video.sh <input.html> <output.mp4|.gif> [seconds] [fps]" >&2
+  echo "usage: export_video.sh <input.html> <output.mp4|.gif> [seconds] [fps] [gif_width] [gif_fps]" >&2
   exit 2
 fi
 
@@ -52,8 +54,10 @@ const [, , input, outDir, frames, fps] = process.argv;
   const page = await (browser.newPage ? browser.newPage() : browser.pages().then(p => p[0]));
   await page.setViewportSize ? page.setViewportSize({ width: 1280, height: 720 })
                              : await page.setViewport({ width: 1280, height: 720 });
-  const url = 'file://' + path.resolve(input);
-  await page.goto(url, { waitUntil: 'load' });
+  const url = /^https?:\/\//.test(input) ? input : 'file://' + path.resolve(input);
+  await page.goto(url, { waitUntil: 'networkidle' });
+  // Wait for web fonts so frames aren't a fallback-font "raw HTML" render.
+  await page.evaluate(() => (document.fonts ? document.fonts.ready : null)).catch(() => {});
   const interval = 1000 / Number(fps);
   for (let i = 0; i < Number(frames); i++) {
     const f = String(i).padStart(5, '0');
@@ -66,14 +70,14 @@ NODE
 
 # --- assemble ---------------------------------------------------------------
 if [[ "$OUT" == *.gif ]]; then
-  PALETTE="$TMP/palette.png"
-  ffmpeg -y -loglevel error -framerate "$FPS" -i "$TMP/frame-%05d.png" \
-    -vf "palettegen" "$PALETTE"
-  ffmpeg -y -loglevel error -framerate "$FPS" -i "$TMP/frame-%05d.png" -i "$PALETTE" \
-    -lavfi "paletteuse" "$OUT"
+  # High-quality GIF: downsample fps, scale (lanczos), per-frame palette (stats_mode
+  # =diff) + Bayer dithering — same quality recipe huashu uses, in one filtergraph.
+  ffmpeg -y -loglevel error -framerate "$FPS" -i "$TMP/frame-%05d.png" -vf \
+    "fps=${GIF_FPS},scale=${GIF_WIDTH}:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
+    -loop 0 "$OUT"
 else
   ffmpeg -y -loglevel error -framerate "$FPS" -i "$TMP/frame-%05d.png" \
-    -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$OUT"
+    -c:v libx264 -pix_fmt yuv420p -crf 18 -movflags +faststart "$OUT"
 fi
 
 echo "✓ wrote $OUT" >&2

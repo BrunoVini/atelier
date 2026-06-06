@@ -30,14 +30,22 @@ exit as a single flowing piece. This is the single biggest quality lever.
 ## Export to video
 
 ```bash
-scripts/export_video.sh path/to/animation.html out.mp4   # or out.gif
+scripts/export_video.sh anim.html out.mp4                      # MP4 (CRF 18)
+scripts/export_video.sh anim.html out.gif 8 30 960 15          # GIF: 960px-wide, 15fps
 ```
 
-- Default delivery is an **MP4 with audio** (SFX + BGM) — a silent version feels
-  cheap. Base 25fps + 60fps interpolation; palette-optimized GIF; auto fade.
-- Requires `ffmpeg` + a headless browser (puppeteer/playwright). If missing, the
-  script warns and produces what it can (e.g. silent / frames only) — see
-  `assets/media/README.md` for BGM/SFX.
+- Capture is **fidelity-correct**: it waits for `networkidle` + `document.fonts.ready`
+  so frames aren't a fallback-font "raw HTML" render.
+- **GIF** uses the high-quality recipe — downsampled fps + lanczos scale +
+  per-frame palette (`stats_mode=diff`) + Bayer dithering, in one filtergraph;
+  defaults to 960px / 15fps for small, shareable files (override via args). This
+  matches huashu's GIF quality.
+- **MP4**: H.264 CRF 18. For 60fps interpolation, auto-fade, and the BGM/SFX
+  pipeline, see `capabilities/animation/video-export.md` (and `assets/media/README.md`
+  for the audio library). Default delivery for a narrated piece is an MP4 *with*
+  audio — a silent version feels cheap.
+- Requires `ffmpeg` + a headless browser (playwright/puppeteer). If missing, the
+  script warns and the HTML stays valid to open in a browser.
 
 ## Preview
 
