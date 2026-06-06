@@ -63,6 +63,12 @@ browser; `export PATH="$HOME/.local/bin:$PATH"` first if ffmpeg/chromium live th
   editable (that trade buys perfect fidelity with no layout-engine guesswork). Speaker-notes
   export is not yet wired into the PPTX path — note that if the user needs editable notes.
 
+**Fonts & true offline use.** A Google-Fonts `<link>` is fine for most decks (the deck
+boots and degrades to a fallback face offline). But when the deck must look *pixel-correct
+offline* — kiosk, air-gapped demo, a judged "fully self-contained" bar — inline the faces as
+base64 `@font-face` (subset to the weights you use) instead of the link, so the intended type
+renders with zero network. Same option applies to prototypes and any single-file deliverable.
+
 The same `export_pdf.mjs` is the print-grade export for **infographics / data-viz** (vector
 PDF); for raster use `screenshot.mjs --full` (300dpi-ish via deviceScaleFactor), and for SVG
 deliverables author the art as inline `<svg>` and save it directly (already vector).
