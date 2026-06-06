@@ -165,17 +165,32 @@ Show the user the `DESIGN.md` + token files (+ style guide) and offer to commit
 them. Remind them the tokens can be imported by the build (CSS `@import`, tailwind
 `presets`).
 
-## Cold start (no CSS, or "make it like this")
+## Cold start (no repo / one-off artifact / "make it like this")
 
-When the repo has no styles to measure, or the user points at a reference, import
-a starting direction instead of inventing one:
+This is the case where atelier looks *least* different from free-handing it — there's
+no design to measure, so the measurement thesis doesn't apply. Don't just "pick a tone
+and generate" (that's the free-hand path). Earn the skill's keep by GROUNDING the
+direction in the distilled knowledge a blank model doesn't have, giving a real choice,
+and closing with the self-QA loop:
 
-```bash
-python3 scripts/import_reference.py --image reference.png    # quantize dominant colors
-python3 scripts/import_reference.py --url https://stripe.com # read live computed styles/fonts
-```
-Assign roles (primary/accent/bg/fg) to the imported colors, then continue from
-step 4. Imported values are a *starting* direction — confirm with the user.
+1. **Ground the direction in the KB** (don't invent from nothing):
+   ```bash
+   python3 scripts/search_kb.py "<product type + tone>" --domain styles          # named styles
+   python3 scripts/search_kb.py "<product type + tone>" --domain palettes        # role'd palettes
+   python3 scripts/search_kb.py "<named brand or vibe>"  --domain brand-exemplars # cold-start seeds
+   python3 scripts/search_kb.py "<product type>"         --domain reasoning       # greenfield reasoning
+   python3 scripts/import_reference.py --url https://… / --image ref.png          # or import a reference
+   ```
+2. **Offer 2–3 distinct directions**, not one — let the user pick (see `variants.md`).
+   Each is a committed tone + palette + type + motion, named (not "modern/clean").
+3. **Capture a tiny inline contract** from the pick (tone + palette roles + the one
+   display/body/mono + motion) so generation is constrained even without a repo.
+4. **Generate** using the craft refs (design-philosophy, prototypes/animations).
+5. **Run the self-QA loop and FIX** (see SKILL.md "Definition of done") — `slop_check`,
+   `audit_contrast`, `overlap_risk`/`responsive_check`. This is the part a blank model
+   cannot do, and it's the concrete reason to run atelier on a from-scratch artifact.
+
+Imported/KB values are a *starting* direction — confirm with the user before committing.
 
 ## Notes
 

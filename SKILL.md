@@ -129,6 +129,25 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 | Design-review a pull request | `references/workflows/pr-review.md` | `lint_design.py` |
 | Onboard the team to the design language | `references/workflows/onboarding.md` | `build_onboarding.py` |
 
+## Definition of done — self-QA every artifact (this is the delta)
+
+Any capable model can *generate* a page. What it cannot do is mechanically verify its
+own output — that's where atelier earns its keep, **especially on from-scratch work
+where there's no contract to measure.** A visual artifact is NOT done until it passes
+these checks and you've FIXED what they flag (don't rationalize a finding away):
+
+```bash
+python3 scripts/slop_check.py <file> --contract <repo|DESIGN.md>   # clean of `important`
+python3 scripts/audit_contrast.py <tokens|DESIGN.md>              # AA: 4.5:1 text / 3:1 large
+python3 scripts/overlap_risk.py <dir>                            # static; always
+node scripts/responsive_check.mjs <file|url>                     # overflow+collision (if renderable)
+```
+
+Run this loop on your OWN generated output, not just the user's — it routinely catches
+generic-font/oklch-default tells, contrast misses, and decoration drift you won't eyeball.
+If you can't render (no browser), say so and rely on the static checks. Skipping this is
+the difference between "I made a page" and "I made a verified, on-contract page."
+
 ## Quick start
 
 ```bash

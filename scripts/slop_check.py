@@ -35,7 +35,13 @@ _PURPLE = re.compile(
 _FONT_DECL = re.compile(r"font-family\s*:\s*([^;{}]+)", re.I)
 _GFONT = re.compile(r"family=([A-Za-z0-9+]+)", re.I)
 _BACKDROP = re.compile(r"backdrop-filter\s*:\s*blur", re.I)
-_LEFT_BORDER = re.compile(r"border-left\s*:[^;}]*\b(solid|#|rgb|var)", re.I)
+# The cliché is a CHUNKY colored accent border (3-4px), not a 1px neutral divider —
+# require >=2px so a normal column divider doesn't trip it.
+_LEFT_BORDER = re.compile(r"border-left\s*:\s*(?:[2-9]|\d{2,})(?:\.\d+)?px[^;}]*\b(solid|#|rgb|var)", re.I)
+# Generic fallbacks in a font stack are NOT distinct typefaces — don't count them.
+_FONT_FALLBACKS = {"serif", "sans-serif", "monospace", "inherit", "initial", "unset",
+                   "system-ui", "ui-serif", "ui-sans-serif", "ui-monospace", "emoji",
+                   "-apple-system", "blinkmacsystemfont"}
 
 # --- text extraction (run copy tells on what the user actually reads) ---
 _SCRIPT_STYLE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.I | re.S)
@@ -208,9 +214,14 @@ def _copy_tells(html):
 
 def _structural_tells(html):
     findings = []
-    if len(re.findall(r"text-transform\s*:\s*uppercase", html, re.I)) >= 4:
+    # Eyebrow OVER-USE = many sections each led by a small kicker label. Count the
+    # actual eyebrow elements (by class), not every uppercase rule — form labels,
+    # tags and status pills are legitimately uppercase and must not trip this.
+    eyebrows = len(re.findall(r'class\s*=\s*["\'][^"\']*\b(?:eyebrow|kicker|overline)\b',
+                              html, re.I))
+    if eyebrows >= 4:
         findings.append({"severity": "polish", "kind": "eyebrow-overuse",
-                         "detail": "uppercase “eyebrow” labels used 4+ times — a template "
+                         "detail": "eyebrow/kicker labels on 4+ sections — a template "
                                    "rhythm; let headings carry the page"})
     low = html.lower()
     if sum(1 for t in _TRAFFIC if t in low) >= 2:
@@ -273,7 +284,10 @@ def check_html(html, allowed_fonts=None, profile=None, contract=None):
     # 1. Overused/generic primary fonts (unless the contract sanctions them).
     used = []
     for decl in _FONT_DECL.findall(html):
-        used.append(decl.split(",")[0].strip().strip("'\""))
+        first = decl.split(",")[0].strip().strip("'\"")
+        if "var(" in first.lower() or not first:   # a token ref isn't a typeface
+            continue
+        used.append(first)
     for fam in _GFONT.findall(html):
         used.append(fam.replace("+", " "))
     for fam in used:
@@ -303,9 +317,8 @@ def check_html(html, allowed_fonts=None, profile=None, contract=None):
         findings.append({"severity": "polish", "kind": "card-left-border",
                          "detail": "rounded card + left colored border — a dated cliché combo"})
 
-    # 6. Too many distinct font families.
-    distinct = {f.lower() for f in used if f and f.lower() not in
-                ("serif", "sans-serif", "monospace", "inherit")}
+    # 6. Too many distinct font families (generic stack fallbacks don't count).
+    distinct = {f.lower() for f in used if f and f.lower() not in _FONT_FALLBACKS}
     if len(distinct) > 4:
         findings.append({"severity": "polish", "kind": "too-many-fonts",
                          "detail": f"{len(distinct)} font families — tighten to a display + body (+mono)"})

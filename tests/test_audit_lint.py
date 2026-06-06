@@ -77,6 +77,35 @@ def test_slop_copy_and_editorial_tells():
                 {f["kind"] for f in check_html("<p>A studio for serious products.</p>")})
 
 
+def test_slop_font_count_ignores_var_refs_and_fallbacks():  # dogfood fix
+    from slop_check import check_html
+    html = ('<style>h1{font-family:"Space Grotesk",system-ui,sans-serif}'
+            'p{font-family:"IBM Plex Sans",sans-serif}'
+            'code{font-family:"JetBrains Mono",ui-monospace,monospace}'
+            'div{font-family:var(--body)}</style>')
+    kinds = {f["kind"] for f in check_html(html)}
+    assert "too-many-fonts" not in kinds   # 3 real faces; var()/fallbacks must not inflate
+    assert "generic-font" not in kinds     # none of the three are slop defaults
+
+
+def test_slop_eyebrow_needs_eyebrow_class_not_any_uppercase():  # dogfood fix
+    from slop_check import check_html
+    uppercase_labels = ('<style>label{text-transform:uppercase}.tag{text-transform:uppercase}'
+                        '.k{text-transform:uppercase}.s{text-transform:uppercase}</style>'
+                        '<label>A</label>')
+    assert "eyebrow-overuse" not in {f["kind"] for f in check_html(uppercase_labels)}
+    eyebrows = "".join(f'<span class="eyebrow">Section {i}</span>' for i in range(5))
+    assert "eyebrow-overuse" in {f["kind"] for f in check_html(eyebrows)}
+
+
+def test_slop_card_left_border_needs_chunky_accent():  # dogfood fix
+    from slop_check import check_html
+    divider = '<style>.col{border-left:1px solid var(--line);border-radius:8px}</style>'
+    assert "card-left-border" not in {f["kind"] for f in check_html(divider)}
+    cliche = '<style>.card{border-left:4px solid #e8513a;border-radius:8px}</style>'
+    assert "card-left-border" in {f["kind"] for f in check_html(cliche)}
+
+
 def test_slop_oklch_warm_neutral_default_ban():
     from slop_check import check_html
     warm = '<style>body{background:oklch(0.96 0.02 80)}</style>'
