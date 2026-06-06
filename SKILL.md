@@ -1,6 +1,6 @@
 ---
 name: atelier
-description: Use when building, designing, reviewing, or improving any visual or frontend work — web pages, components, landing pages, dashboards, UI mockups, hi-fi prototypes, interactive demos, slides/decks, animations, narrated/explainer videos — or when the user wants a live preview/demo, design suggestions, a color/typography/style direction, a design review or layout score, a decision between design directions, or a project's design system / DESIGN.md. Triggers (EN): design, prototype, mockup, landing page, dashboard, component, UI, frontend, slides, deck, animation, explainer, variants, review, score this layout, preview, demo, design tokens, style guide, weigh the options, "make it look good", "does this look right". Triggers (PT): design, protótipo, mockup, página, componente, slides, animação, variantes, revisão, pontuar layout, preview, demonstração, decidir direção, "deixa bonito", estilo, paleta.
+description: Use when building, designing, reviewing, or improving any visual or frontend work — web pages, components, landing pages, dashboards, UI mockups, hi-fi prototypes, interactive demos, slides/decks, animations, narrated/explainer videos — or when the user wants a live preview/demo, design suggestions, a color/typography/style direction, a design review or layout score, a decision between design directions, or a project's design system / DESIGN.md. Triggers (EN): design, prototype, mockup, landing page, dashboard, settings page, form, sign-up, onboarding, wizard, admin panel, component, UI, frontend, slides, deck, animation, explainer, variants, review, score this layout, preview, demo, design tokens, style guide, weigh the options, "make it look good", "does this look right". Triggers (PT): design, protótipo, mockup, página, configurações, formulário, cadastro, onboarding, componente, slides, animação, variantes, revisão, pontuar layout, preview, demonstração, decidir direção, "deixa bonito", estilo, paleta.
 license: Apache-2.0. See LICENSE.
 ---
 
@@ -97,6 +97,7 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 | A hi-fi prototype / app mockup / device frame | `references/capabilities/prototypes.md` | `assets/frames/*.jsx` |
 | A landing / marketing / hero page (make it read *designed*) | `references/capabilities/landing-craft.md` | `slop_check.py` |
 | A dashboard / data viz / chart / KPI / analytics UI | `references/capabilities/data-viz-craft.md` | `search_kb.py` (charts) |
+| A settings / account / form / sign-up / onboarding / wizard / admin / app utility surface | `references/capabilities/forms-craft.md` | `slop_check.py` |
 | A live preview / demo / "show me" / pick between options | `references/capabilities/preview.md` | `scripts/preview/start.sh` |
 | Iterate live on an element (pick → contract-bound variants → accept into source) | `references/capabilities/preview.md` | `scripts/edit_apply.py` |
 | 2-3 design directions to choose from | `references/capabilities/variants.md` | `assets/engines/canvas.jsx` |
