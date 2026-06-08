@@ -12,7 +12,9 @@
  * Usage:
  *   node responsive_check.mjs <page.html|url> [--widths 360,768,834,1024,1280,1440,1920]
  *
- * Exits non-zero if any width overflows OR has a severe (≥60%) text collision.
+ * Exits non-zero if any width overflows, has a severe (≥60%) text collision, OR an
+ * OPAQUE decoration covering text. A blurred / edge-transparent wash over text stays
+ * an advisory (exit 0) — only the confident "solid thing on top of words" case gates.
  * Degrades gracefully without a browser.
  */
 import fs from 'node:fs';
@@ -85,6 +87,20 @@ const PROBE = `(() => {
   // Decorations: positioned (absolute/fixed) or svg/img elements with NO own text.
   // A decoration sitting on top of text (e.g. a doodle peeking around a note) is the
   // case text-vs-text misses — surface it as advisory (collages are legitimate).
+  // Is a decoration an OPAQUE cover (a solid badge/shape that hides text) or a soft
+  // edge-transparent wash (a blurred/fade-out blob the text reads through)? Only the
+  // opaque cover is a hard defect; the wash stays advisory. This is the judgement the
+  // sweep used to punt entirely to a human — we make the confident half mechanical.
+  const isOpaqueCover = (cs) => {
+    if (parseFloat(cs.opacity) < 0.85) return false;                       // see-through element
+    if (cs.filter && cs.filter !== 'none' && /blur\\(/.test(cs.filter)) return false;  // blurred wash
+    const img = cs.backgroundImage || 'none';
+    if (/gradient/.test(img))                                              // fade-to-transparent = wash
+      return !/transparent|rgba\\([^)]*,\\s*0(\\.0+)?\\s*\\)/.test(img);
+    const bg = cs.backgroundColor || 'transparent';
+    if (bg === 'transparent' || /rgba\\([^)]*,\\s*0(\\.\\d+)?\\s*\\)/.test(bg)) return false;
+    return true;                                                           // solid background colour covers
+  };
   const decos = [];
   for (const el of document.querySelectorAll('body *')) {
     const tag = el.tagName.toLowerCase();
@@ -98,7 +114,7 @@ const PROBE = `(() => {
     const r = el.getBoundingClientRect();
     if (r.width < 8 || r.height < 8) continue;
     if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) === 0) continue;
-    decos.push({ el, r, sel: selOf(el) });
+    decos.push({ el, r, sel: selOf(el), opaque: isOpaqueCover(cs) });
   }
 
   const overlaps = [], decoOverlaps = [];
@@ -126,7 +142,7 @@ const PROBE = `(() => {
           const iy = Math.min(t.r.bottom, d.r.bottom) - Math.max(t.r.top, d.r.top);
           if (ix <= 1 || iy <= 1) continue;
           const pct = Math.round((ix * iy) / (t.r.width * t.r.height) * 100);
-          if (pct >= 35) decoOverlaps.push({ text: t.sel, deco: d.sel, pct });
+          if (pct >= 35) decoOverlaps.push({ text: t.sel, deco: d.sel, pct, opaque: !!d.opaque });
         }
       }
       decoOverlaps.sort((x,y) => y.pct - x.pct);
@@ -143,13 +159,14 @@ function contactSheet(rows) {
     const tags = [];
     if (r.overflow) tags.push(`⚠ OVERFLOW (doc ${r.docW}px)`);
     if (r.severeOverlap) tags.push('⚠ COLLISION');
+    if (r.decoOverlaps?.some(o => o.opaque)) tags.push('⚠ COLLISION (deco)');
     return `
     <figure>
       <figcaption>${r.width}px — ${tags.length ? tags.join(' · ') : 'ok'}</figcaption>
       <img src="${path.basename(r.png)}" style="width:${Math.min(r.width, 480)}px">
       ${r.offenders?.length ? '<ul class="of">' + r.offenders.map(o => `<li>overflow: ${o.sel} — ${o.w}px</li>`).join('') + '</ul>' : ''}
       ${r.overlaps?.length ? '<ul class="ov">' + r.overlaps.map(o => `<li>overlap ${o.pct}%: ${o.a} ↔ ${o.b}</li>`).join('') + '</ul>' : ''}
-      ${r.decoOverlaps?.length ? '<ul class="dv">' + r.decoOverlaps.map(o => `<li>verify: ${o.deco} on text ${o.text} (${o.pct}%)</li>`).join('') + '</ul>' : ''}
+      ${r.decoOverlaps?.length ? '<ul class="dv">' + r.decoOverlaps.map(o => `<li>${o.opaque ? 'collision' : 'verify'}: ${o.deco} on text ${o.text} (${o.pct}%)</li>`).join('') + '</ul>' : ''}
     </figure>`;
   }).join('');
   return `<!DOCTYPE html><meta charset="utf-8"><title>atelier — responsive sweep</title>
@@ -162,7 +179,7 @@ img{display:block;border:1px solid #0001}ul{font:13px/1.5 monospace}ul.of{color:
 try {
   const { b, mk } = await launch();
   const rows = [];
-  let anyOverflow = false, anyCollision = false, anyDeco = false;
+  let anyOverflow = false, anyCollision = false, anyOpaqueDeco = false, anySoftDeco = false;
   for (const width of WIDTHS) {
     const page = await mk({ width, height: 900 });
     await page.goto(url, { waitUntil: 'networkidle' });
@@ -173,9 +190,12 @@ try {
     const png = path.join(outDir, `${slug}-${width}.png`);
     await page.screenshot({ path: png, fullPage: true });
     await page.close();
+    const opaqueDecos = (probe.decoOverlaps || []).filter(o => o.opaque);
+    const softDecos = (probe.decoOverlaps || []).filter(o => !o.opaque);
     anyOverflow = anyOverflow || probe.overflow;
     anyCollision = anyCollision || probe.severeOverlap;
-    anyDeco = anyDeco || (probe.decoOverlaps && probe.decoOverlaps.length > 0);
+    anyOpaqueDeco = anyOpaqueDeco || opaqueDecos.length > 0;
+    anySoftDeco = anySoftDeco || softDecos.length > 0;
     rows.push({ width, png, ...probe });
     const tags = [];
     if (probe.overflow) {
@@ -186,9 +206,13 @@ try {
       tags.push(`⚠ COLLISION: ` +
         probe.overlaps.map(o => `${o.a}↔${o.b}(${o.pct}%)`).join(', '));
     }
-    if (probe.decoOverlaps?.length) {
+    if (opaqueDecos.length) {
+      tags.push(`⚠ COLLISION (opaque decoration over text): ` +
+        opaqueDecos.map(o => `${o.deco} on ${o.text}(${o.pct}%)`).join(', '));
+    }
+    if (softDecos.length) {
       tags.push(`◦ verify deco-over-text: ` +
-        probe.decoOverlaps.map(o => `${o.deco} on ${o.text}(${o.pct}%)`).join(', '));
+        softDecos.map(o => `${o.deco} on ${o.text}(${o.pct}%)`).join(', '));
     }
     console.error(`  ${String(width).padStart(4)}px  ${tags.length ? tags.join('  ') : 'ok'}`);
   }
@@ -196,17 +220,18 @@ try {
   const sheet = path.join(outDir, `${slug}-sweep.html`);
   fs.writeFileSync(sheet, contactSheet(rows));
   console.error(`\n✓ contact sheet: ${sheet}`);
-  if (anyOverflow || anyCollision) {
-    const what = [anyOverflow && 'overflow', anyCollision && 'text collision'].filter(Boolean).join(' + ');
+  if (anyOverflow || anyCollision || anyOpaqueDeco) {
+    const what = [anyOverflow && 'overflow', anyCollision && 'text collision',
+                  anyOpaqueDeco && 'opaque decoration over text'].filter(Boolean).join(' + ');
     console.error(`✗ ${what} found — fix the flagged widths, then re-run to confirm the fix holds across the whole sweep.`);
   } else {
     console.error('✓ no horizontal overflow and no text collision across the sweep.');
   }
-  if (anyDeco) {
-    console.error('◦ decoration-over-text candidates flagged — review each: a layered collage may '
-      + 'be intentional, but a doodle drifting onto copy in the mid-range is a bug. Look at the sheet.');
+  if (anySoftDeco) {
+    console.error('◦ decoration-over-text candidates flagged — review each: a soft edge-transparent '
+      + 'wash can be intentional, but a doodle drifting onto copy in the mid-range is a bug. Look at the sheet.');
   }
-  process.exit(anyOverflow || anyCollision ? 1 : 0);
+  process.exit(anyOverflow || anyCollision || anyOpaqueDeco ? 1 : 0);
 } catch (e) {
   if (e?.code === 'ERR_MODULE_NOT_FOUND') {
     console.error('⚠ responsive_check: no headless browser. Install: npm i -D playwright && npx playwright install chromium');
