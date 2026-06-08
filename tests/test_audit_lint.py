@@ -354,6 +354,35 @@ def test_overlap_risk_flags_negative_margin_and_cluster(tmp_path):
     assert any(f["kind"] == "decoration-cluster" for f in scan_file(cluster, "Hero.astro"))
 
 
+def _tokens(tmp_path):
+    (tmp_path / "design").mkdir()
+    (tmp_path / "design" / "design-tokens.json").write_text(json.dumps({
+        "colors": {"background": {"$value": "#ffffff", "$type": "color"},
+                   "foreground": {"$value": "#111111", "$type": "color"}}}))
+
+
+def test_check_gate_fails_when_overlap_risk_present(tmp_path):  # collision = merge gate
+    from check import run
+    _tokens(tmp_path)
+    (tmp_path / "ok.css").write_text(".box{display:flex;align-items:center}")
+    (tmp_path / "deco.css").write_text(".deco{position:absolute;top:40%}")  # %-pinned -> drifts
+    res = run(str(tmp_path), str(tmp_path))
+    assert any(s["step"] == "overlap-risk" for s in res["steps"])   # the new step exists
+    step = next(s for s in res["steps"] if s["step"] == "overlap-risk")
+    assert step["ok"] is False        # an important overlap risk fails the step
+    assert res["ok"] is False         # ...and the whole gate
+
+
+def test_check_gate_passes_clean_repo_with_overlap_step(tmp_path):
+    from check import run
+    _tokens(tmp_path)
+    (tmp_path / "ok.css").write_text(".box{display:flex;align-items:center}")
+    res = run(str(tmp_path), str(tmp_path))
+    step = next(s for s in res["steps"] if s["step"] == "overlap-risk")
+    assert step["ok"] is True         # no risky patterns -> step passes
+    assert res["ok"] is True          # clean repo passes the whole gate
+
+
 def test_assess_consistency_levels():
     from assess import assess
     clean = {"colors": [{"hex": "#2563eb", "count": 9}, {"hex": "#ea580c", "count": 4},

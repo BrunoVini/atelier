@@ -14,9 +14,10 @@ import sys
 from lint_design import lint_repo
 from audit_contrast import audit, gate_failures, _load_colors
 from check_rules import check as check_house_rules
+from overlap_risk import scan_repo_overlap_risk
 
 
-def run(repo, contract, max_drift=0, allow_contrast_fail=False):
+def run(repo, contract, max_drift=0, allow_contrast_fail=False, max_overlap_risk=0):
     results = {"ok": True, "steps": []}
 
     drift = lint_repo(repo, contract)
@@ -40,16 +41,28 @@ def run(repo, contract, max_drift=0, allow_contrast_fail=False):
     results["steps"].append({"step": "house-rules", "violations": len(rule_violations), "ok": rules_ok})
     results["ok"] &= rules_ok
 
+    # Static overlap/collision risk — the patterns that cause mid-range collisions
+    # (%-pinned absolutes, negative margins, decoration clusters). Static-only, so
+    # it gates on the gating severities (critical/important); "polish" is reported
+    # but advisory. Bump max_overlap_risk for repos with intentional layered art.
+    overlaps = scan_repo_overlap_risk(repo)
+    gating = [f for f in overlaps if f["severity"] in ("critical", "important")]
+    overlap_ok = len(gating) <= max_overlap_risk
+    results["steps"].append({"step": "overlap-risk", "risks": len(gating), "ok": overlap_ok})
+    results["ok"] &= overlap_ok
+
     results["drift"] = drift
     results["contrast_fails"] = [f"{r['text']} on {r['surface']} ({r['ratio']}:1)" for r in fails]
     results["rule_violations"] = rule_violations
+    results["overlap_risks"] = overlaps
     return results
 
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a]
     if not args:
-        print("usage: check.py <repo> [--contract <json>] [--max-drift N] [--allow-contrast-fail]")
+        print("usage: check.py <repo> [--contract <json>] [--max-drift N] "
+              "[--allow-contrast-fail] [--max-overlap-risk N]")
         sys.exit(2)
     from contract import has_contract
     repo = args[0]
@@ -59,11 +72,13 @@ if __name__ == "__main__":
     cfg = json.load(open(cfg_path)).get("check", {}) if os.path.exists(cfg_path) else {}
     max_drift = int(args[args.index("--max-drift") + 1]) if "--max-drift" in args else cfg.get("max_drift", 0)
     allow_contrast = "--allow-contrast-fail" in args or cfg.get("allow_contrast_fail", False)
+    max_overlap = (int(args[args.index("--max-overlap-risk") + 1]) if "--max-overlap-risk" in args
+                   else cfg.get("max_overlap_risk", 0))
     if not has_contract(contract):
         print(f"::error:: no contract for {contract} — need design/design-tokens.json or "
               "DESIGN.md (run generate-design-md first)")
         sys.exit(2)
-    res = run(repo, contract, max_drift, allow_contrast)
+    res = run(repo, contract, max_drift, allow_contrast, max_overlap)
     for s in res["steps"]:
         print(f"  [{'PASS' if s['ok'] else 'FAIL'}] {s['step']}: {json.dumps({k:v for k,v in s.items() if k not in ('step','ok')})}")
     for d in res["drift"][:20]:
@@ -73,5 +88,7 @@ if __name__ == "__main__":
     for v in res.get("rule_violations", [])[:20]:
         tip = f" → use {v['prefer']}" if v.get("prefer") else ""
         print(f"    house-rule {v['file']}:{v['line']} forbidden '{v['forbidden']}'{tip}")
+    for o in [f for f in res.get("overlap_risks", []) if f["severity"] in ("critical", "important")][:20]:
+        print(f"    overlap-risk {o['file']}:{o['line']} {o['kind']} — {o['detail']}")
     print("\natelier check:", "PASS" if res["ok"] else "FAIL")
     sys.exit(0 if res["ok"] else 1)
