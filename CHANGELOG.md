@@ -114,6 +114,9 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Optional render-capable CI gate in the GitHub Actions + Azure Pipelines templates —
   installs a headless browser and runs `qa.py --hook` on built pages, so CI now catches
   the rendered defect class (collisions, overflow, illegible charts) the static check can't.
+- PR-diff-scoped design review (`pr_review.py`): lints only the lines a PR changed and
+  emits GitHub `::warning file=…,line=…::` annotations, so governance lands at the point of
+  change instead of flooding a legacy file's pre-existing drift.
 
 #### Tooling & capture
 
