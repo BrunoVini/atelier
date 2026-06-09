@@ -46,6 +46,18 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 - **Dense but scannable:** a clear KPI row, one primary chart with real hierarchy, secondary
   panels that don't compete, a table with aligned right-set numerics. Show a prior-value
   reference on KPIs ("vs 44.5k", "2.2pp") — more informative than "vs prev period".
+- **Cap categories to what stays legible — aggregate or re-type the rest.** A categorical chart
+  (bar / stacked-bar) must label and visually separate *every* mark it draws. If the data has
+  more categories than fit at a readable mark size (rule of thumb: each bar needs enough height
+  for its own axis label — ~10–15 rows in a short panel, not 100), do ONE of: show **top-N with
+  the remainder aggregated** ("Top 12 · +88 more"), switch to a type that scales (treemap, or a
+  ranked table with inline mini-bars), or make the panel **scrollable with a header summary**
+  (the same top-N-plus-remainder pattern a long entity list uses). A panel that renders dozens of
+  sub-pixel, unlabeled bars is an illegible smear — it conveys *nothing* actionable, and is a
+  **P0 legibility failure, not a "small labels" nit.** The **rendered mark count must match any
+  "top N" caption** — a "showing top 10" label over a chart that actually draws 100 bars is both
+  illegible *and* dishonest. Each visible row needs its **identity (a name/label, not only an
+  opaque id)** and its **value on the row**, not hidden in a hover tooltip.
 - **Realistic data, never lorem.** Plausible magnitudes, consistent across panels.
 
 ## 4. Interactive chart controls must actually work
@@ -70,6 +82,7 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 - [ ] Each color has ONE consistent meaning; status colors aren't reused as categories
 - [ ] Cohort/heatmap is a single-hue sequential scale with values + legend
 - [ ] Tabular numerals everywhere; no triplicated magnitudes
+- [ ] Categorical charts cap to a legible mark count (top-N + aggregated remainder / re-typed / scrollable); no sub-pixel unlabeled smear; rendered marks match the "top N" caption; each row shows its label + value (not tooltip-only)
 - [ ] Chart type fits each data question (`knowledge/charts.csv`)
 - [ ] Controls work; tooltip sits on the point with a crosshair + keyboard path
 - [ ] `:focus-visible` everywhere; SVG charts have aria text equivalents; AA contrast

@@ -17,6 +17,38 @@ with click-to-select interaction. It serves high-fidelity HTML themed by the rep
 - **User is choosing** (vague brief, "give me options") → serve **2–4 variants
   side by side** (split/cards) so they can click to pick.
 
+## Show, don't describe — the fidelity ladder
+
+When you're proposing a layout, a redesign, or options for the user to react to, **show a visual —
+don't narrate one.** A described layout is the weakest way to align on something visual. Pick the
+highest rung you can actually produce:
+
+1. **Live preview** (this server) — interactive, themed, click-to-pick. Best.
+2. **Rendered HTML mockup** — a static themed page, screenshotted with `screenshot.mjs`.
+3. **ASCII / box-drawing mockup in the terminal** — when you can't or shouldn't render HTML (no
+   renderable target, a fast structural proposal, or an option set inside an `AskUserQuestion`),
+   sketch the layout with box-drawing characters. A rough wireframe the user can *see* beats a
+   paragraph every time.
+4. **Prose** — last resort only.
+
+**ASCII mockups are the default for option-picking when there's no live/HTML preview** — e.g. the
+`preview` field of an `AskUserQuestion`, or comparing 2–4 layout directions in the terminal. Keep
+the columns the **same width across options** so the comparison is honest, label the regions, and
+show the *structural difference* between options — not decoration. Example (a panel that ranks
+many categories — list vs. split-summary):
+
+```
+  Option A — ranked top-N + remainder        Option B — summary | top-N
+  ┌─────────────────────────────────┐        ┌──────────────┬──────────────────┐
+  │ Events by category   Top 12 ·+88 │        │  TOTAL       │ Top 12  · +88    │
+  │ ▇▇▇▇▇▇▇▇  alpha            1,204  │        │  4,310       │ ▇▇▇▇▇▇  alpha    │
+  │ ▇▇▇▇▇     bravo              842  │        │  ▲ +18% wow  │ ▇▇▇▇    bravo    │
+  │ ▇▇▇       charlie            511  │        │              │ ▇▇▇     charlie  │
+  │ ▇▇        delta              330  │        │  by status   │ ▇▇      delta    │
+  │ ░░        + 88 more (scroll)      │        │  ▢ ok ▤ warn │ … scroll for more │
+  └─────────────────────────────────┘        └──────────────┴──────────────────┘
+```
+
 ## Start the server
 
 The server watches a directory and serves the **newest** HTML file in it.

@@ -91,6 +91,10 @@ run `overlap_risk.py` instead (static risk patterns — see the non-visual mode 
 | 4 | Functionality & a11y | Works / buildable / accessible (contrast, targets, reduced motion)? |
 | 5 | Innovation | A memorable, non-generic idea — or AI slop? |
 
+When the screen contains **charts**, chart legibility is part of dimension 4 (Functionality) —
+not dimension 3 (Detail). An unreadable chart is broken, not merely unpolished; judge it per §3a3
+below and cap dimension 4 low when a chart conveys nothing readable.
+
 Compute a **total /50** and an overall verdict. The anti-slop check is mandatory —
 and now backed by a script, not just judgement:
 
@@ -221,6 +225,33 @@ targets**, not just mobile: if you built a two-column grid, verify the sidebar a
 the content at desktop width (check it's a child of the grid / its bounding box is to the right),
 not merely that "something rendered." Look at the desktop screenshot specifically and ask "is this
 the structure I authored?", because a recovered parse can look plausible in a thumbnail.
+
+## 3a3. Chart legibility — "it rendered" is not "it's readable"
+
+The overlap/collision sweep catches element-vs-element and decoration-over-text, but a single
+dense chart is ONE element — it never trips those detectors, so an illegible chart sails through
+as "it rendered." This is the single most-missed data-viz defect in a review: judge every chart
+explicitly. For each one, ask *can you read each encoded value?* — and if you can't name the
+values you'd read off it, you asserted legibility, you didn't verify it (same burden as
+deco-over-text in §3c).
+
+- **Count the rendered marks against the caption.** If a panel says "top 10" but draws ~100 bars,
+  the caption is both wrong and the chart is illegible — flag it; do NOT praise the caption as an
+  "honest top-N + total." The render must match the claim.
+- **More categories than it can legibly label = a functional failure**, scored under
+  Functionality (dim 4), not "small labels but ok on desktop." Dozens of sub-pixel bars with axis
+  labels for only a handful is an unreadable smear. The root-cause fix lives in `data-viz-craft.md`
+  §3 (top-N + aggregated remainder / re-type to treemap or ranked table / make it scrollable) —
+  cite it, don't nudge the font size.
+- **Each visible row needs its identity and value on the row** — a bare technical id with the
+  count hidden in a hover tooltip is not legible at a glance, and a screenshot review never sees
+  the tooltip.
+- **Catch internal inconsistency.** If one panel handles density well (top-N + "+N more") and
+  another crams everything in, the dashboard contradicts itself — call out both, and hold every
+  panel to the pattern the best panel already proves the team knows.
+
+"I looked, it's fine on desktop" does not clear this — for the same reason it doesn't clear a
+deco-over-text flag. Name the values you can read, or score it as the functional failure it is.
 
 ## 3b. Verify the web fonts actually LOADED (not just linked)
 
