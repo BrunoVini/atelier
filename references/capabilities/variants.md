@@ -17,7 +17,10 @@ or you're at the start of a design and a direction hasn't been committed.
    the unlocked dimensions (layout, type personality, motion).
 3. Lay them out for comparison with `assets/engines/canvas.jsx` (side-by-side), or
    serve them as `cards`/`split` on the preview server (`capabilities/preview.md`)
-   so the user clicks to pick.
+   so the user clicks to pick. **Can't render a comparison** (no renderable target,
+   terminal-only)? Sketch each direction as an **ASCII mockup** rather than describing
+   it in prose, and use that in the `AskUserQuestion` preview when you ask them to pick
+   — see the fidelity ladder in `capabilities/preview.md`.
 4. **Hold the CONTENT identical across directions — vary only the design.** The point
    of a comparison is to isolate the design choice, so the headline, subhead, CTA
    label, and feature names must be the *same words* in every direction; only type,
