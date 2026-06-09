@@ -221,6 +221,30 @@ def extract_colors(text, delta_e_threshold=8.0):
     return [{"hex": _rgb_to_hex(*rgb), "count": n} for rgb, n in clusters]
 
 
+def _attach_color_provenance(colors, file_texts, delta_e_threshold=8.0):
+    """Mutate each clustered color to carry `files` ([{file, count}], top 8) and
+    `top_file_share` — by matching each file's raw colors to the nearest cluster
+    representative. So the contract can state evidence ("primary #2563eb — 412 uses
+    across 9 files") and assess can reason about real usage, not a blob substring
+    count. `hex`/`count` are left unchanged."""
+    reps = [(_hex_to_rgb(c["hex"]), c["hex"]) for c in colors]
+    acc = {c["hex"]: Counter() for c in colors}
+    for relpath, text in file_texts:
+        for rgb, n in Counter(_parse_colors(text)).items():
+            best, best_d = None, delta_e_threshold
+            for rep_rgb, rep_hex in reps:
+                d = _delta_e(rgb, rep_rgb)
+                if d <= best_d:
+                    best, best_d = rep_hex, d
+            if best is not None:
+                acc[best][relpath] += n
+    for c in colors:
+        files = acc[c["hex"]]
+        total = sum(files.values())
+        c["files"] = [{"file": f, "count": n} for f, n in files.most_common(8)]
+        c["top_file_share"] = round(files.most_common(1)[0][1] / total, 3) if total else 0.0
+
+
 # --- font extraction --------------------------------------------------------
 
 _FONT_FAMILY = re.compile(r"font-family:\s*([^;{}]+)", re.I)
@@ -645,6 +669,10 @@ def detect_component_lib(pkg):
 
 _STYLE_EXT = (".css", ".scss", ".sass", ".less")
 _CODE_EXT = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".svelte", ".astro")
+# Markup is measured for the design it carries (embedded <style>, inline styles, hex
+# literals) — so atelier can scan its own .html output and plain static sites — but it is
+# NOT a token source, so it is kept out of _STYLE_EXT (which gates token-source detection).
+_MARKUP_EXT = (".html", ".htm")
 _SKIP_DIRS = {"node_modules", ".git", "dist", "build", ".next", "out", "coverage"}
 _MAX_BYTES = 400_000  # skip giant generated/minified files
 
@@ -664,7 +692,7 @@ def scan_directory(root):
       "radius":  ["8px"]
     }
     """
-    style_text, code_text, merged_deps = [], [], {}
+    style_text, code_text, file_texts, merged_deps = [], [], [], {}
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
         for fn in filenames:
@@ -679,13 +707,18 @@ def scan_directory(root):
                     merged_deps.update(j.get("devDependencies", {}))
                 except Exception:
                     pass
-            elif fn.endswith(_STYLE_EXT) or fn.endswith(_CODE_EXT) or fn.startswith("tailwind.config"):
+            elif (fn.endswith(_STYLE_EXT) or fn.endswith(_CODE_EXT)
+                  or fn.endswith(_MARKUP_EXT) or fn.startswith("tailwind.config")):
                 try:
                     if os.path.getsize(p) > _MAX_BYTES:
                         continue
                     with open(p, encoding="utf-8") as fh:
                         text = fh.read()
-                    (style_text if fn.endswith(_STYLE_EXT) else code_text).append(text)
+                    # Markup reads as style-ish (its design lives in embedded CSS/inline
+                    # styles) but never as a token source — see _MARKUP_EXT.
+                    is_styleish = fn.endswith(_STYLE_EXT) or fn.endswith(_MARKUP_EXT)
+                    (style_text if is_styleish else code_text).append(text)
+                    file_texts.append((os.path.relpath(p, root), text))
                 except Exception:
                     pass
     pkg = {"dependencies": merged_deps}
@@ -701,6 +734,8 @@ def scan_directory(root):
     colors = extract_colors(color_src + "\n"
                             + " ".join(_rgb_to_hex(*c) for c in extra_named) + "\n"
                             + " ".join(token_props["colors"]))
+    # Provenance: which files each clustered color actually lives in (+ dominant share).
+    _attach_color_provenance(colors, file_texts)
 
     # Fonts: style declarations + Google imports + config/theme fonts + token props.
     fonts = []

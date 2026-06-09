@@ -197,3 +197,26 @@ def test_extract_breakpoints_from_media_and_tailwind():
     assert set(extract_breakpoints(cfg)) >= {"640px", "768px", "1280px"}
     # sorted numerically, not lexically
     assert extract_breakpoints("@media(min-width:1280px){} @media(min-width:640px){}") == ["640px", "1280px"]
+
+
+def test_scan_directory_measures_html(tmp_path):
+    # A3: atelier must be able to measure its own .html artifacts and static sites.
+    (tmp_path / "page.html").write_text(
+        '<style>h1{color:#2563eb} body{font-family:Sora,sans-serif}</style><h1>Hi</h1>')
+    report = scan_directory(str(tmp_path))
+    assert "#2563eb" in [c["hex"].lower() for c in report["colors"]]
+    assert "Sora" in report["fonts"]
+
+
+def test_colors_carry_file_provenance(tmp_path):
+    # A2: each color carries which files it came from + the dominant file's share,
+    # so the contract states evidence instead of a blob substring count.
+    (tmp_path / "a.css").write_text("h1{color:#2563eb} p{color:#2563eb} a{color:#2563eb}")
+    (tmp_path / "b.css").write_text(".x{color:#2563eb}")
+    report = scan_directory(str(tmp_path))
+    blue = next(c for c in report["colors"] if c["hex"].lower() == "#2563eb")
+    assert blue["count"] >= 4
+    files = {f["file"] for f in blue["files"]}
+    assert "a.css" in files and "b.css" in files
+    assert 0 < blue["top_file_share"] <= 1
+    assert blue["files"][0]["file"] == "a.css"   # 3 of 4 uses -> dominant file
