@@ -138,7 +138,21 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 Any capable model can *generate* a page. What it cannot do is mechanically verify its
 own output — that's where atelier earns its keep, **especially on from-scratch work
 where there's no contract to measure.** A visual artifact is NOT done until it passes
-these checks and you've FIXED what they flag (don't rationalize a finding away):
+the battery and you've FIXED what it flags (don't rationalize a finding away).
+
+Run the **one** entry point — it runs the whole battery (slop, contrast, overlap,
+responsive sweep, chart legibility), prints a single verdict, and emits a
+machine-readable evidence block:
+
+```bash
+python3 scripts/qa.py <file.html|repo-dir> --contract <repo|DESIGN.md>
+```
+
+**Paste the `=== atelier qa evidence ===` block back to the user.** A `PASS` verdict
+with the evidence is the definition of done; a `FAIL` means fix the flagged item and
+re-run. A check shown `SKIP` (crashed or no headless browser) is *not* a pass — it
+could not be verified; say so. (`qa.py` wraps the individual checks below — run them
+directly only to drill into a specific finding.)
 
 ```bash
 python3 scripts/slop_check.py <file> --contract <repo|DESIGN.md>   # clean of `important`
@@ -150,7 +164,11 @@ node scripts/chart_legibility.mjs <file|url>                     # unreadable/ov
 
 Run this loop on your OWN generated output, not just the user's — it routinely catches
 generic-font/oklch-default tells, contrast misses, missing keyboard focus
-(`no-focus-visible`), and decoration drift you won't eyeball.
+(`no-focus-visible`), and decoration drift you won't eyeball. When atelier is installed
+as a plugin, the Stop/SubagentStop hook (`hooks/hooks.json`) runs the rendered floor
+automatically and blocks finishing on a real collision — but don't rely on it; run `qa.py`
+yourself. For a pull request, `python3 scripts/pr_review.py <repo> --base <ref>` reports
+only the lines the PR changed, as GitHub annotations.
 If you can't render (no browser), say so and rely on the static checks. Skipping this is
 the difference between "I made a page" and "I made a verified, on-contract page."
 

@@ -103,6 +103,20 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   responsive sweep.
 - Chart-legibility mechanical gate — an illegible or collision-prone chart fails the
   review; ASCII previews are the default when no live/HTML preview is available.
+- One `qa.py` entry point for the whole self-QA battery (slop, contrast, overlap,
+  responsive sweep, chart legibility) — emits a single verdict plus a machine-readable
+  evidence block. A check that crashed or found no browser is reported as `unknown` and
+  never gates (never trust a null you can't explain).
+- Collision Stop/SubagentStop gate now ships in the plugin (`hooks/hooks.json`,
+  `${CLAUDE_PLUGIN_ROOT}`): the harness blocks finishing while just-generated HTML has a
+  real rendered collision/overflow, so the self-QA loop is binding for every install — not
+  just the maintainer's machine. Bounded retry budget; a crashed checker never blocks.
+- Optional render-capable CI gate in the GitHub Actions + Azure Pipelines templates —
+  installs a headless browser and runs `qa.py --hook` on built pages, so CI now catches
+  the rendered defect class (collisions, overflow, illegible charts) the static check can't.
+- PR-diff-scoped design review (`pr_review.py`): lints only the lines a PR changed and
+  emits GitHub `::warning file=…,line=…::` annotations, so governance lands at the point of
+  change instead of flooding a legacy file's pre-existing drift.
 
 #### Tooling & capture
 
