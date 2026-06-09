@@ -51,3 +51,21 @@ def test_static_battery_runs_on_a_repo(tmp_path):
     names = {r.name for r in results}
     assert {"design-lint", "contrast", "house-rules", "overlap-risk"} <= names
     assert all(r.gating for r in results)
+
+
+def test_hook_exit_code_contract():
+    from qa import hook_exit_code
+    assert hook_exit_code([CheckResult("r", "fail", True, {}, "")]) == 1          # real failure -> block
+    assert hook_exit_code([CheckResult("r", "unknown", True, {}, "")]) == 3       # all unknown -> could not verify
+    assert hook_exit_code([CheckResult("r", "pass", True, {}, "")]) == 0          # clean
+    # mixed unknown + pass is NOT "could not verify" — something was actually checked
+    assert hook_exit_code([CheckResult("a", "unknown", True, {}, ""),
+                           CheckResult("b", "pass", True, {}, "")]) == 0
+
+
+def test_safe_static_is_unknown_without_a_contract(tmp_path):
+    # Regression for the P0: a repo/dir with no resolvable contract must yield an
+    # `unknown` static result, NOT crash (which would be a false hook block).
+    from qa import _safe_static
+    res = _safe_static(str(tmp_path), str(tmp_path))   # no design-tokens.json / DESIGN.md here
+    assert any(r.name == "overlap-risk" and r.status == "unknown" for r in res)

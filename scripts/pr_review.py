@@ -43,7 +43,10 @@ def review(repo, contract, diff_text):
     touched = changed_lines(diff_text)
     out = []
     for f in lint_repo(repo, contract):
-        rel = os.path.relpath(f["file"], repo).replace(os.sep, "/")
+        # lint_repo already returns repo-relative paths; only relativize a stray
+        # absolute one. (Relativizing an already-relative path resolves against CWD
+        # and silently matches nothing — a vacuous "clean" review.)
+        rel = (os.path.relpath(f["file"], repo) if os.path.isabs(f["file"]) else f["file"]).replace(os.sep, "/")
         if f["line"] in touched.get(rel, ()):  # only lines this PR changed
             out.append(annotation(rel, f["line"], f"off-contract {f['value']} → {f['fix']}"))
     return out
@@ -58,8 +61,12 @@ if __name__ == "__main__":
     contract = args[args.index("--contract") + 1] if "--contract" in args else repo
     if "--base" in args:
         base = args[args.index("--base") + 1]
-        diff_text = subprocess.run(["git", "-C", repo, "diff", "--unified=0", f"{base}...HEAD"],
-                                   capture_output=True, text=True).stdout
+        proc = subprocess.run(["git", "-C", repo, "diff", "--unified=0", f"{base}...HEAD"],
+                              capture_output=True, text=True)
+        if proc.returncode != 0:               # bad ref / not a repo — don't pass a silent vacuous review
+            sys.stderr.write(f"pr_review: git diff failed for base '{base}': {proc.stderr.strip()}\n")
+            sys.exit(2)
+        diff_text = proc.stdout
     else:
         diff_text = "" if sys.stdin.isatty() else sys.stdin.read()
     for line in review(repo, contract, diff_text):

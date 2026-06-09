@@ -44,7 +44,11 @@ SCRIPTS = os.environ.get("ATELIER_SCRIPTS") or os.path.join(
 )
 MAX_ATTEMPTS = 3            # consecutive blocks before we give up and surface it
 RECENT_SECS = 30 * 60       # only gate HTML touched in this window
-MAX_FILES = 6               # cap render cost
+MAX_FILES = 3               # cap render cost (×RENDER_TIMEOUT must stay under the hook timeout)
+RENDER_TIMEOUT = 70         # per-render budget; MAX_FILES×this < hooks.json timeout (240s)
+# Where to look for atelier's /tmp scratch HTML. Overridable so a test (or a user who
+# doesn't want cross-session /tmp gating) can scope it; defaults to the conventional /tmp.
+TMP_ROOT = os.environ.get("ATELIER_GATE_TMP", "/tmp")
 WIDTHS = "390,768,834,1024,1440"   # include the tablet mid-range where overlaps surface
 SKIP_DIRS = {".git", "node_modules", "dist", "build", ".next", "out",
              "vendor", ".venv", "__pycache__", ".cache"}
@@ -79,7 +83,7 @@ def recent_html(root, now):
 
 def run(cmd):
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=200)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=RENDER_TIMEOUT)
         return r.returncode, (r.stderr or "") + (r.stdout or "")
     except Exception as e:
         return None, f"(gate could not run {os.path.basename(cmd[1] if len(cmd) > 1 else cmd[0])}: {e})"
@@ -122,7 +126,8 @@ def main():
     targets = recent_html(cwd, now)
     # atelier writes scratch/deliverables to /tmp — scan the conventional spots only
     # (top-level + atelier* dirs), never all of /tmp, and skip our own contact sheets.
-    tmp_globs = glob.glob("/tmp/*.html") + glob.glob("/tmp/atelier*/**/*.html", recursive=True)
+    tmp_globs = (glob.glob(os.path.join(TMP_ROOT, "*.html"))
+                 + glob.glob(os.path.join(TMP_ROOT, "atelier*/**/*.html"), recursive=True))
     for p in tmp_globs:
         if "atelier-responsive" in p:        # our own sweep contact sheets — skip
             continue

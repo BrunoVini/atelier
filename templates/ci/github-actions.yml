@@ -32,7 +32,9 @@ jobs:
         with:
           node-version: "20"
       - name: install a headless browser
-        run: npx --yes playwright install --with-deps chromium
+        run: |
+          npm i --no-save playwright          # the .mjs checks `import('playwright')` — binaries alone aren't enough
+          npx playwright install --with-deps chromium
       - name: atelier render gate (responsive sweep + chart legibility)
         env:
           ATELIER: ${{ github.workspace }}/.atelier/scripts
@@ -41,6 +43,9 @@ jobs:
           shopt -s globstar nullglob
           fail=0
           for page in $PAGES; do
-            python3 "$ATELIER/qa.py" "$page" --hook || { echo "::error file=$page::atelier render gate failed"; fail=1; }
+            rc=0; python3 "$ATELIER/qa.py" "$page" --hook || rc=$?   # 0 clean, 1 defect, 3 no browser
+            if [ "$rc" -eq 1 ]; then echo "::error file=$page::atelier render gate: layout defect"; fail=1
+            elif [ "$rc" -eq 3 ]; then echo "::error::atelier render gate misconfigured: no headless browser"; fail=1
+            fi
           done
           exit $fail

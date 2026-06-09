@@ -19,7 +19,11 @@ def test_hooks_json_registers_stop_and_subagentstop():
 
 
 def test_gate_noops_without_recent_html(tmp_path):
-    env = {**os.environ, "ATELIER_SCRIPTS": SCRIPTS}
+    # Scope both the cwd scan and the /tmp scan to empty dirs so the result depends on
+    # the input, not on whatever .html happens to be in the machine's real /tmp.
+    empty_tmp = tmp_path / "tmp"
+    empty_tmp.mkdir()
+    env = {**os.environ, "ATELIER_SCRIPTS": SCRIPTS, "ATELIER_GATE_TMP": str(empty_tmp)}
     r = subprocess.run([sys.executable, HOOK],
                        input=json.dumps({"cwd": str(tmp_path), "session_id": "test"}),
                        text=True, capture_output=True, env=env, timeout=60)

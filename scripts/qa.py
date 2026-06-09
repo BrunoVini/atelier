@@ -28,6 +28,16 @@ def verdict(results):
     return "FAIL" if any(r.gating and r.status == "fail" for r in results) else "PASS"
 
 
+def hook_exit_code(results):
+    """Stop-hook contract: 1 = block (a real failure), 3 = could not verify
+    (everything came back unknown — no browser, no contract), 0 = clean."""
+    if verdict(results) == "FAIL":
+        return 1
+    if results and all(r.status == "unknown" for r in results):
+        return 3
+    return 0
+
+
 def _slop(html, contract=None, profile=None):
     from slop_check import check_html
     resolved, allowed = None, []
@@ -71,7 +81,8 @@ def format_evidence(target, contract, results):
              "checks:"]
     for r in results:
         counts = " ".join(f"{k}={v}" for k, v in r.counts.items())
-        tail = f"  — {r.detail}" if (r.detail and r.status != "pass") else ""
+        detail = r.detail.replace("\n", " ¶ ")[:240] if r.detail else ""
+        tail = f"  — {detail}" if (detail and r.status != "pass") else ""
         lines.append(f"  {mark[r.status]:4} {r.name:16} {counts}{tail}")
     lines.append(f"verdict: {verdict(results)}")
     lines.append("=== end atelier qa evidence ===")
@@ -83,7 +94,7 @@ def _run(cmd):
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=200)
         return r.returncode, (r.stderr or "") + (r.stdout or "")
     except Exception as e:
-        return None, f"({os.path.basename(cmd[-2] if len(cmd) > 1 else cmd[0])} could not run: {e})"
+        return None, f"({os.path.basename(cmd[1] if len(cmd) > 1 else cmd[0])} could not run: {e})"
 
 
 def _rendered(path, script, widths=None):
@@ -98,9 +109,21 @@ def _rendered(path, script, widths=None):
         return CheckResult(script, "unknown", True, {}, "no headless browser — not trusted, did not gate")
     if code == 0:
         return CheckResult(script, "pass", True, {}, "clean")
-    if code == 1 and "failed:" not in log:           # 'responsive_check failed:'/'chart_legibility failed:' == crash
+    crashed = "responsive_check failed:" in log or "chart_legibility failed:" in log
+    if code == 1 and not crashed:
         return CheckResult(script, "fail", True, {}, log.strip()[-2000:])
     return CheckResult(script, "unknown", True, {}, "(checker crashed; not trusted)")
+
+
+def _safe_static(repo, contract):
+    """_static needs a resolvable contract; without one (or on any resolution
+    failure) the static battery can't run — report `unknown` so it never gates
+    (review.md §3c: don't block on a null you can't explain). This is what makes
+    the --hook exit-3 'could not verify' path live."""
+    try:
+        return _static(repo, contract)
+    except Exception as e:
+        return [CheckResult("overlap-risk", "unknown", True, {}, f"static battery unavailable: {e}")]
 
 
 def _static(repo, contract):
@@ -126,16 +149,16 @@ def _battery(target, contract, widths, hook):
     if is_html:
         results.append(_rendered(target, "responsive_check.mjs", widths))
         results.append(_rendered(target, "chart_legibility.mjs"))
-        if not hook:                                  # advisory layers: not part of the blocking hook
+        if not hook:                                  # full-mode layers (excluded from the blocking hook)
             results.append(_slop(open(target, encoding="utf-8").read(), contract=contract))
             if contract:
                 results.append(_contrast(contract=contract))
         elif all(r.status == "unknown" for r in results):
             # hook + no browser — fall back to the static overlap lint on the file's dir
             base = os.path.dirname(target) or "."
-            results += [r for r in _static(base, contract or base) if r.name == "overlap-risk"]
+            results += [r for r in _safe_static(base, contract or base) if r.name == "overlap-risk"]
     else:                                             # repo dir
-        results += _static(target, contract or target)
+        results += _safe_static(target, contract or target)
     return results
 
 
@@ -154,9 +177,6 @@ if __name__ == "__main__":
         print(json.dumps([r._asdict() for r in results], indent=2))
     else:
         print(format_evidence(target, contract, results))
-    failed = verdict(results) == "FAIL"
     if hook:
-        # hook contract: 1 = block, 3 = could not verify (no browser, no static signal), 0 = clean
-        no_signal = bool(results) and all(r.status == "unknown" for r in results)
-        sys.exit(1 if failed else (3 if no_signal else 0))
-    sys.exit(1 if failed else 0)
+        sys.exit(hook_exit_code(results))
+    sys.exit(1 if verdict(results) == "FAIL" else 0)
