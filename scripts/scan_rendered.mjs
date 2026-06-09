@@ -6,8 +6,13 @@
  * The static scan (scan_repo.py) counts every hex in the code equally — dead code,
  * vendored CSS, and a one-off email template weigh the same as the hero. This renders
  * the page, walks visible elements, and accumulates each computed color by the on-screen
- * area it paints (background fills + text). The result is "what carries the design",
- * which no string count can tell you. Optionally reconciles against the static report.
+ * area it paints (background fills + text + borders), area weighted by alpha so a
+ * translucent overlay isn't counted as a solid. Colors are normalized through a canvas,
+ * so modern formats (oklch / lab / color()) are read correctly, not dropped. Optionally
+ * reconciles against the static report.
+ *
+ * Scope: walks the whole document (not just the viewport) at a 1440×900 layout; one URL
+ * per run (run per route for a multi-page app); shadow DOM / iframes are not traversed.
  *
  * Usage:
  *   node scan_rendered.mjs <page.html|url> [--json] [--static <scan_repo.json>]
@@ -34,35 +39,39 @@ async function launch() {
   try {
     const { chromium } = await import('playwright');
     const b = await chromium.launch();
-    const page = await b.newPage({ viewport: VIEWPORT });
-    return { b, page };
+    return { b, page: await b.newPage({ viewport: VIEWPORT }), idle: 'networkidle' };
   } catch (e1) {
     if (e1?.code !== 'ERR_MODULE_NOT_FOUND') throw e1;
     const puppeteer = (await import('puppeteer')).default;
     const b = await puppeteer.launch();
     const page = await b.newPage();
     await page.setViewport(VIEWPORT);
-    return { b, page };
+    return { b, page, idle: 'networkidle0' };   // puppeteer's name for the same wait
   }
 }
 
-// Runs in the browser: accumulate computed colors by the area they paint.
+// Runs in the browser: accumulate computed colors by the (alpha-weighted) area they paint.
 const PROBE = `(() => {
-  const toHex = (c) => {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  const parse = (c) => {                       // any CSS color (incl oklch/lab/color()) -> {hex, a}
     if (!c) return null;
-    const m = c.match(/rgba?\\(([^)]+)\\)/);
-    if (!m) return null;
-    const p = m[1].split(',').map(s => s.trim());
-    const a = p.length > 3 ? parseFloat(p[3]) : 1;
-    if (a < 0.05) return null;                       // effectively transparent
-    const h = (n) => (+n).toString(16).padStart(2, '0');
-    return '#' + h(p[0]) + h(p[1]) + h(p[2]);
+    cx.clearRect(0, 0, 1, 1);
+    cx.fillStyle = 'rgba(0,0,0,0)';            // sentinel: an invalid c leaves this -> reads transparent -> null
+    cx.fillStyle = c;
+    cx.fillRect(0, 0, 1, 1);
+    const d = cx.getImageData(0, 0, 1, 1).data;
+    if (d[3] === 0) return null;               // fully transparent — paints nothing
+    const h = (n) => n.toString(16).padStart(2, '0');
+    return { hex: '#' + h(d[0]) + h(d[1]) + h(d[2]), a: d[3] / 255 };
   };
-  const acc = {};                                    // hex -> {area, bg, text, border}
-  const add = (hex, area, role) => {
-    if (!hex || !(area > 0)) return;
-    (acc[hex] || (acc[hex] = { area: 0, bg: 0, text: 0, border: 0 }));
-    acc[hex].area += area; acc[hex][role] += area;
+  const acc = {};                              // hex -> {area, bg, text, border}
+  const add = (col, area, role) => {
+    if (!col || !(area > 0)) return;
+    const w = area * col.a;                     // translucent paints less than a solid
+    if (!(w > 0)) return;
+    (acc[col.hex] || (acc[col.hex] = { area: 0, bg: 0, text: 0, border: 0 }));
+    acc[col.hex].area += w; acc[col.hex][role] += w;
   };
   for (const el of document.querySelectorAll('*')) {
     const r = el.getBoundingClientRect();
@@ -70,11 +79,11 @@ const PROBE = `(() => {
     if (area <= 0) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) === 0) continue;
-    add(toHex(cs.backgroundColor), area, 'bg');
+    add(parse(cs.backgroundColor), area, 'bg');
     const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-    if (hasText) add(toHex(cs.color), area, 'text');
+    if (hasText) add(parse(cs.color), area, 'text');
     if (parseFloat(cs.borderTopWidth) > 0 || parseFloat(cs.borderLeftWidth) > 0)
-      add(toHex(cs.borderTopColor) || toHex(cs.borderLeftColor), Math.max(r.width, r.height) * 2, 'border');
+      add(parse(cs.borderTopColor) || parse(cs.borderLeftColor), Math.max(r.width, r.height) * 2, 'border');
   }
   const total = Object.values(acc).reduce((s, v) => s + v.area, 0) || 1;
   return Object.entries(acc)
@@ -83,20 +92,35 @@ const PROBE = `(() => {
     .sort((a, b) => b.share - a.share);
 })()`;
 
-function rgb(hex) {
+// CIE76 ΔE in Lab — matches scan_repo.py's clustering threshold so the two agree.
+function _rgb(hex) {
   const s = hex.replace('#', '');
   return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)];
 }
-function dist(a, b) { const [r1, g1, b1] = rgb(a), [r2, g2, b2] = rgb(b); return Math.hypot(r1 - r2, g1 - g2, b1 - b2); }
+function _lab([r, g, b]) {
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  r = lin(r); g = lin(g); b = lin(b);
+  let x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+  let y = (r * 0.2126 + g * 0.7152 + b * 0.0722);
+  let z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+  const f = (v) => v > 0.008856 ? Math.cbrt(v) : 7.787 * v + 16 / 116;
+  x = f(x); y = f(y); z = f(z);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+function deltaE(h1, h2) {
+  const [a, b, c] = _lab(_rgb(h1)), [d, e, f] = _lab(_rgb(h2));
+  return Math.hypot(a - d, b - e, c - f);
+}
+
+const DELTA_E = 8;       // same as scan_repo.py clustering
+const PAINT_SHARE = 0.01; // ignore trace paints when judging "is this painted?"
 
 function reconcile(rendered, staticColors) {
-  // Match rendered <-> static by nearest RGB within a tolerance (no ΔE in-browser).
-  const TOL = 24;
   const paintedNotDeclared = rendered
-    .filter(rc => rc.share >= 0.01 && !staticColors.some(sc => dist(rc.hex, sc) <= TOL))
+    .filter(rc => rc.share >= PAINT_SHARE && !staticColors.some(sc => deltaE(rc.hex, sc) <= DELTA_E))
     .map(rc => ({ hex: rc.hex, share: rc.share }));
   const declaredNotPainted = staticColors
-    .filter(sc => !rendered.some(rc => rc.share >= 0.005 && dist(rc.hex, sc) <= TOL));
+    .filter(sc => !rendered.some(rc => rc.share >= PAINT_SHARE / 2 && deltaE(rc.hex, sc) <= DELTA_E));
   return { painted_not_declared: paintedNotDeclared, declared_not_painted: declaredNotPainted };
 }
 
@@ -109,7 +133,7 @@ function reconcile(rendered, staticColors) {
     process.exit(3);
   }
   try {
-    await ctx.page.goto(url, { waitUntil: 'networkidle' }).catch(() => ctx.page.goto(url));
+    await ctx.page.goto(url, { waitUntil: ctx.idle }).catch(() => ctx.page.goto(url));
     const rendered = await ctx.page.evaluate(PROBE);
     const out = { rendered };
     if (staticPath) {

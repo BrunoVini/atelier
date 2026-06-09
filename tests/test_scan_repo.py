@@ -220,3 +220,32 @@ def test_colors_carry_file_provenance(tmp_path):
     assert "a.css" in files and "b.css" in files
     assert 0 < blue["top_file_share"] <= 1
     assert blue["files"][0]["file"] == "a.css"   # 3 of 4 uses -> dominant file
+
+
+def test_html_entities_and_anchors_are_not_colors(tmp_path):
+    # Regression: HTML numeric entities (&#8212;) and href="#abcdef" must NOT be read as
+    # palette colors — only the page's actual CSS is measured.
+    (tmp_path / "page.html").write_text(
+        '<style>body{background:#0f1115}</style>'
+        '<p>a&#8212;b &#8212; c&#8212;d <a href="#abcdef">x</a> &#160;&#169;</p>')
+    hexes = [c["hex"].lower() for c in scan_directory(str(tmp_path))["colors"]]
+    assert hexes == ["#0f1115"]
+
+
+def test_html_is_not_treated_as_a_token_source(tmp_path):
+    # .html carries design (measured) but is never an authoritative token source —
+    # even when it looks like one (:root + many --vars + a theme-ish name).
+    from scan_repo import detect_token_source
+    (tmp_path / "theme.html").write_text(
+        '<style>:root{--a:#111;--b:#222;--c:#333;--d:#444;--e:#555;'
+        '--f:#666;--g:#777;--h:#888;--i:#999}</style>')
+    assert detect_token_source(str(tmp_path)) is None
+
+
+def test_tailwind_classes_in_html_are_measured(tmp_path):
+    # P1: a Tailwind static site (utilities in class=) must not scan as empty.
+    (tmp_path / "i.html").write_text('<body class="bg-blue-600 p-4 rounded-lg"><h1 class="text-red-500">hi</h1></body>')
+    r = scan_directory(str(tmp_path))
+    hexes = [c["hex"].lower() for c in r["colors"]]
+    assert "#2563eb" in hexes and "#ef4444" in hexes
+    assert "16px" in r["spacing"] and "8px" in r["radius"]
