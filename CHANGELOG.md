@@ -111,6 +111,9 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   `${CLAUDE_PLUGIN_ROOT}`): the harness blocks finishing while just-generated HTML has a
   real rendered collision/overflow, so the self-QA loop is binding for every install — not
   just the maintainer's machine. Bounded retry budget; a crashed checker never blocks.
+- Optional render-capable CI gate in the GitHub Actions + Azure Pipelines templates —
+  installs a headless browser and runs `qa.py --hook` on built pages, so CI now catches
+  the rendered defect class (collisions, overflow, illegible charts) the static check can't.
 
 #### Tooling & capture
 

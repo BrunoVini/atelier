@@ -21,3 +21,26 @@ jobs:
           ATELIER: ${{ github.workspace }}/.atelier/scripts
         run: |
           python3 "$ATELIER/check.py" .
+
+  # Optional: render-capable gate — catches the defect class the static check can't
+  # (rendered collisions, overflow, illegible charts). Point PAGES at your built HTML.
+  design-render-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: install a headless browser
+        run: npx --yes playwright install --with-deps chromium
+      - name: atelier render gate (responsive sweep + chart legibility)
+        env:
+          ATELIER: ${{ github.workspace }}/.atelier/scripts
+          PAGES: "dist/**/*.html"   # adjust to your build output
+        run: |
+          shopt -s globstar nullglob
+          fail=0
+          for page in $PAGES; do
+            python3 "$ATELIER/qa.py" "$page" --hook || { echo "::error file=$page::atelier render gate failed"; fail=1; }
+          done
+          exit $fail

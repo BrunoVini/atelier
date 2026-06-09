@@ -17,3 +17,17 @@ steps:
   - script: |
       python3 "$(Build.SourcesDirectory)/.atelier/scripts/check.py" .
     displayName: 'atelier check (drift lint + contrast audit)'
+  # Optional: render-capable gate — catches rendered collisions/overflow/illegible charts.
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+  - script: npx --yes playwright install --with-deps chromium
+    displayName: 'install headless browser'
+  - script: |
+      shopt -s globstar nullglob
+      fail=0
+      for page in dist/**/*.html; do   # adjust to your build output
+        python3 "$(Build.SourcesDirectory)/.atelier/scripts/qa.py" "$page" --hook || { echo "##vso[task.logissue type=error]atelier render gate failed: $page"; fail=1; }
+      done
+      exit $fail
+    displayName: 'atelier render gate (responsive sweep + chart legibility)'
