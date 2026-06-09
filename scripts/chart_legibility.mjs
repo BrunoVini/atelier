@@ -18,11 +18,9 @@
  * Needs a node browser driver (playwright/puppeteer) — DOM introspection can't be
  * done by the system-Chrome CLI fallback. Degrades gracefully if none is present.
  */
-import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { existsSync, readdirSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { findChrome } from './lib/browser.mjs';
 
 const [input, w = '1440', h = '900'] = process.argv.slice(2);
 if (!input) {
@@ -31,17 +29,6 @@ if (!input) {
 }
 const url = /^https?:\/\//.test(input) ? input : 'file://' + path.resolve(input);
 const viewport = { width: Number(w), height: Number(h) };
-
-function findChrome() {
-  const c = [];
-  for (const e of ['ATELIER_CHROME', 'PUPPETEER_EXECUTABLE_PATH', 'CHROME_PATH', 'CHROMIUM_PATH'])
-    if (process.env[e]) c.push(process.env[e]);
-  for (const n of ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'chrome'])
-    { const p = spawnSync('sh', ['-c', `command -v ${n} 2>/dev/null`], { encoding: 'utf8' }).stdout.trim(); if (p) c.push(p); }
-  const pw = `${os.homedir()}/.cache/ms-playwright`;
-  if (existsSync(pw)) for (const d of readdirSync(pw)) if (d.startsWith('chromium-')) c.push(`${pw}/${d}/chrome-linux/chrome`);
-  return c.find((p) => p && existsSync(p)) || null;
-}
 
 async function launch() {
   try {
