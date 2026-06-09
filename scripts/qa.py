@@ -30,7 +30,15 @@ def verdict(results):
 
 def _slop(html, contract=None, profile=None):
     from slop_check import check_html
-    findings = check_html(html, profile=profile, contract=contract)
+    resolved, allowed = None, []
+    if contract:                       # contract is a path (repo|tokens.json); resolve it to a dict
+        try:
+            from contract import resolve_contract
+            resolved = resolve_contract(contract)
+            allowed = resolved.get("fonts", [])
+        except Exception:
+            resolved = None
+    findings = check_html(html, allowed_fonts=allowed, profile=profile, contract=resolved)
     important = [f for f in findings if f["severity"] == "important"]
     advisory = [f for f in findings if f["severity"] != "important"]
     return CheckResult(
