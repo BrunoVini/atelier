@@ -1,6 +1,6 @@
 # atelier
 
-**A repo-aware design studio that *governs* your design — it doesn't just generate pages.**
+**A Claude Code plugin: a repo-aware design studio that *governs* your design — it doesn't just generate pages.**
 
 Most design tools (AI or otherwise) generate a pretty artifact and walk away.
 atelier does the senior thing: it **measures** the design language already living
@@ -12,6 +12,8 @@ obey it. One bold, intentional aesthetic per project; never generic AI slop.
 > *measured from your code, enforced in CI, audited for accessibility, and kept
 > coherent over the product's lifetime* is the part a senior designer-engineer
 > brings — and what atelier automates.
+
+> **Status: pre-release (0.1.0).** Capabilities and script APIs may still change — see the [CHANGELOG](CHANGELOG.md).
 
 ## Install
 
@@ -66,6 +68,21 @@ And on *every* artifact — even from-scratch work with no repo to measure — i
 mechanical verification of its own output is the delta a blank model can't reproduce.
 
 ## Everything atelier does
+
+Three phases, one contract — measure first, generate on-contract, then keep it honest:
+
+- **MEASURE** — extracts an empirical `DESIGN.md` from your code (colors by perceptual
+  ΔE, fonts, spacing, breakpoints, stack), stays honest about messy repos, and can seed
+  from a reference image or URL.
+- **GENERATE** — prototypes, themed live previews, slides, animation/video, SVG, living
+  style guides, responsive sweeps, and multi-brand / dark-mode / native theming — all
+  bound to the contract.
+- **GOVERN** — slop detector, WCAG contrast audit, overlap hunting, design lint,
+  house-rule enforcement, token-migration codemod, a 0–100 coherence score, and CI / PR
+  gates.
+
+<details>
+<summary><b>Full capability list</b></summary>
 
 ### MEASURE — understand the repo's real design first
 
@@ -135,6 +152,8 @@ mechanical verification of its own output is the delta a blank model can't repro
 - **Design QA in CI.** A merge gate (GitHub Actions + Azure Pipelines templates) —
   design coherence enforced like tests — plus **PR design review** and **team
   onboarding packs**.
+
+</details>
 
 ## How it works
 
