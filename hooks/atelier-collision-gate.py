@@ -118,6 +118,12 @@ def main():
     session = data.get("session_id", "nosession")
     cpath = counter_path(session)
 
+    # Escape hatch: a controlled environment that runs many agents in one tree (e.g. a blind
+    # A/B evaluation) needs to turn the gate off so it can't gate one agent on another's
+    # sibling/scratch files. Drop a `.atelier-gate-off` file in the cwd, or set ATELIER_GATE_OFF.
+    if os.environ.get("ATELIER_GATE_OFF") or os.path.exists(os.path.join(cwd, ".atelier-gate-off")):
+        sys.exit(0)
+
     # If the skill isn't where we expect, do nothing — never break unrelated stops.
     if not os.path.isdir(SCRIPTS):
         sys.exit(0)

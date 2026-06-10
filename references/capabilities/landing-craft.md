@@ -167,6 +167,12 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
   and in every static capture — the same failure as the reveal gate, and reveal_check can't see
   an empty bar the way it sees missing text. Same rule as animated numbers: the settled value
   is the source of truth.
+  **Watch the reveal-class trap:** if you write `.js .chart.in .bar{transform:scaleY(1)}` but the
+  IntersectionObserver only adds `.in` to the *card* (`[data-reveal]`), not `.chart`, the bars
+  default to `scaleY(0)` and **never reveal with JS on** — a blank centerpiece chart that
+  ironically renders *only* with JS off. Put the true value on the resting selector and let the
+  reveal be a no-op-safe enhancement; then EYEBALL the JS-on screenshot (after scrolling) and
+  confirm every bar/mark is actually filled — a passing qa.py does not prove the chart drew.
 - **Animated numbers: the final value is the accessible value.** A count-up must have the
   real final number as its initial DOM text (animate the *display* from 0 visually), or be
   `aria-hidden` with a visually-hidden real value beside it. Never leave a literal `0`/`$0`

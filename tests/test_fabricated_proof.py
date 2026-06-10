@@ -61,3 +61,22 @@ def test_too_many_dead_links_is_important():
 def test_a_few_disabled_links_are_fine():
     links = "".join('<a href="#" aria-disabled="true">x</a>' for _ in range(3))
     assert "too-many-dead-links" not in _kinds(f"<html><body><nav>{links}</nav></body></html>")
+
+
+# --- dead in-page anchors (t01 round 6: 7 `#docs` links with no id="docs") ---
+def test_dead_anchors_flagged():
+    body = "".join('<a href="#docs">Docs</a>' for _ in range(7))
+    html = f"<html><body><nav>{body}</nav><main><h1>Hi</h1></main></body></html>"
+    assert "dead-anchors" in _kinds(html, "important"), check_html(html)
+
+
+def test_resolved_anchors_not_flagged():
+    html = ('<html><body><nav><a href="#how">How</a><a href="#price">Price</a></nav>'
+            '<section id="how">…</section><section id="price">…</section></body></html>')
+    assert "dead-anchors" not in _kinds(html)
+
+
+def test_hash_routes_and_placeholders_not_flagged():
+    html = ('<html><body><a href="#">x</a><a href="#top">top</a>'
+            '<a href="#/dashboard">d</a><a href="#/settings">s</a></body></html>')
+    assert "dead-anchors" not in _kinds(html)

@@ -301,6 +301,34 @@ def _proof_tells(html):
     return findings
 
 
+# --- dead in-page anchors: href="#frag" with no matching id/name in the document ---
+_HREF_FRAG = re.compile(r'href\s*=\s*["\']#([^"\']+)["\']', re.I)
+_ID_ATTR = re.compile(r'\bid\s*=\s*["\']([^"\']+)["\']', re.I)
+_NAME_ANCHOR = re.compile(r'<a\b[^>]*\bname\s*=\s*["\']([^"\']+)["\']', re.I)
+
+
+def _dead_anchor_tells(html):
+    """A nav item / CTA whose href="#section" points at no real id scrolls nowhere — it reads
+    as unfinished wiring (a landing shipped 7 `#docs` links with no id="docs"). Skips the `#`
+    placeholder, the spec-special `#top`, and `#/route` hash-router paths. Fires only on a
+    meaningful amount (>=3 occurrences or >=2 distinct) so a lone typo isn't a gate."""
+    targets = set(_ID_ATTR.findall(html)) | set(_NAME_ANCHOR.findall(html))
+    dead = []
+    for frag in _HREF_FRAG.findall(html):
+        f = frag.strip()
+        if not f or f.lower() == "top" or "/" in f:   # placeholder / spec-special / hash route
+            continue
+        if f not in targets:
+            dead.append(f)
+    uniq = sorted(set(dead))
+    if len(dead) >= 3 or len(uniq) >= 2:
+        shown = ", ".join("#" + x for x in uniq[:6])
+        return [{"severity": "important", "kind": "dead-anchors",
+                 "detail": f"{len(dead)} in-page link(s) target #fragment(s) with no matching id ({shown}). "
+                           "A nav/CTA that scrolls nowhere reads as unfinished — add the target id or wire the link."}]
+    return []
+
+
 _INTERACTIVE_EL = re.compile(r"<button\b|<a\b[^>]*\bhref|<input\b|<select\b|<textarea\b", re.I)
 _BTN_STYLE = re.compile(r"\.btn\b|\bbutton\s*\{", re.I)
 _FOCUS_RULE = re.compile(r":focus(?:-visible)?\b", re.I)
@@ -419,6 +447,7 @@ def check_html(html, allowed_fonts=None, profile=None, contract=None):
     findings.extend(_structural_tells(html))
     findings.extend(_a11y_tells(html))
     findings.extend(_proof_tells(html))
+    findings.extend(_dead_anchor_tells(html))
     findings.extend(_profile_tells(html, profile))
     return findings
 
