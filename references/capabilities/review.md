@@ -162,14 +162,17 @@ Fix:   ⚠️ critical  / ⚡ important / 💡 polish   (each: what + where + ho
 Quick wins: <top 3 doable in ~5 min>
 ```
 
-### Rigor — two isolated assessors + a tracked trend
+### Rigor — two assessors + a tracked trend
 
-Keep the two halves of the review **independent** so one can't rationalize the other:
+Produce the two halves **independently**, then reconcile — measurement beats opinion:
 1. **Evidence** — the mechanical battery (`qa.py`): slop, contrast, overlap, responsive
    sweep, chart legibility. Numbers, not opinion.
-2. **Judgment** — the 5-dimension scorecard above, scored *before* looking at the
-   evidence block, then reconciled (a dimension-1/4 score must agree with the measured
-   contrast/overlap evidence; if they conflict, the measurement wins).
+2. **Judgment** — the 5-dimension scorecard above, formed by looking at the render.
+
+When a judgment score on dimension 1 (contract fit) or 4 (functionality/a11y) disagrees
+with the measured evidence, **the measurement wins** — lower the score to match; don't
+talk the evidence down. (This is a documented discipline, not a hard gate: the only
+mechanically-enforced floors are the `qa.py` checks + the collision hook.)
 
 Record each pass so a one-shot number becomes a tracked metric:
 

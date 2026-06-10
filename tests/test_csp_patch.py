@@ -28,3 +28,18 @@ def test_meta_tag(tmp_path):
 def test_none_when_no_csp(tmp_path):
     (tmp_path / "index.html").write_text("<h1>hi</h1>")
     assert classify_csp(str(tmp_path))["mechanism"] == "none"
+
+
+def test_meta_beats_headers_file(tmp_path):
+    # a meta CSP IS active on a dev server; a headers file usually isn't -> meta wins
+    (tmp_path / "vercel.json").write_text("{}")
+    (tmp_path / "index.html").write_text('<meta http-equiv="Content-Security-Policy" content="default-src \'self\'">')
+    assert classify_csp(str(tmp_path))["mechanism"] == "meta-tag"
+
+
+def test_late_meta_tag_is_found(tmp_path):
+    # CSP after a long block of OG/Twitter tags (>2KB) must still be detected
+    head = "".join(f'<meta property="og:tag{i}" content="x">' for i in range(200))
+    (tmp_path / "index.html").write_text(
+        "<head>" + head + '<meta http-equiv="Content-Security-Policy" content="default-src \'self\'"></head>')
+    assert classify_csp(str(tmp_path))["mechanism"] == "meta-tag"

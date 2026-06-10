@@ -24,3 +24,13 @@ def test_tolerates_malformed_lines(tmp_path):
     led = tmp_path / "critique.jsonl"
     led.write_text("garbage\n{}\n")
     assert trend("x.html", str(led)) is None   # never crashes
+
+
+def test_record_rejects_missing_or_typod_dimensions(tmp_path):
+    from critique_ledger import record
+    led = str(tmp_path / "c.jsonl")
+    try:
+        record("a.html", {"contract": 8, "heirarchy": 7, "detail": 6, "functionality": 9, "innovation": 7}, led)
+        assert False, "typo'd dimension should raise"
+    except ValueError:
+        pass

@@ -177,13 +177,17 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   which elements animate (with duration / easing / iteration), the animation libraries in use
   (by globals + `script src`), and scroll-driven patterns (sticky, AOS, Locomotive, CSS
   scroll-timeline) — extending MEASURE to a dimension no tool measures ("make it move like X").
-- Critique discipline: two **isolated** assessors (mechanical evidence vs. judgment, scored
-  before seeing the evidence then reconciled — measurement wins) and a persisted critique
-  ledger (`critique_ledger.py`) so a one-shot score becomes a tracked trend across edits.
+- Critique discipline: a documented two-assessor review (mechanical evidence vs. judgment,
+  produced independently and reconciled — measurement wins) and a persisted critique ledger
+  (`critique_ledger.py`, all five dimensions required) so a one-shot score becomes a tracked
+  trend across edits.
 - Live-preview CSP classification (`csp_patch.py`): detects how a project's Content-Security-
-  Policy must be relaxed (next / sveltekit / nuxt / headers-file / meta-tag) so the themed
-  preview's client can inject. (Deeper live-iteration — per-variant knobs, real component
-  compilation, freehand annotations — and `import_reference` `light-dark()` pairing are deferred.)
+  Policy must be relaxed (next / sveltekit / nuxt / meta-tag / headers-file) so the themed
+  preview's client can inject.
+- Deferred from this phase (noted, not silently dropped): deeper live-iteration (per-variant
+  knobs, real component compilation, freehand annotations); `import_reference` `light-dark()`
+  / `color-scheme` dark-mode pairing; a published Nielsen 0–4 rubric; a Claude-specific
+  defect profile for `slop_check`; and a cross-artifact critique backlog view.
 
 #### Tooling & capture
 

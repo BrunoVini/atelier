@@ -29,15 +29,17 @@ def classify_csp(repo):
         return {"mechanism": "sveltekit", "hint": "add the preview origin to kit.csp.directives (dev only)"}
     if has("nuxt.config.js", "nuxt.config.ts"):
         return {"mechanism": "nuxt", "hint": "relax routeRules CSP headers (dev only)"}
-    if has("netlify.toml", "_headers", "vercel.json"):
-        return {"mechanism": "headers-file", "hint": "the CSP is set in a headers file — not active on a dev server"}
-    # A meta CSP tag in any top-level/2-level HTML.
+    # A meta CSP IS active on a dev server, so it's checked BEFORE a headers file (which a
+    # dev server usually doesn't apply). Read the whole head — a CSP meta often sits after
+    # a long block of OG/Twitter/JSON-LD tags well past the first 2 KB.
     for p in glob.glob(os.path.join(repo, "*.html")) + glob.glob(os.path.join(repo, "*", "*.html")):
         try:
-            if _CSP_META.search(open(p, encoding="utf-8", errors="replace").read(2000)):
+            if _CSP_META.search(open(p, encoding="utf-8", errors="replace").read()):
                 return {"mechanism": "meta-tag", "hint": f"strip/relax the <meta> CSP in {os.path.relpath(p, repo)} for the preview"}
         except OSError:
             pass
+    if has("netlify.toml", "_headers", "vercel.json"):
+        return {"mechanism": "headers-file", "hint": "CSP set in a headers file — usually not applied by the dev server"}
     return {"mechanism": "none", "hint": "no CSP detected — the preview client injects freely"}
 
 

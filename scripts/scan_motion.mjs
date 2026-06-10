@@ -40,52 +40,67 @@ const PROBE = `(() => {
     (el.className && typeof el.className === 'string' && el.className.trim()
       ? '.' + el.className.trim().split(/\\s+/).slice(0, 2).join('.') : '');
 
-  // @keyframes defined across all (same-origin) stylesheets.
-  const keyframes = new Set();
+  // @keyframes (name -> cssText so "make it move like X" can reproduce it), recursing into
+  // @media/@supports groups — atelier's own reduced-motion pattern wraps keyframes there.
+  const keyframes = {};
+  let crossOrigin = 0;
+  const walk = (rules) => {
+    for (const r of rules || []) {
+      if (r.type === CSSRule.KEYFRAMES_RULE) keyframes[r.name] = r.cssText;
+      else if (r.cssRules) { try { walk(r.cssRules); } catch {} }
+    }
+  };
   for (const ss of document.styleSheets) {
-    let rules; try { rules = ss.cssRules; } catch { continue; }   // cross-origin -> skip
-    for (const r of rules || []) if (r.type === CSSRule.KEYFRAMES_RULE) keyframes.add(r.name);
+    let rules; try { rules = ss.cssRules; } catch { crossOrigin++; continue; }   // cross-origin
+    walk(rules);
   }
 
-  // Elements that actually animate or transition, with timing.
+  // Elements that animate/transition (timing), and sticky count — one pass, independent caps.
   const animated = [], transitions = [];
+  let sticky = 0;
   for (const el of document.querySelectorAll('*')) {
     const cs = getComputedStyle(el);
-    if (cs.animationName && cs.animationName !== 'none') {
+    if (cs.position === 'sticky') sticky++;
+    if (cs.animationName && cs.animationName !== 'none' && animated.length < 40)
       animated.push({ sel: sel(el), name: cs.animationName,
         duration: cs.animationDuration, easing: cs.animationTimingFunction,
         iteration: cs.animationIterationCount });
-      if (animated.length >= 40) break;
-    }
-    if (cs.transitionProperty && cs.transitionProperty !== 'none' && cs.transitionDuration !== '0s')
+    if (cs.transitionProperty && cs.transitionProperty !== 'none' && cs.transitionDuration !== '0s'
+        && transitions.length < 40)
       transitions.push({ sel: sel(el), property: cs.transitionProperty,
         duration: cs.transitionDuration, easing: cs.transitionTimingFunction });
   }
+  const truncated = animated.length >= 40 || transitions.length >= 40;
 
-  // Animation libraries — globals first, then <script src>.
+  // Animation libraries — SHAPE-checked globals (a global named Motion/AOS isn't proof),
+  // then filename-boundary <script src> (not bare substrings: 'chaos.js' ≠ aos).
   const libs = new Set();
   const g = window;
-  if (g.gsap || g.TweenMax || g.TweenLite) libs.add('gsap');
-  if (g.ScrollTrigger || (g.gsap && g.gsap.ScrollTrigger)) libs.add('gsap/ScrollTrigger');
-  if (g.lottie || g.bodymovin) libs.add('lottie');
-  if (g.THREE) libs.add('three');
-  if (g.Motion || g.framerMotion) libs.add('framer-motion');
-  if (g.AOS) libs.add('aos');
-  if (g.anime) libs.add('anime');
-  if (g.LocomotiveScroll) libs.add('locomotive-scroll');
-  if (g.Matter) libs.add('matter-js');
+  const get = (k) => { try { return g[k]; } catch { return undefined; } };
+  if (get('gsap')?.to || get('TweenMax') || get('TweenLite')) libs.add('gsap');
+  if (get('ScrollTrigger')?.create || get('gsap')?.ScrollTrigger) libs.add('gsap/ScrollTrigger');
+  if (typeof get('lottie')?.loadAnimation === 'function' || get('bodymovin')) libs.add('lottie');
+  if (get('THREE')?.Scene) libs.add('three');
+  if (typeof get('Motion')?.animate === 'function' || get('framerMotion')) libs.add('framer-motion');
+  if (typeof get('AOS')?.init === 'function') libs.add('aos');
+  if (typeof get('anime') === 'function' || typeof get('anime')?.timeline === 'function') libs.add('anime');
+  if (typeof get('LocomotiveScroll') === 'function') libs.add('locomotive-scroll');
+  if (get('Matter')?.Engine) libs.add('matter-js');
   for (const s of document.querySelectorAll('script[src]')) {
-    const u = (s.getAttribute('src') || '').toLowerCase();
-    for (const [k, lib] of [['gsap', 'gsap'], ['scrolltrigger', 'gsap/ScrollTrigger'],
-      ['lottie', 'lottie'], ['three', 'three'], ['framer', 'framer-motion'], ['aos', 'aos'],
-      ['anime', 'anime'], ['locomotive', 'locomotive-scroll'], ['matter', 'matter-js']])
-      if (u.includes(k)) libs.add(lib);
+    const u = ((s.getAttribute('src') || '').toLowerCase().split('?')[0].split('/').pop()) || '';
+    if (/(^|\\W)gsap(\\W|$)/.test(u)) libs.add('gsap');
+    if (/scrolltrigger/.test(u)) libs.add('gsap/ScrollTrigger');
+    if (/(^|\\W)lottie(\\W|$)/.test(u)) libs.add('lottie');
+    if (/(^|\\W)three(\\.min|\\.module|\\.core)?\\.js$/.test(u)) libs.add('three');
+    if (/framer-motion|(^|\\W)motion(\\.min)?\\.js$/.test(u)) libs.add('framer-motion');
+    if (/(^|\\W)aos(\\.min)?\\.js$/.test(u)) libs.add('aos');
+    if (/(^|\\W)anime(\\.min|\\.es)?\\.js$/.test(u)) libs.add('anime');
+    if (/locomotive/.test(u)) libs.add('locomotive-scroll');
+    if (/(^|\\W)matter(\\.min)?\\.js$/.test(u)) libs.add('matter-js');
   }
 
-  // Scroll-driven patterns.
   const scroll = {
-    sticky: document.querySelectorAll('*[style*="sticky"], .sticky').length +
-            [...document.querySelectorAll('*')].filter(e => getComputedStyle(e).position === 'sticky').length,
+    sticky,
     aos: document.querySelectorAll('[data-aos]').length,
     locomotive: document.querySelectorAll('[data-scroll]').length,
     scroll_timeline: [...document.styleSheets].some(ss => {
@@ -93,8 +108,8 @@ const PROBE = `(() => {
       catch { return false; }
     }),
   };
-  return { keyframes: [...keyframes], animated, transitions: transitions.slice(0, 40),
-           libraries: [...libs], scroll };
+  return { keyframes, animated, transitions, libraries: [...libs], scroll, truncated,
+           crossOriginSheets: crossOrigin };
 })()`;
 
 (async () => {
@@ -107,8 +122,9 @@ const PROBE = `(() => {
     if (asJson) {
       console.log(JSON.stringify(spec, null, 2));
     } else {
-      console.error(`@keyframes: ${spec.keyframes.join(', ') || '(none)'}`);
-      console.error(`animated elements: ${spec.animated.length}; transitions: ${spec.transitions.length}`);
+      console.error(`@keyframes: ${Object.keys(spec.keyframes).join(', ') || '(none)'}`);
+      console.error(`animated elements: ${spec.animated.length}${spec.truncated ? '+' : ''}; transitions: ${spec.transitions.length}` +
+                    (spec.crossOriginSheets ? `  (${spec.crossOriginSheets} cross-origin sheet(s) not read)` : ''));
       console.error(`libraries: ${spec.libraries.join(', ') || '(none)'}`);
       console.error(`scroll: sticky=${spec.scroll.sticky} aos=${spec.scroll.aos} ` +
                     `locomotive=${spec.scroll.locomotive} scroll-timeline=${spec.scroll.scroll_timeline}`);

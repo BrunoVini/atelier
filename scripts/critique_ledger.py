@@ -17,7 +17,13 @@ DEFAULT_LEDGER = os.environ.get("ATELIER_CRITIQUE_LEDGER") or os.path.expanduser
 
 
 def record(artifact, scores, ledger=DEFAULT_LEDGER):
-    row = {"artifact": artifact, "scores": {d: float(scores[d]) for d in DIMENSIONS if d in scores}}
+    # All five dimensions are required — a missing/typo'd key would silently change the
+    # total and poison the trend (a phantom regression on an unchanged design).
+    missing = [d for d in DIMENSIONS if d not in scores]
+    unknown = [k for k in scores if k not in DIMENSIONS]
+    if missing or unknown:
+        raise ValueError(f"scores must be exactly {DIMENSIONS} (missing={missing}, unknown={unknown})")
+    row = {"artifact": artifact, "scores": {d: float(scores[d]) for d in DIMENSIONS}}
     row["total"] = round(sum(row["scores"].values()), 2)
     os.makedirs(os.path.dirname(ledger) or ".", exist_ok=True)
     with open(ledger, "a", encoding="utf-8") as f:
@@ -36,7 +42,7 @@ def load(ledger=DEFAULT_LEDGER):
             continue
         try:
             row = json.loads(line)
-            if isinstance(row, dict) and "artifact" in row and "total" in row:
+            if isinstance(row, dict) and "artifact" in row and isinstance(row.get("total"), (int, float)):
                 out.append(row)
         except Exception:
             pass
@@ -53,7 +59,11 @@ if __name__ == "__main__":
     a = sys.argv[1:]
     if len(a) >= 2 and a[0] == "record":
         scores = dict(kv.split("=", 1) for kv in a[2:] if "=" in kv)
-        print(json.dumps(record(a[1], scores)))
+        try:
+            print(json.dumps(record(a[1], scores)))
+        except ValueError as e:
+            sys.stderr.write(f"critique_ledger: {e}\n")
+            sys.exit(2)
     elif len(a) >= 2 and a[0] == "trend":
         t = trend(a[1])
         print(f"trend for {a[1]}: {'+' if (t or 0) >= 0 else ''}{t}" if t is not None else "no prior snapshot")
