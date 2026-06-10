@@ -14,34 +14,65 @@ import json
 import os
 import sys
 
-from scan_repo import _hex_to_rgb, _delta_e, _rgb_to_hex
+from scan_repo import _hex_to_rgb, _delta_e
 
-DEFAULT_LEDGER = os.path.expanduser("~/.atelier/cold-start.jsonl")
-DELTA_E = 10.0   # same font+archetype AND palette centroid within this reads as "the same look"
+DEFAULT_LEDGER = os.environ.get("ATELIER_LEDGER") or os.path.expanduser("~/.atelier/cold-start.jsonl")
+DELTA_E = 12.0   # mean nearest-neighbor ΔE between palettes below this (same font+archetype) = "same look"
 RECENT = 5       # only compare against the last N cold-start outputs
 
 
-def _centroid(palette):
-    rgbs = [_hex_to_rgb(h) for h in palette if isinstance(h, str) and h.startswith("#")]
-    if not rgbs:
-        return (128, 128, 128)
-    n = len(rgbs)
-    return tuple(round(sum(c[i] for c in rgbs) / n) for i in range(3))
+def _norm_font(font):
+    # first family, lowercased, quotes + fallback stack stripped ("Sora, sans-serif" -> "sora")
+    return (font or "").split(",")[0].strip().strip("'\"").lower()
+
+
+def _palette_rgbs(palette):
+    out = []
+    for h in palette or []:
+        if isinstance(h, str) and h.startswith("#"):
+            try:
+                out.append(_hex_to_rgb(h))
+            except Exception:
+                pass
+    return out
+
+
+def _palette_distance(a, b):
+    """Symmetric mean nearest-neighbor ΔE between two color SETS — robust to palette
+    length (padding with a neutral can't evade) and to a shared centroid of unlike
+    colors (red+blue ≠ all-purple). Empty/non-hex palette -> infinite (never collides)."""
+    ra, rb = _palette_rgbs(a), _palette_rgbs(b)
+    if not ra or not rb:
+        return float("inf")
+    def avg_nn(xs, ys):
+        return sum(min(_delta_e(x, y) for y in ys) for x in xs) / len(xs)
+    return (avg_nn(ra, rb) + avg_nn(rb, ra)) / 2
 
 
 def fingerprint(font, archetype, palette):
     return {
-        "font": (font or "").lower(),
+        "font": _norm_font(font),
         "archetype": (archetype or "").lower(),
-        "palette": [h.lower() for h in palette],
-        "centroid": _rgb_to_hex(*_centroid(palette)),
+        "palette": [h.lower() for h in palette if isinstance(h, str)],
     }
 
 
 def load(ledger=DEFAULT_LEDGER):
+    """Tolerant: a torn/half-written or malformed line never kills the gate."""
     if not os.path.exists(ledger):
         return []
-    return [json.loads(l) for l in open(ledger, encoding="utf-8") if l.strip()]
+    out = []
+    for line in open(ledger, encoding="utf-8"):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+            if isinstance(row, dict):
+                out.append(row)
+        except Exception:
+            pass
+    return out
 
 
 def record(fp, ledger=DEFAULT_LEDGER):
@@ -52,12 +83,11 @@ def record(fp, ledger=DEFAULT_LEDGER):
 
 
 def too_similar(fp, ledger=DEFAULT_LEDGER, n=RECENT):
-    """Return the most recent colliding fingerprint (same font + archetype, palette
-    centroid within ΔE of a recent one), or None."""
-    c = _hex_to_rgb(fp["centroid"])
+    """Return the most recent colliding fingerprint (same normalized font + archetype,
+    palette sets within ΔE of a recent one), or None."""
     for prior in reversed(load(ledger)[-n:]):
         if prior.get("font") == fp["font"] and prior.get("archetype") == fp["archetype"]:
-            if _delta_e(c, _hex_to_rgb(prior["centroid"])) <= DELTA_E:
+            if _palette_distance(fp.get("palette"), prior.get("palette")) <= DELTA_E:
                 return prior
     return None
 

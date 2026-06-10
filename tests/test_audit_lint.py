@@ -583,3 +583,10 @@ def test_slop_flags_styled_native_control():
     assert "native-control" in {f["kind"] for f in check_html(styled)}
     assert "native-control" not in {f["kind"] for f in check_html('<select><option>x</option></select>')}
     assert "native-control" in {f["kind"] for f in check_html('<style>a{}</style><input type="date">')}
+    # false positives the fix must avoid:
+    assert "native-control" not in {f["kind"] for f in check_html(  # hidden native select behind a custom trigger
+        '<style>a{}</style><select aria-hidden="true" tabindex="-1"><option>x</option></select>')}
+    assert "native-control" not in {f["kind"] for f in check_html(  # inside an HTML comment
+        '<style>a{}</style><!-- <select><option>x</option></select> -->')}
+    assert "native-control" not in {f["kind"] for f in check_html(  # data-type, not type
+        '<style>a{}</style><input type="text" data-type="date">')}

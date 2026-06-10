@@ -110,7 +110,7 @@ works at demo scale is not done.
 |---|-----------|--------------------|
 | 1 | Contract fit | Honors `DESIGN.md` (palette, type, spacing, motion)? Off-contract = capped low. |
 | 2 | Visual hierarchy | Does the eye land where it should? Type scale, contrast, focal point. |
-| 3 | Detail execution | Alignment, optical spacing, consistent radii/shadows, states, edge cases, **subtle layering** (surfaces too flat / borders too harsh / elevation jumps too dramatic are findings — see design-philosophy §4 "Subtle layering"; squint test: mentally remove every border, can you still read the structure?). |
+| 3 | Detail execution | Alignment, optical spacing, consistent radii/shadows, states, edge cases, **subtle layering** (borders too harsh, or elevation jumps too dramatic, are findings — see design-philosophy §4 "Subtle layering"; squint test: mentally remove every border, can you still read the structure? — **but a contract whose depth strategy declares `flat`/`borders-only`, or a deliberately maximalist vision, is obeying dim 1, not failing dim 3**). |
 | 4 | Functionality & a11y | Works / buildable / accessible (contrast, targets, reduced motion)? |
 | 5 | Innovation | A memorable, non-generic idea — or AI slop? |
 

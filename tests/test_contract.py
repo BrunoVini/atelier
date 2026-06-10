@@ -90,3 +90,22 @@ def test_template_has_agent_prompt_guide():
     tmpl = os.path.join(os.path.dirname(__file__), "..", "templates", "DESIGN.md.template")
     text = open(tmpl, encoding="utf-8").read()
     assert "Agent Prompt Guide" in text and "Paste-ready prompts" in text
+
+
+def test_agent_prompt_guide_fills_with_no_dangling_placeholders():
+    # The §13 cheat-sheet is copy-pasted by external agents — every {{placeholder}} it
+    # uses must be a real one the generator fills (would have caught {{RADIUS}}).
+    import os
+    import re
+    tmpl = os.path.join(os.path.dirname(__file__), "..", "templates", "DESIGN.md.template")
+    text = open(tmpl, encoding="utf-8").read()
+    guide = text[text.index("## 13. Agent Prompt Guide"):]
+    fills = {
+        "{{COLOR_PRIMARY}}": "#2563eb", "{{COLOR_INK}}": "#111111", "{{COLOR_PAPER}}": "#ffffff",
+        "{{PALETTE_REST}}": "accent #ea580c", "{{FONT_DISPLAY}}": "Sora", "{{FONT_BODY}}": "Inter",
+        "{{SPACING_SCALE}}": "4 8 16 24px", "{{RADIUS_SCALE}}": "8px", "{{DEPTH_STRATEGY}}": "borders-only",
+    }
+    for k, v in fills.items():
+        guide = guide.replace(k, v)
+    assert not re.search(r"\{\{[A-Z_]+\}\}", guide), "dangling placeholder in the Agent Prompt Guide"
+    assert "no Inter" not in guide   # no hardcoded ban that could contradict a measured Inter body font

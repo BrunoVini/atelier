@@ -24,9 +24,9 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Color provenance: each measured color now carries the files it lives in and the
   dominant file's share, so the contract can state evidence ("primary `#2563eb` — 412
   uses across 9 files") instead of an opaque blob count.
-- DESIGN.md "Agent Prompt Guide": an auto-generated, flat copy-paste cheat-sheet (literal
-  palette/type values + ready-to-paste section prompts) so any coding agent — not just
-  atelier — can build on-contract without reading the whole file.
+- DESIGN.md "Agent Prompt Guide": a flat copy-paste cheat-sheet section in the template
+  (literal palette/type values + ready-to-paste section prompts) the generator fills, so
+  any coding agent — not just atelier — can build on-contract without reading the whole file.
 - Render-grounded measurement (`scan_rendered.mjs`): measures the colors users actually
   *see*, weighted by on-screen painted area, and reconciles against the static scan —
   surfacing "declared but not painted" (dead palette) and "painted but not declared"
@@ -114,10 +114,14 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Chart-legibility mechanical gate — an illegible or collision-prone chart fails the
   review; ASCII previews are the default when no live/HTML preview is available.
 - Native-control prohibition: a styled page using a native `<select>` / `<input type=date|
-  color>` is flagged — build a custom trigger+popover for a designed control.
+  color>` is flagged (advisory) — build a custom trigger+popover for a designed control.
+  (Hidden native controls behind a custom trigger are not flagged.) The other two #12
+  rules — symmetric-padding and a four-level-hierarchy *lint* — are deferred; four-level
+  hierarchy ships as taught craft in design-philosophy §4 + the review rubric.
 - Prose anti-slop gate (`prose_check.py`, CI-wired): fails on high-signal AI-tell
-  vocabulary (delve, seamless, "not just X, it's Y", …) in the project's own docs/copy —
-  conservative, never flags common legitimate words.
+  vocabulary (`delve`, `seamless`, `not just X / it's Y`, …) in the project's own docs/copy —
+  conservative (never flags common words like `robust`/`leverage`), and ignores code spans
+  so a doc can document the banned words without flagging itself.
 - Taught "subtle layering" craft (design-philosophy §4) + a review rubric for it: surfaces
   too flat / borders too harsh / elevation jumps too dramatic are findings, with the
   "mentally remove every border — can you still read the structure?" squint test.

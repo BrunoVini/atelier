@@ -52,6 +52,10 @@ color values (e.g. `oklch(...)`) aren't yet supported in the block — keep colo
     a single-route sample, no error states, no elevation tokens). `scan_repo.py`
     emits these so the contract is honest about where generation may invent rather
     than pretending it's complete. Don't silently fill a gap — name it.
+13. **Agent Prompt Guide** — a flat, copy-paste cheat-sheet (literal palette/type values
+    + ready-to-paste section prompts) so any coding agent, not just atelier, can build
+    on-contract without reading the whole file. Synthesize from the tokens; point at §6
+    for anti-slop rules rather than hardcoding bans.
 
 ## Scale the contract to the repo
 
