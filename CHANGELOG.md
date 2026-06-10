@@ -51,7 +51,14 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   (Drove by the t04 launch-film head-to-head.)
 - `chart_legibility` skips decorative graphics (`aria-hidden="true"` / `role="presentation"|
   "none"`) up the ancestor chain — a decorative optical/illustrative SVG (a lens, an iris, a
-  particle field) is not a data chart and shouldn't be judged as one; mark it `aria-hidden`. (Vendored SFX/BGM, a TTS narration producer, offline
+  particle field) is not a data chart and shouldn't be judged as one; mark it `aria-hidden`.
+- Explainer caption craft (`animation-pitfalls.md` §19c): the synced-narration caption band is
+  **protected** — geometry/strokes/icons must never cross it (the §18 text-over-art rule applied
+  to the caption lane), verified on every held frame; **one dominant text register per beat**
+  (caption leads; don't stack kicker + headline + caption + legend — restraint is register count,
+  not just color count); **let the finale breathe** (resolve working geometry so the payoff lands
+  on a calm frame); and size each caption window to ~12 cps, not the 15 cps brisk limit. (Drove by
+  the t05 narrated-explainer head-to-head, where these were the two dimensions that first slipped.) (Vendored SFX/BGM, a TTS narration producer, offline
   font-binary bundling, and the `styles.csv` enrichment are out of scope / deferred — atelier
   is a design studio, not a video producer.)
 - Render-grounded measurement (`scan_rendered.mjs`): measures the colors users actually
