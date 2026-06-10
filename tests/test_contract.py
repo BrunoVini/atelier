@@ -36,3 +36,50 @@ def test_validate_passes_viable_contract():
     ok, rep = validate_contract({"source": "x", "colors": {"ink": "#111111", "paper": "#ffffff"},
                                  "fonts": ["Sora"], "spacing": ["4px"]})
     assert ok is True and not rep["issues"]
+
+
+def test_template_machine_block_is_valid_json(tmp_path):
+    import os
+    tmpl = os.path.join(os.path.dirname(__file__), "..", "templates", "DESIGN.md.template")
+    text = open(tmpl, encoding="utf-8").read()
+    fills = {
+        "{{COLOR_PRIMARY}}": "#2563eb", "{{COLOR_INK}}": "#111111", "{{COLOR_PAPER}}": "#ffffff",
+        "{{FONT_DISPLAY}}": "Sora", "{{FONT_BODY}}": "Inter",
+        "{{SPACING_SCALE_JSON}}": '"4px", "8px", "16px", "24px"', "{{DEPTH_STRATEGY}}": "borders-only",
+    }
+    for k, v in fills.items():
+        text = text.replace(k, v)
+    d = tmp_path / "DESIGN.md"
+    d.write_text(text)
+    c = resolve_contract(str(d))
+    assert c.get("machine_block") is None and not c.get("machine_block_dropped")
+    assert c["colors"]["primary"] == "#2563eb"
+    assert "Sora" in c["fonts"]
+    assert c["spacing"] == ["4px", "8px", "16px", "24px"]
+    assert c["depth"] == "borders-only"
+
+
+def test_malformed_block_falls_back_to_prose_and_is_flagged(tmp_path):
+    d = tmp_path / "DESIGN.md"
+    d.write_text("```json atelier-contract\n{ not, valid: json }\n```\n\n"
+                 "## Colors\n| Role | Hex |\n|---|---|\n| primary | `#2563eb` |\n")
+    c = resolve_contract(str(d))
+    assert c["machine_block"] == "unparseable"
+    assert any(v.lower() == "#2563eb" for v in c["colors"].values())   # prose fallback worked
+    ok, rep = validate_contract(c)
+    assert ok is False and any("unparseable" in i for i in rep["issues"])
+
+
+def test_block_drops_non_hex_color_and_flags_it():
+    from contract import _contract_from_block
+    c = _contract_from_block(
+        {"colors": {"ink": "#111111", "brand": "oklch(0.7 0.2 30)"}, "fonts": ["Sora"]}, "x")
+    assert "brand" in c.get("machine_block_dropped", []) and "ink" in c["colors"]
+    ok, rep = validate_contract(c)
+    assert ok is False and any("non-hex" in i for i in rep["issues"])
+
+
+def test_block_type_guards_bad_shapes():
+    from contract import _contract_from_block
+    c = _contract_from_block({"colors": {"ink": "#111"}, "fonts": "Sora", "spacing": "4px"}, "x")
+    assert c["fonts"] == [] and c["spacing"] == []   # a string is not a list -> guarded, not split

@@ -35,3 +35,21 @@ def test_ratchet_baselines_then_blocks_new_drift(tmp_path):
     # re-baseline -> passes again
     assert _check([repo, "--update-baseline"]).returncode == 0
     assert _check([repo, "--ratchet"]).returncode == 0
+
+
+def test_ratchet_auto_tightens_on_decrease(tmp_path):
+    repo = str(tmp_path)
+    (tmp_path / "design").mkdir()
+    (tmp_path / "design" / "design-tokens.json").write_text('{"colors":{"ink":"#111111","paper":"#ffffff"}}')
+    cfgp = os.path.join(repo, "design", "atelier.config.json")
+    (tmp_path / "a.css").write_text("a{color:#ff00ff}\nb{color:#00ff00}")   # 2 drift
+    assert _check([repo, "--update-baseline"]).returncode == 0
+    assert json.load(open(cfgp))["check"]["drift_baseline"] == 2
+    # improve to 1 drift (one off-contract color, one on-contract) -> ratchet passes
+    # AND tightens baseline to 1
+    (tmp_path / "a.css").write_text("a{color:#ff00ff}\nb{color:#111111}")
+    assert _check([repo, "--ratchet"]).returncode == 0
+    assert json.load(open(cfgp))["check"]["drift_baseline"] == 1
+    # reintroduce a 2nd drift -> exceeds the tightened baseline -> fail
+    (tmp_path / "a.css").write_text("a{color:#ff00ff}\nd{color:#00ff00}")
+    assert _check([repo, "--ratchet"]).returncode == 1

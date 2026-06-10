@@ -65,22 +65,55 @@ def _from_tokens_json(path):
 _CONTRACT_BLOCK = re.compile(r"```[^\n]*atelier-contract[^\n]*\n(.*?)\n```", re.S)
 
 
+def _contract_from_block(block, path):
+    """Build a contract from the parsed `atelier-contract` JSON object, type-guarding
+    each field. Colors must be hex (the rest of atelier's contract model is hex); a
+    non-hex/invalid color value is RECORDED in `machine_block_dropped` (not silently
+    dropped) so `validate_contract` can flag it."""
+    colors, dropped = {}, []
+    raw = block.get("colors")
+    if isinstance(raw, dict):
+        for k, v in raw.items():
+            if isinstance(v, str) and v.startswith("#"):
+                try:
+                    colors[k] = _norm_hex(v)
+                except Exception:
+                    dropped.append(k)
+            else:
+                dropped.append(k)          # non-hex (e.g. oklch) not yet supported in the block
+    fonts = block.get("fonts")
+    spacing = block.get("spacing")
+    out = {
+        "source": path,
+        "colors": colors,
+        "fonts": list(fonts) if isinstance(fonts, list) else [],
+        "spacing": [str(s) for s in spacing] if isinstance(spacing, list) else [],
+        "depth": block.get("depth") if isinstance(block.get("depth"), str) else None,
+    }
+    if dropped:
+        out["machine_block_dropped"] = dropped
+    return out
+
+
 def _from_design_md(path):
     text = open(path, encoding="utf-8").read()
     m = _CONTRACT_BLOCK.search(text)
     if m:
         try:
             block = json.loads(m.group(1))
-            return {
-                "source": path,
-                "colors": {k: _norm_hex(v) for k, v in (block.get("colors") or {}).items()
-                           if isinstance(v, str) and v.startswith("#")},
-                "fonts": list(block.get("fonts") or []),
-                "spacing": [str(s) for s in (block.get("spacing") or [])],
-                "depth": block.get("depth") if isinstance(block.get("depth"), str) else None,
-            }
         except Exception:
-            pass   # malformed block -> fall back to prose parsing below (never silently empty)
+            c = _from_design_md_prose(text, path)     # malformed JSON -> prose, but flag it loudly
+            c["machine_block"] = "unparseable"
+            return c
+        if isinstance(block, dict):
+            return _contract_from_block(block, path)
+        c = _from_design_md_prose(text, path)
+        c["machine_block"] = "not-an-object"
+        return c
+    return _from_design_md_prose(text, path)
+
+
+def _from_design_md_prose(text, path):
     colors = {}
     for line in text.splitlines():
         # Skip WCAG/contrast prose notes — their hexes are examples, not palette roles.
@@ -194,6 +227,12 @@ def validate_contract(contract):
     colors = contract.get("colors", {})
     fonts = contract.get("fonts", [])
     issues = []
+    if contract.get("machine_block") in ("unparseable", "not-an-object"):
+        issues.append("an atelier-contract block is present but unparseable — fell back to prose; "
+                      "fix the JSON so the block is authoritative")
+    if contract.get("machine_block_dropped"):
+        issues.append(f"machine block dropped non-hex/invalid color(s): "
+                      f"{contract['machine_block_dropped']} — contract colors must be hex")
     if len(colors) < 2:
         issues.append(f"only {len(colors)} color role(s) parsed — too thin to lint drift "
                       "(check the DESIGN.md palette table or add an atelier-contract block)")
@@ -212,7 +251,12 @@ if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a]
     if "--validate" in args:
         target = next((a for a in args if not a.startswith("-")), ".")
-        ok, rep = validate_contract(resolve_contract(target))
+        try:
+            contract = resolve_contract(target)
+        except FileNotFoundError as e:
+            print(f"::error:: {e}")
+            sys.exit(2)
+        ok, rep = validate_contract(contract)
         print(json.dumps(rep, indent=2))
         for i in rep["issues"]:
             print("  ⚠", i)
