@@ -120,9 +120,20 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - **Progressive-enhancement gate** (`reveal_check.mjs`): a page must show its content
   without its own JavaScript — it renders the page with scripts stripped and fails if a
   large share of content is gated behind a JS-only reveal (the pattern that screenshots
-  blank for crawlers, print, and static review). **Capture honesty**: screenshots and the
-  paint-weighted color scan now scroll-drive reveals first, so a review sees the whole page
-  a scrolling user sees, not a half-blank fold.
+  blank for crawlers, print, and static review). It also fails when content is **stuck at
+  `opacity:0` WITH JavaScript on** — a reveal that never fires (observer wired to the wrong
+  node, no fallback) ships a blank section to real users. The canonical reveal pattern now
+  ships a **safety net** (reveal any not-yet-revealed element on load/timeout, and reveal
+  everything if `IntersectionObserver` is unsupported). **Capture honesty**: screenshots and
+  the paint-weighted color scan scroll-drive reveals AND fast-forward running animations to
+  their settled end state, so a review sees the whole, finished page — not a half-blank fold
+  or a mid-fade "washed-out" comp. Finish rules also cover meter/progress fills (true value on
+  the resting selector), no self-anchored primary CTA, full-opacity settled state, and a skip
+  link that un-clips on `:focus`.
+- **Critiques are exhaustive and verified**: a review runs the full mechanical battery and
+  folds every result into a severity-tiered punch list, and re-checks every cited number — a
+  wrong ratio/width discredits the critique. Honest copy "shows, doesn't announce" (repeated
+  anti-slop meta-commentary is its own tell).
 - WCAG contrast audit for every text/surface pairing in the locked palette, with
   nearest-passing shade suggestions and on-pair contrast scoring.
 - Overlap / collision hunting across screen sizes, on by default in any scan or review:
@@ -238,5 +249,12 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - `synthesize_tokens` returns a soft near-black/near-white (not harsh pure `#000`/`#fff`)
   on the high-contrast side; `responsive_check` rejects an empty `--widths` instead of
   "passing" a swept-nothing page; deduplicated review.md's `§3b`/`§3c` headers.
+- The collision gate no longer raises false positives from its own scratch: the responsive
+  sweep contact-sheet images are responsive (no self-overflow at narrow widths), and the gate
+  skips its own `/tmp/atelier-responsive` and `reveal_check` probe files. Added a gate
+  off-switch (`ATELIER_GATE_OFF` env or a `.atelier-gate-off` file in the cwd) for controlled
+  multi-agent environments. `reveal_check` loads its no-JS render via `setContent` (no /tmp
+  scratch). `slop_check` no longer counts metric-matched `<Brand> Fallback` `@font-face`s
+  toward the too-many-fonts limit (they're the recommended fallback practice, not typefaces).
 
 [Unreleased]: https://github.com/BrunoVini/atelier/commits/main
