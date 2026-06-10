@@ -283,7 +283,7 @@ ffmpeg -i video.mp4 -ss $DURATION-0.1 -vframes 1 frame-end.png
 ```
 The first frame must be the animation's t=0 initial state (not mid-animation, not black); the last frame must be the animation's terminal state (not some moment in a second loop).
 
-**Reference implementations**: `assets/engines/narration.jsx` / `sprites.jsx` implement this Stage protocol. atelier's bundled exporter (`scripts/export_video.sh`) captures by screenshot at a fixed fps — it does NOT inject the `__ready`/`__seek` handshake — so hand-written HTML must use the starter tick template and render a complete frame 0; every line guards against a specific bug.
+**Reference implementations**: `assets/engines/narration.jsx` / `sprites.jsx` implement this Stage protocol. atelier's bundled exporter (`scripts/export_video.sh`) now drives the handshake: it injects `window.__recording = true` before load, waits for `window.__ready === true`, and calls `window.__seek(seconds)` per frame for deterministic capture — falling back to a fixed-fps screenshot loop for pages that don't expose `__seek`. A page that opts in must still render a complete frame 0 and reset its loop when `__recording`; every line of the template guards against a specific bug.
 
 ## 13. No looping during recording — `window.__recording` signal
 
