@@ -173,6 +173,22 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   (`from-violet-600 …`), not only as a literal `linear-gradient(...)`. (Spacing-scale drift
   linting and contrast-pairing from the rendered DOM are deferred to a later pass.)
 
+- Live-site MOTION capture (`scan_motion.mjs`): renders a page and extracts its `@keyframes`,
+  which elements animate (with duration / easing / iteration), the animation libraries in use
+  (by globals + `script src`), and scroll-driven patterns (sticky, AOS, Locomotive, CSS
+  scroll-timeline) — extending MEASURE to a dimension no tool measures ("make it move like X").
+- Critique discipline: a documented two-assessor review (mechanical evidence vs. judgment,
+  produced independently and reconciled — measurement wins) and a persisted critique ledger
+  (`critique_ledger.py`, all five dimensions required) so a one-shot score becomes a tracked
+  trend across edits.
+- Live-preview CSP classification (`csp_patch.py`): detects how a project's Content-Security-
+  Policy must be relaxed (next / sveltekit / nuxt / meta-tag / headers-file) so the themed
+  preview's client can inject.
+- Deferred from this phase (noted, not silently dropped): deeper live-iteration (per-variant
+  knobs, real component compilation, freehand annotations); `import_reference` `light-dark()`
+  / `color-scheme` dark-mode pairing; a published Nielsen 0–4 rubric; a Claude-specific
+  defect profile for `slop_check`; and a cross-artifact critique backlog view.
+
 #### Tooling & capture
 
 - stdlib-only Python scripts (no install needed) for scan, audit, lint, census,

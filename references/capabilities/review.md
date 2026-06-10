@@ -162,6 +162,28 @@ Fix:   ⚠️ critical  / ⚡ important / 💡 polish   (each: what + where + ho
 Quick wins: <top 3 doable in ~5 min>
 ```
 
+### Rigor — two assessors + a tracked trend
+
+Produce the two halves **independently**, then reconcile — measurement beats opinion:
+1. **Evidence** — the mechanical battery (`qa.py`): slop, contrast, overlap, responsive
+   sweep, chart legibility. Numbers, not opinion.
+2. **Judgment** — the 5-dimension scorecard above, formed by looking at the render.
+
+When a judgment score on dimension 1 (contract fit) or 4 (functionality/a11y) disagrees
+with the measured evidence, **the measurement wins** — lower the score to match; don't
+talk the evidence down. (This is a documented discipline, not a hard gate: the only
+mechanically-enforced floors are the `qa.py` checks + the collision hook.)
+
+Record each pass so a one-shot number becomes a tracked metric:
+
+```bash
+python3 scripts/critique_ledger.py record <artifact> contract=9 hierarchy=7 detail=6 functionality=8 innovation=8
+python3 scripts/critique_ledger.py trend  <artifact>   # did this edit make it better or worse?
+```
+
+A rising trend across edits is the honest signal the design improved; a falling one on a
+"polish" pass means you regressed something — go look.
+
 ## 3b. Regression & weight checks (when editing an existing page)
 
 ```bash

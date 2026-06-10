@@ -114,4 +114,21 @@ horizontal trap. The rest state is the source of truth; motion enhances it.
   script (see `capabilities/animation/video-export.md`), not a real wheel event.
 - This is real motion — the craft rules in `capabilities/animation/animation-pitfalls.md`
   (fonts.ready before measuring, pure seekable render, no layout-prop animation) all apply.
+
+## Capture an existing site's motion system ("make it move like X")
+
+To MEASURE the motion a reference site (or the repo's own output) actually uses, render it:
+
+```bash
+node scripts/scan_motion.mjs <page.html|url> --json
+```
+
+It returns a motion spec: `keyframes` (name → full `@keyframes` body, including ones nested
+in `@media` — so you can reproduce them), `animated`/`transitions` (selector + duration +
+easing + iteration — the timing to mirror into DESIGN.md §5 Motion), `libraries` (GSAP/
+ScrollTrigger/Lottie/Three/Framer/AOS/Locomotive — shape-verified, not name-guessed), and
+`scroll` (sticky count, AOS/Locomotive usage, CSS scroll-timeline). Use it to seed a
+contract's motion language from a reference instead of inventing timings. `truncated: true`
+means there were >40 animated/transition elements (the listed ones are representative);
+`crossOriginSheets > 0` means some `@keyframes` lived in sheets it couldn't read.
 ```
