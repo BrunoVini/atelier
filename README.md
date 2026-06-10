@@ -43,7 +43,8 @@ defaults (violet gradient, Inter, decorative color) for an owned, self-QA'd syst
 </table>
 
 Each artifact below also came from a **one-line brief** — one self-contained file, run
-through atelier's own self-QA loop (slop / contrast / overlap / a11y) and fixed until clean:
+through atelier's own self-QA loop (slop / contrast / overlap / a11y / progressive-enhancement)
+and fixed until clean:
 
 <table>
 <tr>
@@ -64,8 +65,9 @@ anything invented from scratch. atelier works in three phases:
 **MEASURE** the repo → **GENERATE** artifacts on-contract → **GOVERN** coherence over time.
 
 And on *every* artifact — even from-scratch work with no repo to measure — it runs a
-**self-QA loop and fixes what it flags** (slop, contrast, overlaps, overflow). That
-mechanical verification of its own output is the delta a blank model can't reproduce.
+**self-QA loop and fixes what it flags** (slop, contrast, overlaps, overflow, and
+progressive-enhancement — content must render without JavaScript). That mechanical
+verification of its own output is the delta a blank model can't reproduce.
 
 ## Everything atelier does
 
@@ -110,6 +112,11 @@ Three phases, one contract — measure first, generate on-contract, then keep it
 
 - **Hi-fi prototypes / app mockups / device frames**, real UI code written into an
   existing repo, and **2–3 distinct design directions** to choose from.
+- **Landing / marketing-page craft** — an owned aesthetic over the genre default, a real
+  focal moment with depth, a production **type-engineering floor** (fluid `clamp()` scale,
+  tabular/slashed-zero numerals, balanced rag, a metric-matched fallback so the body stays
+  characterful offline), and **honest proof only** (no fabricated logo walls, testimonials,
+  or scale-theater stats).
 - **Themed live preview** — a local server that serves your output themed by your own
   tokens, with click-to-select, plus **live element iteration** (pick an element →
   contract-bound variants → accept back into source, with journaled undo).
@@ -134,7 +141,14 @@ Three phases, one contract — measure first, generate on-contract, then keep it
 
 - **Slop detector.** Scans generated HTML for the AI tells (generic fonts, purple
   gradient, gratuitous glassmorphism, chunky left-border cards) across three layers —
-  visual, copy, structural. "No slop" is a *check*, not just a prompt.
+  visual, copy, structural — and for **fabricated social proof** (a customer/logo wall +
+  testimonials for a product with no real customers), **scale-theater** stats, and **dead /
+  self-anchored links**. "No slop" is a *check*, not just a prompt, and it binds in the
+  self-QA loop.
+- **Progressive-enhancement gate.** A page must show its content *without JavaScript*: it
+  renders the page with scripts stripped and flags content gated behind a JS-only reveal —
+  and a reveal that never fires (content stuck at `opacity:0` *with* JS on). The pattern that
+  screenshots blank for crawlers, print, and static review is caught mechanically.
 - **Contrast audit.** Computes WCAG ratios for every text/surface pairing in the
   *locked palette* and suggests nearest-passing shades.
 - **Overlap / collision hunting across screen sizes** — runs by default in any scan or
@@ -180,6 +194,7 @@ python3 scripts/overlap_risk.py <repo>                      # static overlap-ris
 python3 scripts/build_styleguide.py design/design-tokens.json   # living style guide
 scripts/preview/start.sh --project-dir <repo>              # live preview server (free port)
 node scripts/responsive_check.mjs page.html                # width sweep (tablet zone + overlaps)
+node scripts/reveal_check.mjs page.html                    # progressive enhancement: content without JS
 node scripts/screenshot.mjs page.html shot.png             # capture for review/scoring
 node scripts/diff_screens.mjs page.html                    # visual-regression diff
 ```
