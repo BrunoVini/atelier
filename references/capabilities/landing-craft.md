@@ -298,6 +298,12 @@ Use proof you can actually stand behind:
 
 Ask: *would this proof survive someone asking "is that real?"* If not, cut it or make it honest.
 
+**Show honesty; don't announce it.** State verifiable facts plainly and let them speak. If you use
+an explicit "we're early / no logo wall yet" device, use it **once** — repeating anti-slop
+meta-commentary ("not vibes", "not another adjective-driven feature list", "no logos we can't
+earn") is itself a pose that reads as protesting too much, and a discerning reader marks it down.
+A plain, literal, confident headline often out-restrains a clever one.
+
 ## 10. Subvert the genre default — the expected look loses to a committed one
 
 Every genre has a default skin the model reaches for first: dark terminal/console for dev-tools,
