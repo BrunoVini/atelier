@@ -142,7 +142,14 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
   targets — not all resolve to `#hero`. Clicking "Careers" landing on a testimonial reads
   as filler. And don't game it the other way: pointing eight distinct links all at one
   real-looking anchor (`#start`) is still dishonest. Route honestly, or mark non-functional
-  demo links `aria-disabled="true"` / `href="#"` and say so.
+  demo links `aria-disabled="true"` / `href="#"` and say so. A **primary CTA must not
+  self-anchor to its own containing section** (`<section id="start">…<a href="#start">`) —
+  clicking scrolls to where you already are, an inert action that reads as broken on click.
+- **The settled state is full-opacity, and the skip link must un-clip on focus.** Entrance/
+  reveal animations must END at `opacity:1` (never leave a section faded in the resting state —
+  it reads "washed-out" in any capture or for a user who lands mid-fade). The visually-hidden
+  skip link must become fully visible and in-flow on `:focus` (a common bug is a clipped
+  `sr-only` skip link whose `:focus` rule never restores it).
 - **Never `display:none` real content at mobile — reflow it.** Hiding the 2nd/3rd columns
   of a board, or the hero's signature visual, on phones deletes substance the page promised.
   Stack, horizontally scroll, or condense instead, so small screens get the whole story.
@@ -159,8 +166,8 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
   otherwise it finishes before the user scrolls to it and arrives dead. Trigger it from
   the same IntersectionObserver as the section.
 - **A chart's real values are its DEFAULT state, not a JS payload.** Bar heights/widths,
-  meter fills, gauge angles, and sparkline paths must be set in the CSS/markup at their true
-  value (e.g. `style="--h:72%"` consumed by CSS, or the `<rect height>`/`<path d>` drawn), so
+  **meter / progress fills**, gauge angles, and sparkline paths must be set in the CSS/markup
+  at their true value (e.g. `style="--h:72%"` consumed by CSS, or the `<rect height>`/`<path d>` drawn), so
   the chart shows its data with JavaScript disabled, in print, and if the reveal never fires.
   JS may animate *from* a start state (`@media (prefers-reduced-motion:no-preference){.js …}`),
   but a bar that is empty/zero until a script fills it renders as a blank chart for no-JS users

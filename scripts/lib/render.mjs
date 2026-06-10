@@ -33,6 +33,16 @@ export async function driveReveals(page) {
       window.scrollTo(0, 0); await sleep(60);          // back to top for a top-anchored capture
     });
   } catch { /* scrolling blocked (e.g. JS-disabled context) — nothing to drive */ }
-  // let any in-flight reveal transitions finish painting before the caller captures
-  await new Promise((r) => setTimeout(r, 450));
+  // let in-flight reveal transitions paint…
+  await new Promise((r) => setTimeout(r, 350));
+  // …then FAST-FORWARD every running animation/transition to its settled end state, so the
+  // capture shows what a user sees AFTER entrances complete — not a mid-fade "washed-out" comp.
+  // (Infinite ambient animations throw on finish() and are left alone.)
+  try {
+    await page.evaluate(() => {
+      if (!document.getAnimations) return;
+      for (const a of document.getAnimations()) { try { a.finish(); } catch { /* infinite/ambient */ } }
+    });
+  } catch { /* eval blocked */ }
+  await new Promise((r) => setTimeout(r, 120));
 }
