@@ -162,6 +162,25 @@ Fix:   ⚠️ critical  / ⚡ important / 💡 polish   (each: what + where + ho
 Quick wins: <top 3 doable in ~5 min>
 ```
 
+### Rigor — two isolated assessors + a tracked trend
+
+Keep the two halves of the review **independent** so one can't rationalize the other:
+1. **Evidence** — the mechanical battery (`qa.py`): slop, contrast, overlap, responsive
+   sweep, chart legibility. Numbers, not opinion.
+2. **Judgment** — the 5-dimension scorecard above, scored *before* looking at the
+   evidence block, then reconciled (a dimension-1/4 score must agree with the measured
+   contrast/overlap evidence; if they conflict, the measurement wins).
+
+Record each pass so a one-shot number becomes a tracked metric:
+
+```bash
+python3 scripts/critique_ledger.py record <artifact> contract=9 hierarchy=7 detail=6 functionality=8 innovation=8
+python3 scripts/critique_ledger.py trend  <artifact>   # did this edit make it better or worse?
+```
+
+A rising trend across edits is the honest signal the design improved; a falling one on a
+"polish" pass means you regressed something — go look.
+
 ## 3b. Regression & weight checks (when editing an existing page)
 
 ```bash

@@ -80,6 +80,7 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 |---|---|---|
 | A DESIGN.md / design system / "map our design" | `references/workflows/generate-design-md.md` | `scan_repo.py`, `export_tokens.py` |
 | Measure what users actually SEE (paint-weighted), reconcile vs the static scan | `references/workflows/generate-design-md.md` | `scan_rendered.mjs` |
+| Measure a site's MOTION system (@keyframes + timing, animation libraries, scroll patterns) | `references/capabilities/scroll-motion.md` | `scan_motion.mjs` |
 | Is the repo too inconsistent to auto-generate a contract? | `references/workflows/generate-design-md.md` | `assess.py` |
 | "Make it like this" / import a reference / cold start | `references/workflows/generate-design-md.md` | `import_reference.py` |
 | Survey the frontend architecture before writing code | `references/workflows/architecture-fit.md` | `survey_repo.py` |
@@ -122,6 +123,7 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 | The user wants… | Read | Key scripts |
 |---|---|---|
 | A critique / review / score a layout / "is this good?" | `references/capabilities/review.md` | `screenshot.mjs` |
+| Track whether edits improve or regress a design (critique trend) | `references/capabilities/review.md` | `critique_ledger.py` |
 | Audit accessibility / contrast against the palette | `references/capabilities/review.md` | `audit_contrast.py` |
 | Verify output isn't generic AI slop | `references/capabilities/review.md` | `slop_check.py` |
 | Verify a change didn't regress (visual diff) | `references/capabilities/review.md` | `diff_screens.mjs` |
