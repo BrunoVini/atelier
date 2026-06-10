@@ -143,6 +143,15 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
   section (bars growing, sparkline drawing) should animate when that section reveals —
   otherwise it finishes before the user scrolls to it and arrives dead. Trigger it from
   the same IntersectionObserver as the section.
+- **A chart's real values are its DEFAULT state, not a JS payload.** Bar heights/widths,
+  meter fills, gauge angles, and sparkline paths must be set in the CSS/markup at their true
+  value (e.g. `style="--h:72%"` consumed by CSS, or the `<rect height>`/`<path d>` drawn), so
+  the chart shows its data with JavaScript disabled, in print, and if the reveal never fires.
+  JS may animate *from* a start state (`@media (prefers-reduced-motion:no-preference){.js …}`),
+  but a bar that is empty/zero until a script fills it renders as a blank chart for no-JS users
+  and in every static capture — the same failure as the reveal gate, and reveal_check can't see
+  an empty bar the way it sees missing text. Same rule as animated numbers: the settled value
+  is the source of truth.
 - **Animated numbers: the final value is the accessible value.** A count-up must have the
   real final number as its initial DOM text (animate the *display* from 0 visually), or be
   `aria-hidden` with a visually-hidden real value beside it. Never leave a literal `0`/`$0`
