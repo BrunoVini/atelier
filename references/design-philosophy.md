@@ -63,6 +63,29 @@ Maximalist visions need elaborate code (extensive animation, effects, layered
 detail). Minimalist visions need restraint and precision — careful spacing,
 type, and subtle detail. Elegance is executing the chosen vision fully.
 
+### Subtle layering (the amateur-vs-pro tell — get this right or nothing else matters)
+
+Depth is *felt, not seen*. The gap between a templated UI and a crafted one is almost
+always here:
+
+- **Surface elevation = a few percentage points of lightness.** A raised surface is ~5–12%
+  lighter than its ground in dark mode (surface-100 ≈ +7%, -200 ≈ +9%, -300 ≈ +12%), a
+  hair darker/lighter in light mode. You should *feel* the lift, barely *see* it. Big
+  lightness jumps between adjacent surfaces read as cheap.
+- **Borders are low-opacity, not solid hex.** Use `rgba(…, 0.05–0.12)` (or a token at that
+  alpha), so a border disappears when you're not looking for it. If the first thing you
+  notice on a card is its border, it's too strong. The squint/remove test: *mentally
+  remove every border — can you still read the structure?* If yes, the borders are doing
+  their job quietly; if the layout collapses, you're leaning on borders instead of space.
+- **Four levels, not two.** Maintain four text levels (primary / secondary / tertiary /
+  muted) and a matching border ladder. If only two are in use, the hierarchy is too flat.
+- **Inputs are inset** (slightly darker than their surface), not raised. Sidebars share the
+  canvas background with a subtle divider — a different sidebar fill fragments the space.
+
+This is taught craft, not a token list — the contract names the surface scale and depth
+strategy; *this* is how to use them. `review.md` scores it (surfaces too flat / borders too
+harsh / elevation jumps too dramatic are findings, not nits).
+
 ## 5. When the brief is vague — Design Direction Advisor
 
 Don't freeze or default. Offer **3 differentiated directions** drawn from

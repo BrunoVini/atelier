@@ -36,6 +36,17 @@ headless browser; keep the always-on gate to lint + contrast.
 - **contrast-audit** — every text/surface token pairing vs WCAG AA-large.
 - **house-rules** — violations of DESIGN.md §9 directives (e.g. a flyout where the
   project mandates modals), via `check_rules.py`.
+- **overlap-risk** — static collision-risk lint (gating severities only).
 
-Both are dependency-light (stdlib Python), so the gate is fast and reliable.
+These are dependency-light (stdlib Python), so the gate is fast and reliable.
 Generate `design/design-tokens.json` (via `generate-design-md`) before enabling.
+
+**Adopting on a legacy repo:** baseline existing drift with `check.py <repo> --update-baseline`,
+then gate with `check.py <repo> --ratchet` — drift may only shrink (the baseline auto-tightens).
+
+**Optional extra gates** (in the GitHub Actions template):
+- **prose gate** — `prose_check.py README.md docs/**/*.md` fails on AI-tell vocabulary in
+  the project's own copy.
+- **render gate** — `qa.py <built-page> --hook` catches rendered collisions/overflow/illegible
+  charts the static check can't see (needs a headless browser).
+- **PR-scoped review** — `pr_review.py <repo> --base <ref>` annotates only the lines a PR changed.

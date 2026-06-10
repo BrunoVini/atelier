@@ -21,6 +21,12 @@ jobs:
           ATELIER: ${{ github.workspace }}/.atelier/scripts
         run: |
           python3 "$ATELIER/check.py" .
+      - name: atelier prose gate (AI-tell vocabulary in docs/copy)
+        env:
+          ATELIER: ${{ github.workspace }}/.atelier/scripts
+        run: |
+          shopt -s globstar nullglob
+          python3 "$ATELIER/prose_check.py" README.md docs/**/*.md || exit 1   # adjust globs
 
   # Optional: render-capable gate — catches the defect class the static check can't
   # (rendered collisions, overflow, illegible charts). Point PAGES at your built HTML.

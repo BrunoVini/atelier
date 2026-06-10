@@ -130,8 +130,10 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 | Enforce project house rules ("no flyouts, only modals") | `references/workflows/enforce-coherence.md` | `check_rules.py` |
 | Migrate hardcoded values to tokens (codemod) | `references/workflows/enforce-coherence.md` | `migrate_to_tokens.py` |
 | A design-debt report / coherence score / trend | `references/workflows/design-debt.md` | `design_report.py` |
-| Gate design in CI / pre-commit | `references/workflows/ci.md` | `check.py` |
-| Design-review a pull request | `references/workflows/pr-review.md` | `lint_design.py` |
+| Gate design in CI / pre-commit (incl. drift ratchet for legacy adoption) | `references/workflows/ci.md` | `check.py`, `qa.py` |
+| Design-review a pull request | `references/workflows/pr-review.md` | `lint_design.py`, `pr_review.py` |
+| Catch AI-tell vocabulary in the project's own docs/copy | `references/workflows/ci.md` | `prose_check.py` |
+| Avoid shipping the same look every cold-start project (anti-sameness) | `references/workflows/generate-design-md.md` | `cold_start_ledger.py` |
 | Onboard the team to the design language | `references/workflows/onboarding.md` | `build_onboarding.py` |
 
 ## Definition of done — self-QA every artifact (this is the delta)

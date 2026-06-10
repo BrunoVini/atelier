@@ -193,7 +193,11 @@ This is the case where atelier looks *least* different from free-handing it — 
 no design to measure, so the measurement thesis doesn't apply. Don't just "pick a tone
 and generate" (that's the free-hand path). Earn the skill's keep by GROUNDING the
 direction in the distilled knowledge a blank model doesn't have, giving a real choice,
-and closing with the self-QA loop:
+and closing with the self-QA loop.
+
+**First, the design read (one line, before anything):** state *"Reading this as: a `<page
+kind>` for `<audience>`, in a `<vibe>` language"* — the model's default-aesthetic reflex is
+the main reason cold-start output is generic; naming the read up front breaks it.
 
 1. **Ground the direction in the KB** (don't invent from nothing):
    ```bash
@@ -207,6 +211,13 @@ and closing with the self-QA loop:
    Each is a committed tone + palette + type + motion, named (not "modern/clean").
 3. **Capture a tiny inline contract** from the pick (tone + palette roles + the one
    display/body/mono + motion) so generation is constrained even without a repo.
+   Then **guard against your own sameness** — check the pick differs from recent
+   cold-start work, and record it once committed:
+   ```bash
+   python3 scripts/cold_start_ledger.py check  "<display font>" "<archetype>" "#p" "#ink" "#paper"
+   python3 scripts/cold_start_ledger.py record "<display font>" "<archetype>" "#p" "#ink" "#paper"
+   ```
+   If `check` warns it's too similar to a recent output, pick a different palette/font family.
 4. **Generate** using the craft refs (design-philosophy, prototypes/animations).
 5. **Run the self-QA loop and FIX** (see SKILL.md "Definition of done") — `slop_check`,
    `audit_contrast`, `overlap_risk`/`responsive_check`. This is the part a blank model

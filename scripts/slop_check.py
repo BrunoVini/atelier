@@ -230,8 +230,36 @@ def _structural_tells(html):
         findings.append({"severity": "polish", "kind": "fake-window-chrome",
                          "detail": "faux macOS traffic-light window chrome — a generic “app "
                                    "screenshot” cliché"})
+    # Styled page using a native <select>/<input type=date|time|color> — for a designed UI,
+    # build a custom trigger + popover (interface-design); a plain unstyled form is fine,
+    # and a HIDDEN native control behind a custom trigger (the a11y-correct pattern this
+    # very finding recommends) must not be flagged.
+    if _HAS_STYLE.search(html):
+        findings.extend(_native_control_tells(html))
     findings.extend(layout_variance(html))
     return findings
+
+
+_NATIVE_OPEN_TAG = re.compile(r"<(select|input)\b([^>]*)>", re.I)
+# `type=` not preceded by a word char/hyphen, so `data-type="date"` doesn't match.
+_NATIVE_INPUT_TYPE = re.compile(r"(?<![-\w])type\s*=\s*[\"']?(?:date|time|datetime-local|month|week|color)\b", re.I)
+_HIDDEN_ATTR = re.compile(r"\bhidden\b|aria-hidden\s*=\s*[\"']?true|\bsr-only\b|tabindex\s*=\s*[\"']?-1", re.I)
+_SCRIPT_BLOCK = re.compile(r"<script\b[^>]*>.*?</script>", re.I | re.S)
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+
+
+def _native_control_tells(html):
+    # Don't read tags inside <script> or HTML comments (keep <style> so _HAS_STYLE held).
+    probe = _HTML_COMMENT.sub(" ", _SCRIPT_BLOCK.sub(" ", html))
+    for m in _NATIVE_OPEN_TAG.finditer(probe):
+        tag, attrs = m.group(1).lower(), m.group(2)
+        if _HIDDEN_ATTR.search(attrs):
+            continue                                  # hidden native control behind a custom trigger
+        if tag == "select" or _NATIVE_INPUT_TYPE.search(attrs):
+            return [{"severity": "polish", "kind": "native-control",
+                     "detail": "styled page uses a native <select>/<input type=date|time|color> — "
+                               "build a custom trigger+popover for a designed control"}]
+    return []
 
 
 _INTERACTIVE_EL = re.compile(r"<button\b|<a\b[^>]*\bhref|<input\b|<select\b|<textarea\b", re.I)
