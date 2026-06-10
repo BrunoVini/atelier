@@ -303,6 +303,28 @@ marks, marks ≫ axis-labels, and "top N" caption vs. rendered-mark mismatch. Ru
 with charts — like the collision sweep, a prose gate alone leans on the reviewer's mood; a hard
 `ILLEGIBLE` finding here is a P0 that caps the verdict (§4).
 
+## 3a4. Geometric truth — a diagram must draw the relationship it teaches
+
+A diagram teaching a spatial/geometric relationship can be wrong while every number in it is
+right. Case: a trilateration explainer where the "you are here" point sat exactly on all three
+distance circles (the intersection was computed correctly), but the satellites floated along the
+top of the frame, detached from the centers of their own circles — a satellite off the center of
+its range ring silently contradicts the very concept the ring exists to teach. The author's
+self-check and the review both missed it because both looked at the intersection, not the anchors.
+
+So for any diagram asserting a spatial/geometric relationship, verify on the RENDERED frame —
+never from the author's computed numbers:
+
+- **Each source sits at its locus's defining anchor**: a distance/range ring centered on its
+  source, a vector at its true origin and direction, an orbit centered on its body, an angle at
+  its vertex.
+- **The answer element satisfies EVERY claimed constraint** — a point on the mutual intersection
+  is meaningless if the rings aren't anchored to their sources; both must hold.
+
+A geometrically-incoherent diagram is a fabricated statistic in visual form: score it under
+Functionality (dim 4) as a correctness P0 that caps the verdict (§4), not a style nit. (Builder
+side: `animation-pitfalls.md` §19d.)
+
 ## 3d. Verify the web fonts actually LOADED (not just linked)
 
 A `<link>` to a font is not proof the font rendered. A single typo in a Google Fonts

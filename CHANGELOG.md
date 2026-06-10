@@ -61,6 +61,15 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   the t05 narrated-explainer head-to-head, where these were the two dimensions that first slipped.) (Vendored SFX/BGM, a TTS narration producer, offline
   font-binary bundling, and the `styles.csv` enrichment are out of scope / deferred — atelier
   is a design studio, not a video producer.)
+- Geometric truth in explainer diagrams (`animation-pitfalls.md` §19d + `review.md` §3a4): a
+  diagram teaching a spatial/geometric relationship must draw it truthfully — every locus
+  anchored to its defining source (a distance ring centered on its satellite/sensor, a vector at
+  its true origin, an angle at its vertex) AND the answer element satisfying every claimed
+  constraint, verified on the RENDERED frame; computed coordinates are necessary but not
+  sufficient. Reviews now check this explicitly and treat a geometrically-incoherent diagram as
+  a correctness P0, not a style nit. (Drove by a trilateration explainer that drew satellites
+  detached from the centers of their own distance circles — intersection math right,
+  construction false — which neither self-check nor review caught.)
 - Render-grounded measurement (`scan_rendered.mjs`): measures the colors users actually
   *see*, weighted by on-screen painted area, and reconciles against the static scan —
   surfacing "declared but not painted" (dead palette) and "painted but not declared"

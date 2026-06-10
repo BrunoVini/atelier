@@ -536,3 +536,31 @@ Lessons from a narrated explainer where the teaching was strong but legibility +
   reading before it leaves is an unread line.
 - [ ] Narrated: is the caption band clear of art on every held frame, is there ONE dominant text
   register per beat, does the finale breathe, and does every caption hold long enough to read?
+
+### §19d — geometric truth in explainer diagrams (the picture must not contradict the concept)
+A diagram that teaches a spatial/geometric relationship must render that relationship truthfully
+and self-consistently — this is data accuracy applied to geometry, and a construction drawn wrong
+is the visual equivalent of a fabricated statistic. From a trilateration explainer whose
+satellites floated along the top of the frame, detached from the centers of their own distance
+circles: the intersection math was right, the construction was false, and neither the "I computed
+the intersection" self-check nor the visual review caught it, because both looked at the
+intersection point instead of the anchors.
+
+- **Anchor every locus to its defining source.** A distance/range ring is CENTERED on its source
+  (a GPS satellite sits at the center of its distance circle; a radar range ring is centered on
+  the sensor); a vector originates and points where the concept requires; an orbit is centered on
+  the body it orbits; an angle is drawn at its true vertex. A source drawn off its anchor silently
+  lies about the very concept being taught.
+- **The answer element must satisfy EVERY constraint it claims.** "You are here" at the mutual
+  intersection of three rings means nothing unless each ring is also centered on its own
+  satellite — both must hold, or the diagram asserts a relationship it doesn't draw.
+- **Computed numbers are necessary but NOT sufficient.** Having computed the intersection
+  coordinate does not make the diagram honest. Verify on the RENDERED frame that each
+  construction element sits at its geometrically-truthful position (each source at its locus's
+  defining anchor) — an off-anchor source reads as a lie even when the intersection math is right.
+- **Treat a geometrically-incoherent diagram as a correctness defect**, not a style nit — same
+  severity as a fabricated number in a chart.
+- [ ] Spatial/geometric explainer: is each source anchored at its locus's defining position (ring
+  centered on its source, vector at its true origin, orbit on its body, angle at its vertex), and
+  does the answer element satisfy every claimed constraint — verified on the rendered frame, not
+  from the computed coordinates?
