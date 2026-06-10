@@ -23,6 +23,10 @@ A single rectangular "product screenshot" pane is the template default. A design
 Ask: *does the hero have a clear focal point and at least one depth layer?* If it's a
 lone centered rectangle, it reads "good template" — escalate it.
 
+**Headline ≤ ~3 lines at desktop.** A 4–5-line poster headline buries the subhead and CTA and
+slows the first beat. Tighten the words or the `max-width`/measure so the hero reads in one
+glance, with `text-wrap: balance` so it doesn't rag to a lone word.
+
 ## 2. Motion must pay off on scroll — load-time-only animation goes stale
 
 Keyframes that fire once on page load (staggered `animation-delay`) are **already over**
@@ -77,6 +81,13 @@ two most template-like blocks on any landing page.
   clones.
 - **Earn every block.** A stat strip is fine *as accent*, not as the substitute for a
   second real product surface.
+- **No dead space inside equal-height cards.** When a grid equalizes row heights, a sparse
+  card becomes a slab of emptiness next to a dense sibling. Either let cards size to their
+  content (`align-items: start`), give the thin card a real artifact, or rebalance what's in
+  each — never ship a card that's mostly padding. (Same for a tall feature card with a short
+  body: fill it or shrink it.)
+- **Kill orphans everywhere, not just in headings.** Apply `text-wrap: pretty` (or `balance`)
+  to sub-heads, ledes, and card copy too — a lone-word last line ("…card.") reads as unfinished.
 
 Ask: *is any block pure filler (identical clones, a number grid with nothing to show)?*
 
@@ -223,6 +234,12 @@ A characterful pairing chosen well is only half the type work. The detail that r
   stack (`"Brand", "Brand Fallback", system-ui`). The page then renders on-metric offline and
   during font swap — no CLS, no jarring jump. (This is also why the offline screenshot looks
   finished, not bare.)
+- **The BODY must stay characterful offline too — not just the display face.** The single
+  cheapest tell is a hero in a real face over body copy that has collapsed to bare
+  `Arial`/`Helvetica`/`Times`. Give the body the SAME metric-matched fallback treatment, or
+  end its stack in a distinctive system set (`ui-sans-serif, system-ui, …`) — never let
+  `…, Arial, sans-serif` be the effective render. Always judge the **offline** screenshot
+  (webfont not loaded), because that's what a reviewer on a cold cache sees.
 - **Optical detail.** `letter-spacing` tightens slightly as display size grows (negative em on
   large headings); set `font-feature-settings`/`font-variant` for the face's real features
   (oldstyle figures for editorial, `ss01` etc. where the family offers them). Hang punctuation
