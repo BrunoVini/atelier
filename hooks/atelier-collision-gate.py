@@ -129,7 +129,10 @@ def main():
     tmp_globs = (glob.glob(os.path.join(TMP_ROOT, "*.html"))
                  + glob.glob(os.path.join(TMP_ROOT, "atelier*/**/*.html"), recursive=True))
     for p in tmp_globs:
-        if "atelier-responsive" in p:        # our own sweep contact sheets — skip
+        base = os.path.basename(p)
+        # atelier's own scratch probes are not deliverables — never gate on them:
+        #   atelier-responsive* = sweep contact sheets;  atelier-nojs* = reveal_check no-JS probes.
+        if base.startswith("atelier-responsive") or base.startswith("atelier-nojs"):
             continue
         try:
             if now - os.path.getmtime(p) <= RECENT_SECS:

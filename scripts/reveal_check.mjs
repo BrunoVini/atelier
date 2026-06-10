@@ -29,7 +29,6 @@
  * Exit:  0 clean · 1 finding · 2 usage · 3 no headless browser (unknown — never gates).
  */
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { findChrome } from './lib/browser.mjs';
@@ -93,6 +92,17 @@ function stripScripts(html) {
     .replace(/<\/?noscript\s*>/gi, '');                      // unwrap: noscript fallbacks ARE the no-JS content
 }
 
+// The no-JS render is loaded via setContent (NOT a temp file — a /tmp scratch file would be
+// picked up by the collision-gate hook and cause spurious blocks). setContent's base URL is
+// about:blank, so inject a <base> pointing at the source dir to keep relative assets resolving.
+function injectBase(html, href) {
+  const tag = `<base href="${href}">`;
+  if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => m + tag);
+  if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, (m) => m + tag);
+  return tag + html;
+}
+const baseHref = isUrl ? url.replace(/[^/]*$/, '') : 'file://' + path.dirname(path.resolve(input)) + '/';
+
 async function getSource(page) {
   if (!isUrl) return fs.readFileSync(input, 'utf-8');
   try {
@@ -124,7 +134,6 @@ async function main() {
     browser = await chromium.launch({ executablePath: bin });
   }
 
-  let tmpFile = null;
   try {
     // 1. LIVE render — the page as a scrolling user sees it (its own JS runs).
     const live = await browser.newPage({ viewport: VIEWPORT });
@@ -132,12 +141,11 @@ async function main() {
     const source = await getSource(live);
     const liveRes = await live.evaluate(SWEEP_PROBE);
 
-    // 2. NO-JS render — same page with its own scripts removed.
-    const stripped = stripScripts(source);
-    tmpFile = path.join(os.tmpdir(), `atelier-nojs-${process.pid}-${Date.now()}.html`);
-    fs.writeFileSync(tmpFile, stripped, 'utf-8');
+    // 2. NO-JS render — same page with its own scripts removed, loaded via setContent
+    //    (no temp file → nothing for the collision-gate /tmp scan to trip on).
+    const stripped = injectBase(stripScripts(source), baseHref);
     const nojs = await browser.newPage({ viewport: VIEWPORT });
-    await nojs.goto('file://' + tmpFile, { waitUntil: 'networkidle' }).catch(() => nojs.goto('file://' + tmpFile, { waitUntil: 'load' }));
+    await nojs.setContent(stripped, { waitUntil: 'networkidle' }).catch(() => nojs.setContent(stripped, { waitUntil: 'load' }));
     const nojsRes = await nojs.evaluate(SWEEP_PROBE);
 
     await browser.close();
@@ -174,8 +182,6 @@ async function main() {
     try { await browser.close(); } catch {}
     console.error('reveal_check failed:', e?.message || e);
     process.exit(1);   // _rendered() treats "<name> failed:" as a crash → unknown, never gates
-  } finally {
-    if (tmpFile) { try { fs.unlinkSync(tmpFile); } catch {} }
   }
 }
 
