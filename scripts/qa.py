@@ -150,14 +150,19 @@ def _battery(target, contract, widths, hook):
     results = []
     is_html = os.path.isfile(target) and target.endswith(".html")
     if is_html:
-        results.append(_rendered(target, "responsive_check.mjs", widths))
-        results.append(_rendered(target, "chart_legibility.mjs"))
-        results.append(_rendered(target, "reveal_check.mjs"))   # content must be visible without JS (a11y/crawler/capture honesty)
-        if not hook:                                  # full-mode layers (excluded from the blocking hook)
-            results.append(_slop(open(target, encoding="utf-8").read(), contract=contract))
+        rendered = [
+            _rendered(target, "responsive_check.mjs", widths),
+            _rendered(target, "chart_legibility.mjs"),
+            _rendered(target, "reveal_check.mjs"),   # content must be visible without JS (a11y/crawler/capture honesty)
+        ]
+        results += rendered
+        # Anti-slop binds in the self-QA loop too (important findings gate the --hook), not
+        # only in full mode — a fabricated logo wall or missing focus ring should block "done".
+        results.append(_slop(open(target, encoding="utf-8").read(), contract=contract))
+        if not hook:                                  # full-mode-only layer (needs a contract)
             if contract:
                 results.append(_contrast(contract=contract))
-        elif all(r.status == "unknown" for r in results):
+        elif all(r.status == "unknown" for r in rendered):
             # hook + no browser — fall back to the static overlap lint on the file's dir
             base = os.path.dirname(target) or "."
             results += [r for r in _safe_static(base, contract or base) if r.name == "overlap-risk"]

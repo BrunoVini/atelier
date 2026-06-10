@@ -218,6 +218,42 @@ A characterful pairing chosen well is only half the type work. The detail that r
 Ask: *fluid scale off one ratio · tabular-nums on every figure · measure capped + balanced
 headings · metric-matched fallback so nothing reflows?* If any is "no", it reads as default.
 
+## 9. Honest proof — never fabricate social proof
+
+A greenfield or fictional product has no customers yet. Inventing a customer **logo wall**,
+**named testimonials** ("— Jane Smith, VP Eng at Northwind"), or precise **marketing-multiplier
+stats** ("94% fewer incidents", "6.2× faster") is the single most recognizable AI-SaaS-slop
+move — a careful reviewer spots it instantly and it torches credibility on exactly the section
+meant to build it. `slop_check.py` now flags a logo-wall + testimonials combo, and a page of
+mostly dead `aria-disabled` links, as `important`.
+
+Use proof you can actually stand behind:
+- **Honest, checkable signals** instead of fake logos: the SDKs / languages / frameworks it
+  integrates with, standards it implements, "open source / MIT", a real changelog, docs depth.
+- **Show the product working** rather than quoting fictional people: a real query→result, a
+  before→after, an actual config, sample data clearly framed as an example.
+- If the genre truly needs a voice, use a **single clearly-attributed, plausible quote** or a
+  "why we built this" note — not a grid of manufactured endorsements.
+- Numbers must be **defensible or explicitly illustrative** — don't assert invented percentages
+  as fact. And **wire the primary CTA and nav**; reserve `aria-disabled` for a few clearly-demo
+  affordances, not the whole page (a landing whose actions don't work reads as unfinished).
+
+Ask: *would this proof survive someone asking "is that real?"* If not, cut it or make it honest.
+
+## 10. Subvert the genre default — the expected look loses to a committed one
+
+Every genre has a default skin the model reaches for first: dark terminal/console for dev-tools,
+indigo gradient for SaaS, warm-paper for editorial, teal-and-rounded for health. Shipping the
+default reads as "good template"; a blind reviewer rewards the entry that commits to a fresher,
+still-appropriate aesthetic. Name the cliché for *this* brief, then choose an owned direction that
+still fits the audience — it can be light or dark (just not the flagged warm-paper monoculture or
+the genre default), carried by one decisive concept (a printed-instrument readout, a blueprint, a
+ledger, a measurement grid…) rather than the first look anyone would reach for. Restraint and
+credibility don't require the default; they require commitment. (Pairs with the cold-start
+anti-sameness ledger — `cold_start_ledger.py` — so successive briefs don't converge.)
+
+Ask: *is this the first look anyone would reach for, or one I chose on purpose?*
+
 ## Definition of done for a landing surface
 
 Before you call a hero/landing page finished, all of these are "yes":
@@ -228,6 +264,9 @@ Before you call a hero/landing page finished, all of these are "yes":
 - [ ] **Content visible without JS** — reveals gated on `html.js`, `reveal_check.mjs` clean
 - [ ] Type floor: fluid `clamp()` scale · `tabular-nums` on data · `measure` cap + balanced
       headings · metric-matched fallback `@font-face` (no reflow on font swap)
+- [ ] **Honest proof** — no fabricated logo wall / named testimonials / invented stats;
+      primary CTA + nav are wired (not a page of `aria-disabled` dead links)
+- [ ] **Owned aesthetic, not the genre default** (subverts the first-reach cliché)
 - [ ] No template filler (no 3 clone cards, no number-grid standing in for product)
 - [ ] Product shown more than once, with **different** surfaces
 - [ ] Primary CTA is the loudest pixel at rest (glow/fill/arrow); secondary is quiet

@@ -262,6 +262,45 @@ def _native_control_tells(html):
     return []
 
 
+# --- fabricated social proof (the canonical greenfield-SaaS slop kit) ---
+# A logo/clients wall: many elements whose class/id names them logos, OR a "trusted by"
+# style cue in the copy. A single site logo (1–2 refs) must NOT trip it — require >=2.
+_PROOF_WALL_CLASS = re.compile(r'\b(?:class|id)\s*=\s*["\'][^"\']*\blogos?\b', re.I)
+_PROOF_WALL_TEXT = re.compile(
+    r"\b(trusted by|backed by|our customers|companies (?:we|that)|used by (?:teams|leading|engineers)|"
+    r"loved by|as (?:seen|featured) in|join \d|powering (?:teams|engineering|the))\b", re.I)
+_BLOCKQUOTE = re.compile(r"<blockquote\b", re.I)
+_TESTIMONIAL_CLASS = re.compile(r'class\s*=\s*["\'][^"\']*\b(?:testimonial|quote-card|review)\b', re.I)
+_ATTRIBUTION = re.compile(r"[—–-]\s*[A-Z][a-z]+ [A-Z][a-z]+\s*,\s*[A-Z]")   # "— Jane Smith, VP …"
+_ARIA_DISABLED_LINK = re.compile(r'<a\b[^>]*\baria-disabled\s*=\s*["\']?true', re.I)
+
+
+def _proof_tells(html):
+    """Greenfield/fictional products have no real customers; fabricating a logo wall AND
+    testimonials is the single most recognizable AI-SaaS-slop kit (a careful reviewer spots
+    it instantly). Require BOTH so a real site's lone testimonials or its own header logo
+    don't false-positive. Also flag a landing whose actions mostly don't work."""
+    findings = []
+    vt = _visible_text(html)
+    wall = len(_PROOF_WALL_CLASS.findall(html)) >= 2 or bool(_PROOF_WALL_TEXT.search(vt))
+    testimonials = (len(_BLOCKQUOTE.findall(html)) >= 2
+                    or len(_TESTIMONIAL_CLASS.findall(html)) >= 2
+                    or len(_ATTRIBUTION.findall(vt)) >= 2)
+    if wall and testimonials:
+        findings.append({"severity": "important", "kind": "fabricated-social-proof",
+                         "detail": "a customer/logo wall AND testimonials for a product with no disclosed, real "
+                                   "customers — the canonical fabricated-SaaS-proof kit a careful reviewer spots "
+                                   "instantly. Use honest proof (SDK/language/integration chips, real capabilities, "
+                                   "sample data clearly framed) or omit the section."})
+    dead = len(_ARIA_DISABLED_LINK.findall(html))
+    if dead >= 5:
+        findings.append({"severity": "important", "kind": "too-many-dead-links",
+                         "detail": f"{dead} links are aria-disabled — a landing whose actions mostly don't work "
+                                   "reads as unfinished. Wire the primary CTA and nav; reserve disabled for a few "
+                                   "clearly-illustrative demo affordances, not the whole page."})
+    return findings
+
+
 _INTERACTIVE_EL = re.compile(r"<button\b|<a\b[^>]*\bhref|<input\b|<select\b|<textarea\b", re.I)
 _BTN_STYLE = re.compile(r"\.btn\b|\bbutton\s*\{", re.I)
 _FOCUS_RULE = re.compile(r":focus(?:-visible)?\b", re.I)
@@ -375,10 +414,11 @@ def check_html(html, allowed_fonts=None, profile=None, contract=None):
         findings.append({"severity": "polish", "kind": "too-many-fonts",
                          "detail": f"{len(distinct)} font families — tighten to a display + body (+mono)"})
 
-    # 7–10. Copy, structural/editorial, a11y, and model-profile tells.
+    # 7–11. Copy, structural/editorial, a11y, fabricated-proof, and model-profile tells.
     findings.extend(_copy_tells(html))
     findings.extend(_structural_tells(html))
     findings.extend(_a11y_tells(html))
+    findings.extend(_proof_tells(html))
     findings.extend(_profile_tells(html, profile))
     return findings
 
