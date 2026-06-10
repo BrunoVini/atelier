@@ -40,7 +40,9 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   frame (the documented Stage/engine contract) — deterministic, no wall-clock drift, no
   leading blank frame, no mid-cycle loop — falling back to the real-time screenshot loop for
   pages without the handshake. Capture resolution is env-configurable (`VW`/`VH`; default 720p)
-  so a film exports at film-standard 1080p (`VW=1920 VH=1080`).
+  so a film exports at film-standard 1080p (`VW=1920 VH=1080`). (Vendored SFX/BGM, a TTS
+  narration producer, offline font-binary bundling, and the `styles.csv` enrichment are out of
+  scope / deferred — atelier is a design studio, not a video producer.)
 - Film/animation-aware self-QA: `qa.py` now recognizes a fixed-aspect timeline FILM (by the
   `__seek`/`__ready`/`__recording` handshake or `<meta name="atelier:kind" content="animation">`;
   `--kind page|animation` overrides) and runs the film gate — **real motion (`scan_motion`,
@@ -58,9 +60,7 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   (caption leads; don't stack kicker + headline + caption + legend — restraint is register count,
   not just color count); **let the finale breathe** (resolve working geometry so the payoff lands
   on a calm frame); and size each caption window to ~12 cps, not the 15 cps brisk limit. (Drove by
-  the t05 narrated-explainer head-to-head, where these were the two dimensions that first slipped.) (Vendored SFX/BGM, a TTS narration producer, offline
-  font-binary bundling, and the `styles.csv` enrichment are out of scope / deferred — atelier
-  is a design studio, not a video producer.)
+  the t05 narrated-explainer head-to-head, where these were the two dimensions that first slipped.)
 - Geometric truth in explainer diagrams (`animation-pitfalls.md` §19d + `review.md` §3a4): a
   diagram teaching a spatial/geometric relationship must draw it truthfully — every locus
   anchored to its defining source (a distance ring centered on its satellite/sensor, a vector at
