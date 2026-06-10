@@ -230,8 +230,18 @@ def _structural_tells(html):
         findings.append({"severity": "polish", "kind": "fake-window-chrome",
                          "detail": "faux macOS traffic-light window chrome — a generic “app "
                                    "screenshot” cliché"})
+    # Styled page using a native <select>/<input type=date|color> — for a designed UI,
+    # build a custom trigger + popover (interface-design); a plain unstyled form is fine.
+    if _HAS_STYLE.search(html) and _NATIVE_CONTROL.search(html):
+        findings.append({"severity": "polish", "kind": "native-control",
+                         "detail": "styled page uses a native <select>/<input type=date|color> — "
+                                   "build a custom trigger+popover for a designed control"})
     findings.extend(layout_variance(html))
     return findings
+
+
+_NATIVE_CONTROL = re.compile(
+    r"<select\b|<input\b[^>]*\btype\s*=\s*[\"']?(?:date|time|datetime-local|month|week|color)\b", re.I)
 
 
 _INTERACTIVE_EL = re.compile(r"<button\b|<a\b[^>]*\bhref|<input\b|<select\b|<textarea\b", re.I)

@@ -573,3 +573,13 @@ def test_slop_tailwind_gradient_no_false_positive():
     # text-/bg-/border- violet utilities are NOT gradients — must not flag
     html = '<div class="text-violet-600 bg-purple-100"><span class="border-indigo-500">x</span></div>'
     assert "purple-gradient" not in {f["kind"] for f in check_html(html)}
+
+
+def test_slop_flags_styled_native_control():
+    # #12 (interface-design): a styled page using a native <select>/<input type=date>
+    # should build a custom trigger+popover; flag it. An UNSTYLED form is fine.
+    from slop_check import check_html
+    styled = '<style>body{font-family:Fraunces,serif}</style><select><option>x</option></select>'
+    assert "native-control" in {f["kind"] for f in check_html(styled)}
+    assert "native-control" not in {f["kind"] for f in check_html('<select><option>x</option></select>')}
+    assert "native-control" in {f["kind"] for f in check_html('<style>a{}</style><input type="date">')}

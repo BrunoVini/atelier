@@ -83,3 +83,10 @@ def test_block_type_guards_bad_shapes():
     from contract import _contract_from_block
     c = _contract_from_block({"colors": {"ink": "#111"}, "fonts": "Sora", "spacing": "4px"}, "x")
     assert c["fonts"] == [] and c["spacing"] == []   # a string is not a list -> guarded, not split
+
+
+def test_template_has_agent_prompt_guide():
+    import os
+    tmpl = os.path.join(os.path.dirname(__file__), "..", "templates", "DESIGN.md.template")
+    text = open(tmpl, encoding="utf-8").read()
+    assert "Agent Prompt Guide" in text and "Paste-ready prompts" in text
