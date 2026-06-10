@@ -97,6 +97,67 @@ def _run(cmd):
         return None, f"({os.path.basename(cmd[1] if len(cmd) > 1 else cmd[0])} could not run: {e})"
 
 
+def detect_kind_text(html):
+    """Classify an HTML artifact as a fixed-aspect timeline 'animation'/film or a
+    responsive 'page'. A film exposes atelier's recording handshake (__seek/__ready/
+    __recording) or declares it via <meta name="atelier:kind" content="animation|film">.
+    The page-oriented checks (responsive reflow, no-JS reveal) don't apply to a film —
+    the MP4 is the artifact and the timeline IS the behavior."""
+    low = html.lower()
+    if 'name="atelier:kind"' in low or "name='atelier:kind'" in low:
+        if any(k in low for k in ('content="film"', "content='film'",
+                                  'content="animation"', "content='animation'")):
+            return "animation"
+    if any(sig in html for sig in ("__seek", "__ready", "__recording")):
+        return "animation"
+    return "page"
+
+
+def _rendered_plan(kind):
+    """Which rendered checks run for an artifact of this kind (pure, for testability).
+    Film: real motion + decorative-aware chart legibility (no responsive/reveal — those
+    are page semantics). Page: the full responsive/chart/reveal battery."""
+    if kind == "animation":
+        return ["scan_motion.mjs", "chart_legibility.mjs"]
+    return ["responsive_check.mjs", "chart_legibility.mjs", "reveal_check.mjs"]
+
+
+def _motion_present(path):
+    """A film/animation must actually animate. Gates on scan_motion --json: FAIL only
+    when it rendered cleanly and found NO motion at all (no @keyframes, no animated
+    elements, no transitions) — a 'film' that's a still. No browser / unparseable -> unknown
+    (never gates), per the same don't-trust-a-null contract as the other rendered checks."""
+    code, log = _run(["node", os.path.join(HERE, "scan_motion.mjs"), path, "--json"])
+    if code == 3 or "no headless browser" in log:
+        return CheckResult("scan_motion.mjs", "unknown", True, {}, "no headless browser — not trusted, did not gate")
+    try:
+        data = json.loads(log[log.index("{"):log.rindex("}") + 1])
+    except Exception:
+        return CheckResult("scan_motion.mjs", "unknown", True, {}, "(scan_motion returned no parseable json; not trusted)")
+    try:
+        src = open(path, encoding="utf-8").read()
+    except Exception:
+        src = ""
+    return _motion_verdict(data, src)
+
+
+def _motion_verdict(data, src):
+    """Decide motion presence (pure, for testability). FAIL only when there's no CSS/DOM
+    motion AND no canvas/rAF film: scan_motion can't see requestAnimationFrame canvas
+    motion, so a <canvas> + rAF (or the __seek timeline handshake) counts as real motion."""
+    n = lambda x: len(x) if isinstance(x, (list, dict)) else (x or 0)
+    kf, an, tr = n(data.get("keyframes")), n(data.get("animated")), n(data.get("transitions"))
+    if kf or an or tr:
+        return CheckResult("scan_motion.mjs", "pass", True, {"keyframes": kf, "animated": an},
+                           "real motion system present")
+    low = (src or "").lower()
+    if "<canvas" in low and ("requestanimationframe" in low or "__seek" in src):
+        return CheckResult("scan_motion.mjs", "pass", True, {"canvas": 1},
+                           "canvas/rAF motion system (not visible to CSS scan)")
+    return CheckResult("scan_motion.mjs", "fail", True, {"keyframes": kf, "animated": an},
+                       "no motion — a film/animation must animate")
+
+
 def _rendered(path, script, widths=None):
     """Run a .mjs rendered check. exit 0=clean, 1=real finding, 2=usage,
     3=no browser, crash=None. Only a real finding (1) gates; no-browser and
@@ -145,20 +206,25 @@ def _static(repo, contract):
     return out
 
 
-def _battery(target, contract, widths, hook):
+def _battery(target, contract, widths, hook, kind=None):
     """Build the result list for a target (artifact file or repo dir)."""
     results = []
     is_html = os.path.isfile(target) and target.endswith(".html")
     if is_html:
-        rendered = [
-            _rendered(target, "responsive_check.mjs", widths),
-            _rendered(target, "chart_legibility.mjs"),
-            _rendered(target, "reveal_check.mjs"),   # content must be visible without JS (a11y/crawler/capture honesty)
-        ]
+        html = open(target, encoding="utf-8").read()
+        k = kind or detect_kind_text(html)
+        rendered = []
+        for script in _rendered_plan(k):
+            if script == "scan_motion.mjs":
+                rendered.append(_motion_present(target))
+            elif script == "responsive_check.mjs":
+                rendered.append(_rendered(target, script, widths))
+            else:
+                rendered.append(_rendered(target, script))   # content must be visible without JS (page mode)
         results += rendered
         # Anti-slop binds in the self-QA loop too (important findings gate the --hook), not
         # only in full mode — a fabricated logo wall or missing focus ring should block "done".
-        results.append(_slop(open(target, encoding="utf-8").read(), contract=contract))
+        results.append(_slop(html, contract=contract))
         if not hook:                                  # full-mode-only layer (needs a contract)
             if contract:
                 results.append(_contrast(contract=contract))
@@ -175,13 +241,14 @@ if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a]
     if not args:
         print("usage: qa.py <artifact.html|repo-dir> [--contract <repo|tokens.json>] "
-              "[--widths a,b,c] [--hook] [--json]")
+              "[--widths a,b,c] [--kind page|animation] [--hook] [--json]")
         sys.exit(2)
     target = args[0]
     contract = args[args.index("--contract") + 1] if "--contract" in args else None
     widths = args[args.index("--widths") + 1] if "--widths" in args else DEFAULT_WIDTHS
+    kind = args[args.index("--kind") + 1] if "--kind" in args else None   # page|animation (else auto)
     hook = "--hook" in args
-    results = _battery(target, contract, widths, hook)
+    results = _battery(target, contract, widths, hook, kind=kind)
     if "--json" in args:
         print(json.dumps([r._asdict() for r in results], indent=2))
     else:

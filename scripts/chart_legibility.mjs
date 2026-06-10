@@ -59,9 +59,23 @@ const PROBE = `(() => {
     }
     return n;
   };
+  // A decorative graphic is NOT a data chart: skip anything explicitly marked
+  // aria-hidden or role=presentation/none (the unambiguous "ignore this" signals,
+  // honored up the ancestor chain). This is how a decorative optical SVG / ornament
+  // avoids being mis-read as an illegible chart — mark it aria-hidden="true".
+  const isDecorative = (el) => {
+    for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+      if (!n.getAttribute) continue;
+      if (n.getAttribute('aria-hidden') === 'true') return true;
+      const role = (n.getAttribute('role') || '').toLowerCase();
+      if (role === 'presentation' || role === 'none') return true;
+    }
+    return false;
+  };
   const candidates = [];
   // DOM bar charts: a container whose children are mostly bare (text-free) thin boxes
   for (const el of document.querySelectorAll('div,ul,ol,g')) {
+    if (isDecorative(el)) continue;
     const kids = Array.from(el.children);
     if (kids.length < 12 || kids.length > 2000) continue;
     const thk = [];
@@ -77,6 +91,7 @@ const PROBE = `(() => {
   }
   // SVG charts: many marks
   for (const svg of document.querySelectorAll('svg')) {
+    if (isDecorative(svg)) continue;                 // decorative/illustrative SVG, not a chart
     const rects = svg.querySelectorAll('rect');
     const marks = rects.length + svg.querySelectorAll('path,line,polyline,circle').length;
     if (marks < 12) continue;

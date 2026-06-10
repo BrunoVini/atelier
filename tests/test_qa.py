@@ -63,6 +63,44 @@ def test_hook_exit_code_contract():
                            CheckResult("b", "pass", True, {}, "")]) == 0
 
 
+def test_detect_kind_recognizes_a_timeline_film():
+    # t04 lesson: a fixed-aspect timeline FILM exposes the recording handshake
+    # (__seek/__ready/__recording) or an explicit kind meta — qa must treat it as an
+    # animation, not a responsive page.
+    from qa import detect_kind_text
+    film = "<html><script>window.__ready=true; window.__seek=function(t){};</script></html>"
+    assert detect_kind_text(film) == "animation"
+    meta = '<html><head><meta name="atelier:kind" content="film"></head></html>'
+    assert detect_kind_text(meta) == "animation"
+    page = "<html><body><main><h1>Landing</h1><p>copy</p></main></body></html>"
+    assert detect_kind_text(page) == "page"
+
+
+def test_film_battery_skips_page_only_checks_and_requires_motion():
+    # A film is gated on motion + (decorative-aware) chart legibility + anti-slop;
+    # the page-only responsive-reflow and no-JS-reveal checks DON'T apply to a
+    # fixed-aspect MP4 source and must NOT run (they mis-fire on cross-dissolves).
+    from qa import _rendered_plan
+    film = _rendered_plan("animation")
+    assert "scan_motion.mjs" in film
+    assert "responsive_check.mjs" not in film and "reveal_check.mjs" not in film
+    page = _rendered_plan("page")
+    assert {"responsive_check.mjs", "reveal_check.mjs", "chart_legibility.mjs"} <= set(page)
+    assert "scan_motion.mjs" not in page
+
+
+def test_motion_verdict_passes_css_and_canvas_films_fails_a_still():
+    from qa import _motion_verdict
+    # CSS/DOM motion present
+    assert _motion_verdict({"keyframes": 2, "animated": 2, "transitions": 0}, "").status == "pass"
+    # no CSS motion, but a canvas + rAF film -> real motion (scan_motion can't see rAF)
+    canvas = '<canvas id="c"></canvas><script>requestAnimationFrame(loop)</script>'
+    assert _motion_verdict({"keyframes": 0, "animated": 0, "transitions": 0}, canvas).status == "pass"
+    # a true still (no CSS motion, no canvas/rAF) -> fail (a film must animate)
+    assert _motion_verdict({"keyframes": 0, "animated": 0, "transitions": 0},
+                           "<div>static</div>").status == "fail"
+
+
 def test_safe_static_is_unknown_without_a_contract(tmp_path):
     # Regression for the P0: a repo/dir with no resolvable contract must yield an
     # `unknown` static result, NOT crash (which would be a false hook block).

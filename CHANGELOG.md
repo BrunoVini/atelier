@@ -39,7 +39,19 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   page loads, waits for `window.__ready === true`, and drives `window.__seek(seconds)` per
   frame (the documented Stage/engine contract) — deterministic, no wall-clock drift, no
   leading blank frame, no mid-cycle loop — falling back to the real-time screenshot loop for
-  pages without the handshake. (Vendored SFX/BGM, a TTS narration producer, offline
+  pages without the handshake. Capture resolution is env-configurable (`VW`/`VH`; default 720p)
+  so a film exports at film-standard 1080p (`VW=1920 VH=1080`).
+- Film/animation-aware self-QA: `qa.py` now recognizes a fixed-aspect timeline FILM (by the
+  `__seek`/`__ready`/`__recording` handshake or `<meta name="atelier:kind" content="animation">`;
+  `--kind page|animation` overrides) and runs the film gate — **real motion (`scan_motion`,
+  also accepting canvas/rAF) + decorative-aware chart legibility + anti-slop** — instead of the
+  page-only responsive-reflow + no-JS-reveal checks, which mis-fire on a film (cross-dissolving
+  copy stacked at one position reads as a "collision"; a timeline has no no-JS render). The fix
+  is what lets film work pass an honest gate instead of rationalizing past a page-mode FAIL.
+  (Drove by the t04 launch-film head-to-head.)
+- `chart_legibility` skips decorative graphics (`aria-hidden="true"` / `role="presentation"|
+  "none"`) up the ancestor chain — a decorative optical/illustrative SVG (a lens, an iris, a
+  particle field) is not a data chart and shouldn't be judged as one; mark it `aria-hidden`. (Vendored SFX/BGM, a TTS narration producer, offline
   font-binary bundling, and the `styles.csv` enrichment are out of scope / deferred — atelier
   is a design studio, not a video producer.)
 - Render-grounded measurement (`scan_rendered.mjs`): measures the colors users actually

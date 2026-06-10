@@ -55,8 +55,11 @@ const [input, outDir, frames, fps] = process.argv.slice(-4);
   try { browser = await require('playwright').chromium.launch(); }
   catch { browser = await require('puppeteer').launch(); }
   const page = await (browser.newPage ? browser.newPage() : browser.pages().then(p => p[0]));
-  await page.setViewportSize ? page.setViewportSize({ width: 1280, height: 720 })
-                             : await page.setViewport({ width: 1280, height: 720 });
+  // Capture resolution is env-configurable (default 720p, unchanged); set VW/VH for
+  // film-standard 1080p export (VW=1920 VH=1080).
+  const VW = Number(process.env.VW) || 1280, VH = Number(process.env.VH) || 720;
+  await page.setViewportSize ? page.setViewportSize({ width: VW, height: VH })
+                             : await page.setViewport({ width: VW, height: VH });
   // Tell the page it's being recorded BEFORE its scripts run, so animation engines build
   // their __seek path and suppress looping (atelier's Stage/narration engines gate on
   // window.__recording — see animation-pitfalls.md "defense #1").

@@ -437,6 +437,23 @@ land it cleanly *outside* the shape on the paper background.
   collision discipline in `review.md` §3c. The same self-check applies: **screenshot it and
   read every letter** — against the actual rendered art, not your mental model of it.
 
+## Self-QA a film with the right gate — `qa.py --kind animation`
+
+A finished film/animation is gated by `qa.py`, but a 30s **timeline film is not a responsive
+page**: the page-oriented checks (responsive-reflow collision, no-JS reveal) mis-fire on it —
+cross-dissolving copy stacked at one position reads as a "collision", and a timeline has no
+meaningful no-JS render. `qa.py` auto-detects a film by the `__seek`/`__ready`/`__recording`
+handshake (or `<meta name="atelier:kind" content="animation">`) and switches to the film gate:
+**real motion present (`scan_motion`) + decorative-aware chart legibility + anti-slop** — and
+skips the page-only checks. Force it with `qa.py film.html --kind animation --hook`. Don't
+rationalize past a page-mode FAIL on a film; run the film gate, which should come back clean.
+
+- **Mark decorative graphics `aria-hidden="true"`.** A decorative/illustrative SVG (a lens, an
+  iris, an ornament, a particle field, a generated texture) is not a data chart and not content.
+  Marking it `aria-hidden="true"` (or `role="presentation"`) is correct for accessibility AND
+  stops the legibility checker from mistaking its many marks for an illegible chart. Reserve real
+  chart semantics for real charts.
+
 ## Pre-flight self-check (5 seconds before starting)
 
 - [ ] Every parent of a `position: absolute` element has `position: relative`?
@@ -457,6 +474,7 @@ land it cleanly *outside* the shape on the paper background.
 - [ ] Cross-scene elements (chapter label / watermark / scene number) have no hard-coded colors? Visible against every scene's background?
 - [ ] Element-follows-path motion: the visual tip is anchored ON the path (rotation compensated), keyframes sampled densely from the real path, draw + follower share duration and `linear` timing? Verified on mid-animation frames, not just the end?
 - [ ] Any text label over artwork contrasts with what's behind it for its whole length (no red-on-red, no edge-clipping)? Read every letter on the rendered screenshot?
+- [ ] Decorative SVG / canvas / texture marked `aria-hidden="true"` (so it's not mistaken for a data chart)? Final gate run as `qa.py film.html --kind animation --hook` (film gate, not page gate)?
 
 ## §19 — An explainer animation must EXPLAIN (legibility > minimalism)
 
