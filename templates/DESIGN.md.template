@@ -13,7 +13,11 @@
      the prose below is for humans. Keep them in sync — or delete this block to let
      the tools parse the prose tables. Run `contract.py --validate <repo>` to check.
      MUST be valid JSON: colors are hex strings; SPACING_SCALE_JSON is a quoted,
-     comma-separated list, e.g. "4px", "8px", "16px", "24px". -->
+     comma-separated list, e.g. "4px", "8px", "16px", "24px".
+     If the system ships a co-equal DARK theme, fill the `dark` map below with the
+     dark palette (same roles, hex) — `audit_contrast.py` and `contract.py` then
+     ENFORCE the dark tokens too, instead of leaving them prose-only. DELETE the
+     entire `dark` block for a light-only system. -->
 ```json atelier-contract
 {
   "colors": {
@@ -24,6 +28,13 @@
     "muted": "{{COLOR_MUTED}}", "on-muted": "{{ON_MUTED}}",
     "border": "{{COLOR_BORDER}}",
     "destructive": "{{COLOR_DESTRUCTIVE}}", "on-destructive": "{{ON_DESTRUCTIVE}}"
+  },
+  "dark": {
+    "primary": "{{DARK_PRIMARY}}", "on-primary": "{{DARK_ON_PRIMARY}}",
+    "background": "{{DARK_BG}}", "foreground": "{{DARK_FG}}",
+    "muted": "{{DARK_MUTED}}", "on-muted": "{{DARK_ON_MUTED}}",
+    "border": "{{DARK_BORDER}}",
+    "destructive": "{{DARK_DESTRUCTIVE}}", "on-destructive": "{{DARK_ON_DESTRUCTIVE}}"
   },
   "fonts": ["{{FONT_DISPLAY}}", "{{FONT_BODY}}"],
   "spacing": [{{SPACING_SCALE_JSON}}],

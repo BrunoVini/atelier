@@ -24,6 +24,31 @@ def test_audit_flags_real_low_contrast_text():
     assert row["aa_large"] is False and "suggest" in row
 
 
+def test_audit_themes_enforces_dark_palette(tmp_path):
+    # t03 lesson: the machine block's DARK palette must be contrast-audited too, so a
+    # bad dark on-color fails the gate instead of hiding in prose. load_themed_colors
+    # returns {"base":..., "dark":...} and each theme audits independently.
+    from audit_contrast import load_themed_colors, audit, gate_failures
+    (tmp_path / "DESIGN.md").write_text(
+        "```json atelier-contract\n"
+        '{"colors":{"background":"#ffffff","foreground":"#111111"},'
+        '"dark":{"background":"#0b0e12","foreground":"#5a5f66"},'   # muddy fg on near-black -> FAIL
+        '"fonts":["Sora"],"spacing":["4px"],"depth":"surface-shift"}\n'
+        "```\n")
+    themes = load_themed_colors(str(tmp_path))
+    assert "dark" in themes and themes["dark"]["background"] == "#0b0e12"
+    assert not gate_failures(audit(themes["base"]))            # light is fine
+    assert gate_failures(audit(themes["dark"]))                 # dark fg too low -> caught
+    # a contract with no dark block -> only a base theme, no crash
+    light_only = tmp_path / "lightonly"
+    light_only.mkdir()
+    (light_only / "DESIGN.md").write_text(
+        "```json atelier-contract\n"
+        '{"colors":{"background":"#ffffff","foreground":"#111111"},"fonts":["Sora"]}\n```\n')
+    lt = load_themed_colors(str(light_only))
+    assert set(lt) == {"base"}
+
+
 def test_audit_enforces_on_token_against_its_base():
     colors = {"primary": "#2563eb", "on-primary": "#0a0a0a"}  # dark text on blue button
     row = next(r for r in audit(colors) if r["text"] == "on-primary" and r["surface"] == "primary")

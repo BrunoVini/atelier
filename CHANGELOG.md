@@ -190,6 +190,13 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Canonical machine block in DESIGN.md: the contract can be embedded as a fenced
   `atelier-contract` JSON block that the tools parse **first** — the prose tables become a
   human-facing fallback, so the enforceable half of the thesis no longer rests on regex.
+- Co-equal **dark theme** in the machine block: the `atelier-contract` block takes an optional
+  `dark` map (same roles, hex), so a light+dark system's dark tokens are part of the *enforceable*
+  contract, not prose-only. `contract.py` parses it into `dark_colors` (flagging non-hex dark
+  values), and `audit_contrast.py` audits **both** themes — a dark-only contrast failure now fails
+  the gate. The template scaffolds it and the `generate-design-md` workflow tells the agent to fill
+  it for dark-mode projects. (Drove by the t03 head-to-head, where dark-mode enforceability was the
+  one soft spot in an otherwise decisive blind win.)
 - `contract.py --validate`: reports what parsed (roles, fonts, spacing) and fails loudly
   when a contract is too thin to enforce, instead of silently degrading lint to noise.
 - Drift ratchet (`check.py --ratchet` / `--update-baseline`): adopt the gate on a legacy

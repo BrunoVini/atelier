@@ -70,17 +70,29 @@ def _contract_from_block(block, path):
     each field. Colors must be hex (the rest of atelier's contract model is hex); a
     non-hex/invalid color value is RECORDED in `machine_block_dropped` (not silently
     dropped) so `validate_contract` can flag it."""
-    colors, dropped = {}, []
-    raw = block.get("colors")
-    if isinstance(raw, dict):
-        for k, v in raw.items():
-            if isinstance(v, str) and v.startswith("#"):
-                try:
-                    colors[k] = _norm_hex(v)
-                except Exception:
-                    dropped.append(k)
-            else:
-                dropped.append(k)          # non-hex (e.g. oklch) not yet supported in the block
+    def _hexmap(raw, label):
+        """Parse a {role: hex} map, normalizing hex and recording bad values
+        (labelled so the caller can tell light from dark drops)."""
+        out_colors, bad = {}, []
+        if isinstance(raw, dict):
+            for k, v in raw.items():
+                if isinstance(v, str) and v.startswith("#"):
+                    try:
+                        out_colors[k] = _norm_hex(v)
+                    except Exception:
+                        bad.append(label + k)
+                else:
+                    bad.append(label + k)   # non-hex (e.g. oklch) not yet supported in the block
+        return out_colors, bad
+
+    colors, dropped = _hexmap(block.get("colors"), "")
+    # A second, co-equal DARK palette may ride in a `dark` key (a {role: hex} map, or
+    # {"dark": {"colors": {...}}}). Without this, dark-mode tokens are prose-only and
+    # can't be machine-enforced — the one enforceability gap the t03 review found.
+    raw_dark = block.get("dark")
+    if isinstance(raw_dark, dict) and isinstance(raw_dark.get("colors"), dict):
+        raw_dark = raw_dark["colors"]
+    dark, dark_dropped = _hexmap(raw_dark, "dark:")
     fonts = block.get("fonts")
     spacing = block.get("spacing")
     out = {
@@ -90,8 +102,10 @@ def _contract_from_block(block, path):
         "spacing": [str(s) for s in spacing] if isinstance(spacing, list) else [],
         "depth": block.get("depth") if isinstance(block.get("depth"), str) else None,
     }
-    if dropped:
-        out["machine_block_dropped"] = dropped
+    if dark:
+        out["dark_colors"] = dark
+    if dropped or dark_dropped:
+        out["machine_block_dropped"] = dropped + dark_dropped
     return out
 
 
@@ -241,6 +255,7 @@ def validate_contract(contract):
     report = {
         "source": contract.get("source"),
         "colors": len(colors), "fonts": len(fonts), "spacing": len(contract.get("spacing", [])),
+        "dark_colors": len(contract.get("dark_colors") or {}),
         "depth": contract.get("depth"), "issues": issues, "ok": not issues,
     }
     return (not issues), report

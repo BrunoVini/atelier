@@ -28,6 +28,22 @@ def _load_colors(target):
             if isinstance(v, str) and v.startswith("#")}
 
 
+def load_themed_colors(target):
+    """Return {"base": {name: hex}, "dark": {name: hex}} — the contract's light
+    palette plus, when the machine block ships a co-equal DARK palette, the dark
+    one. Each theme is audited independently so a dark-only contrast failure is
+    caught by the gate instead of hiding in prose."""
+    from contract import resolve_contract
+    c = resolve_contract(target)
+    def hexes(d):
+        return {n: v for n, v in (d or {}).items() if isinstance(v, str) and v.startswith("#")}
+    out = {"base": hexes(c.get("colors"))}
+    dark = hexes(c.get("dark_colors"))
+    if dark:
+        out["dark"] = dark
+    return out
+
+
 def _role(name):
     low = name.lower()
     if any(h in low for h in _TEXT_HINTS):
@@ -137,10 +153,14 @@ if __name__ == "__main__":
     if not args or args[0].startswith("-"):
         print("usage: audit_contrast.py <repo | design-tokens.json | DESIGN.md> [--json]")
         sys.exit(2)
-    colors = _load_colors(args[0])
-    rows = audit(colors)
+    themes = load_themed_colors(args[0])
+    by_theme = {name: audit(cols) for name, cols in themes.items()}
+    fails = sum(len(gate_failures(rows)) for rows in by_theme.values())
     if "--json" in args:
-        print(json.dumps(rows, indent=2))
+        print(json.dumps(by_theme if len(by_theme) > 1 else by_theme["base"], indent=2))
     else:
-        print(_format(rows))
-    sys.exit(1 if gate_failures(rows) else 0)
+        for name, rows in by_theme.items():
+            if len(by_theme) > 1:
+                print(f"\n=== {name} theme ===")
+            print(_format(rows))
+    sys.exit(1 if fails else 0)

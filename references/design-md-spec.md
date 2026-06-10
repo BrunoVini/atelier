@@ -14,6 +14,20 @@ a strategy string. Keep the block and prose in sync; `contract.py --validate <re
 loudly if the block is malformed (it would otherwise silently fall back to prose). Non-hex
 color values (e.g. `oklch(...)`) aren't yet supported in the block — keep colors as hex.
 
+**Dark theme (co-equal, machine-enforced).** A light+dark system carries its DARK palette
+in an optional `"dark"` key — a second `{role: "#hex"}` map (same roles as `colors`).
+`contract.py` parses it into `dark_colors`, and `audit_contrast.py` audits BOTH themes, so
+a dark-only contrast failure fails the gate instead of hiding in the §2 prose. Without this,
+dark tokens are documentation, not contract. Omit the `dark` key for a light-only system:
+
+```json atelier-contract
+{
+  "colors": { "background": "#ffffff", "foreground": "#111111", "primary": "#2563eb", "on-primary": "#ffffff" },
+  "dark":   { "background": "#0b0e12", "foreground": "#f7f7f8", "primary": "#60a5fa", "on-primary": "#0b0e12" },
+  "fonts": ["Sora", "Inter"], "spacing": ["4px", "8px", "16px"], "depth": "surface-shift"
+}
+```
+
 ## Sections (use the template in `templates/DESIGN.md.template`)
 
 1. **Identity & tone** — inferred product type, audience, and the ONE committed

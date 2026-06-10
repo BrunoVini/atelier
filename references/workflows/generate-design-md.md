@@ -113,9 +113,14 @@ persistent file). The moment real signal exists, the empirical scan wins.
 Start from `templates/DESIGN.md.template`. **Fill the `atelier-contract` machine block**
 (fenced ```json) — it is the canonical, machine-read contract; the tools parse it FIRST and
 the prose tables are the human-facing fallback. It MUST be valid JSON: colors are hex strings,
-`spacing` is a quoted list (`"4px", "8px", …`). After writing, run
+`spacing` is a quoted list (`"4px", "8px", …`). **If the system ships a co-equal dark theme,
+fill the block's `dark` map** (same roles, hex) so `audit_contrast.py` and `contract.py`
+enforce the dark tokens too — otherwise dark mode is prose-only and unchecked; delete the
+`dark` key for a light-only system. After writing, run
 `python3 scripts/contract.py --validate <repo>` — it fails loudly if the contract parsed too
-thin (e.g. the block was malformed and silently fell back to prose).
+thin (e.g. the block was malformed and silently fell back to prose) — and
+`python3 scripts/audit_contrast.py <repo>` to confirm every enforced pair clears AA in
+**both** themes.
 
 First check `scan_repo`'s `token_source`. **If it is set** (the repo already owns
 its tokens in a TS/JS theme module, a CSS custom-property theme, or a Tailwind

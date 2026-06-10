@@ -50,6 +50,11 @@ def test_template_machine_block_is_valid_json(tmp_path):
         "{{COLOR_MUTED}}": "#f1f5f9", "{{ON_MUTED}}": "#475569",
         "{{COLOR_BORDER}}": "#e2e8f0",
         "{{COLOR_DESTRUCTIVE}}": "#dc2626", "{{ON_DESTRUCTIVE}}": "#ffffff",
+        "{{DARK_PRIMARY}}": "#60a5fa", "{{DARK_ON_PRIMARY}}": "#0b0e12",
+        "{{DARK_BG}}": "#0b0e12", "{{DARK_FG}}": "#f7f7f8",
+        "{{DARK_MUTED}}": "#1e293b", "{{DARK_ON_MUTED}}": "#cbd5e1",
+        "{{DARK_BORDER}}": "#272a2e",
+        "{{DARK_DESTRUCTIVE}}": "#f87171", "{{DARK_ON_DESTRUCTIVE}}": "#0b0e12",
         "{{FONT_DISPLAY}}": "Sora", "{{FONT_BODY}}": "Inter",
         "{{SPACING_SCALE_JSON}}": '"4px", "8px", "16px", "24px"', "{{DEPTH_STRATEGY}}": "borders-only",
     }
@@ -59,6 +64,8 @@ def test_template_machine_block_is_valid_json(tmp_path):
     d.write_text(text)
     c = resolve_contract(str(d))
     assert c.get("machine_block") is None and not c.get("machine_block_dropped")
+    # the template ships a co-equal dark palette in the block, so dark tokens enforce too
+    assert c["dark_colors"]["background"] == "#0b0e12" and c["dark_colors"]["foreground"] == "#f7f7f8"
     # the block must carry ALL the §2 palette roles (not just primary), so lint/audit
     # don't flag the repo's own secondary/accent/border as drift
     for role in ("primary", "secondary", "accent", "background", "foreground", "muted", "border", "destructive"):
@@ -93,6 +100,64 @@ def test_block_type_guards_bad_shapes():
     from contract import _contract_from_block
     c = _contract_from_block({"colors": {"ink": "#111"}, "fonts": "Sora", "spacing": "4px"}, "x")
     assert c["fonts"] == [] and c["spacing"] == []   # a string is not a list -> guarded, not split
+
+
+# --- dark-theme machine block (t03 lesson) ----------------------------------
+# A DESIGN.md that ships light AND dark must be able to express the DARK palette
+# in the canonical machine block too — otherwise dark-mode tokens are prose-only
+# and a linter/contrast gate can't enforce them (the one enforceability gap a
+# blind review found). The block carries an optional `dark` map of {role: hex}.
+
+def test_machine_block_parses_dark_palette():
+    from contract import _contract_from_block
+    c = _contract_from_block({
+        "colors": {"background": "#ffffff", "foreground": "#111111"},
+        "dark": {"background": "#0b0e12", "foreground": "#f7f7f8"},
+        "fonts": ["Sora"]}, "x")
+    assert c["colors"]["background"] == "#ffffff"          # light still primary
+    assert c["dark_colors"]["background"] == "#0b0e12"     # dark parsed + normalized
+    assert c["dark_colors"]["foreground"] == "#f7f7f8"
+
+
+def test_dark_block_accepts_nested_colors_key():
+    # tolerate {"dark": {"colors": {...}}} as well as {"dark": {role: hex}}
+    from contract import _contract_from_block
+    c = _contract_from_block({
+        "colors": {"bg": "#ffffff", "fg": "#111111"},
+        "dark": {"colors": {"bg": "#0b0e12", "fg": "#f7f7f8"}}}, "x")
+    assert c["dark_colors"] == {"bg": "#0b0e12", "fg": "#f7f7f8"}
+
+
+def test_dark_block_drops_non_hex_and_validate_flags_it():
+    from contract import _contract_from_block
+    c = _contract_from_block({
+        "colors": {"background": "#ffffff", "foreground": "#111111"},
+        "dark": {"background": "oklch(0.18 0.01 250)"}}, "x")        # non-hex dark color
+    assert any("dark" in d for d in c.get("machine_block_dropped", []))
+    ok, rep = validate_contract(c)
+    assert ok is False and any("dark" in i.lower() for i in rep["issues"])
+
+
+def test_contract_without_dark_block_is_unchanged():
+    # backward compat: no `dark` key -> no dark_colors, validate behaves exactly as before
+    from contract import _contract_from_block
+    c = _contract_from_block(
+        {"colors": {"ink": "#111111", "paper": "#ffffff"}, "fonts": ["Sora"], "spacing": ["4px"]}, "x")
+    assert not c.get("dark_colors")
+    ok, rep = validate_contract(c)
+    assert ok is True and rep.get("dark_colors", 0) == 0
+
+
+def test_dark_palette_resolves_end_to_end_from_design_md(tmp_path):
+    d = tmp_path / "DESIGN.md"
+    d.write_text(
+        "```json atelier-contract\n"
+        '{"colors":{"background":"#ffffff","foreground":"#111111"},'
+        '"dark":{"background":"#0b0e12","foreground":"#f7f7f8"},'
+        '"fonts":["Sora"],"spacing":["4px"],"depth":"surface-shift"}\n'
+        "```\n")
+    c = resolve_contract(str(d))
+    assert c["dark_colors"]["foreground"] == "#f7f7f8"
 
 
 def test_template_has_agent_prompt_guide():
