@@ -85,7 +85,7 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 | Survey the frontend architecture before writing code | `references/workflows/architecture-fit.md` | `survey_repo.py` |
 | Reuse existing components / component inventory | `references/workflows/census.md` | `census.py` |
 | Palette / font / style / product recommendations | `references/knowledge/` | `search_kb.py` |
-| Pick a font by language coverage (CJK / Arabic / Cyrillic) or variable axes | `references/knowledge/` | `search_kb.py --domain fonts-catalog` |
+| Pick a font by language coverage (CJK / Arabic / Cyrillic / Vietnamese) or variable-axis tag (`opsz`/`wdth`) | `references/knowledge/` | `search_kb.py --domain fonts-catalog` |
 | Greenfield: synthesize a WCAG-correct token set from brand seed colors | `references/workflows/generate-design-md.md` | `synthesize_tokens.py` |
 | "Make it like Stripe/Linear/Notion…" (named brand) | `references/knowledge/` (brand-exemplars) | `search_kb.py` |
 | Stack-idiomatic do/don't (react/next/shadcn/swiftui/flutter/rn) | `references/knowledge/` | `search_kb.py` |

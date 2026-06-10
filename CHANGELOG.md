@@ -35,11 +35,13 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - DESIGN.md "Agent Prompt Guide": a flat copy-paste cheat-sheet section in the template
   (literal palette/type values + ready-to-paste section prompts) the generator fills, so
   any coding agent — not just atelier — can build on-contract without reading the whole file.
-- Frame-exact video capture: `export_video.sh` now drives deterministic capture via the
-  `__ready`/`__seek(ms)` handshake when a page exposes it (no wall-clock drift, no leading
-  blank frame, no mid-cycle loop), falling back to the real-time screenshot loop otherwise.
-  (Vendored SFX/BGM and a TTS narration producer remain out of scope — atelier is a design
-  studio, not a video producer; offline font-binary bundling is deferred.)
+- Frame-exact video capture: `export_video.sh` now injects `window.__recording` before the
+  page loads, waits for `window.__ready === true`, and drives `window.__seek(seconds)` per
+  frame (the documented Stage/engine contract) — deterministic, no wall-clock drift, no
+  leading blank frame, no mid-cycle loop — falling back to the real-time screenshot loop for
+  pages without the handshake. (Vendored SFX/BGM, a TTS narration producer, offline
+  font-binary bundling, and the `styles.csv` enrichment are out of scope / deferred — atelier
+  is a design studio, not a video producer.)
 - Render-grounded measurement (`scan_rendered.mjs`): measures the colors users actually
   *see*, weighted by on-screen painted area, and reconciles against the static scan —
   surfacing "declared but not painted" (dead palette) and "painted but not declared"

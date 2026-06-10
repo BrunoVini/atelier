@@ -57,22 +57,30 @@ const [input, outDir, frames, fps] = process.argv.slice(-4);
   const page = await (browser.newPage ? browser.newPage() : browser.pages().then(p => p[0]));
   await page.setViewportSize ? page.setViewportSize({ width: 1280, height: 720 })
                              : await page.setViewport({ width: 1280, height: 720 });
+  // Tell the page it's being recorded BEFORE its scripts run, so animation engines build
+  // their __seek path and suppress looping (atelier's Stage/narration engines gate on
+  // window.__recording — see animation-pitfalls.md "defense #1").
+  if (page.addInitScript) await page.addInitScript(() => { window.__recording = true; });
+  else if (page.evaluateOnNewDocument) await page.evaluateOnNewDocument(() => { window.__recording = true; });
   const url = /^https?:\/\//.test(input) ? input : 'file://' + path.resolve(input);
   await page.goto(url, { waitUntil: 'networkidle' });
   // Wait for web fonts so frames aren't a fallback-font "raw HTML" render.
   await page.evaluate(() => (document.fonts ? document.fonts.ready : null)).catch(() => {});
-  // Frame-EXACT capture when the page opts into the handshake: __ready (assets/animation
-  // initialized) + __seek(ms) (drive the animation by a virtual clock) make capture
-  // deterministic — no wall-clock drift, no leading blank frame, no mid-cycle loop. A page
-  // that doesn't expose __seek falls back to the real-time screenshot loop.
+  // Frame-EXACT capture when the page opts into the handshake: __ready (true once
+  // assets/animation are initialized) + __seek(seconds) (drive the animation by a virtual
+  // clock) make capture deterministic — no wall-clock drift, no leading blank frame, no
+  // mid-cycle loop. A page that doesn't expose __seek falls back to the real-time loop.
   const hasSeek = await page.evaluate(() => typeof window.__seek === 'function').catch(() => false);
-  const hasReady = await page.evaluate(() => typeof window.__ready !== 'undefined').catch(() => false);
-  if (hasReady) await page.evaluate(() => Promise.resolve(window.__ready)).catch(() => {});
+  if (hasSeek) {
+    // Poll for __ready === true (the documented boolean contract); bounded so a page that
+    // never sets it can't hang the export.
+    await page.waitForFunction(() => window.__ready === true, { timeout: 8000 }).catch(() => {});
+  }
   const interval = 1000 / Number(fps);
   for (let i = 0; i < Number(frames); i++) {
     const f = String(i).padStart(5, '0');
     if (hasSeek) {
-      await page.evaluate((t) => window.__seek(t), i * interval);
+      await page.evaluate((t) => window.__seek(t), i / Number(fps));   // SECONDS, per the Stage/engine contract
       // let the seek paint before grabbing (two rAFs = one committed frame)
       await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))).catch(() => {});
     }

@@ -5,9 +5,10 @@ Once an animation HTML is done, users often ask "can you export this as a video?
 > **atelier script names:** the exporter is **`scripts/export_video.sh`**, plus
 > **`scripts/convert-formats.sh`** (60fps + GIF) and **`scripts/add-music.sh`** (BGM).
 > The engine files are **`assets/engines/sprites.jsx`** and **`assets/engines/narration.jsx`**.
-> `export_video.sh` captures frames by screenshot at a fixed fps; the
-> `window.__recording`/`__seek` handshake described below is the responsibility of a
-> **hand-written Stage** using the narration engine, not of the bundled exporter.
+> `export_video.sh` injects `window.__recording` before load, waits for `window.__ready`,
+> and drives `window.__seek(seconds)` per frame for **deterministic** capture when a page
+> exposes that Stage handshake (the narration/sprites engines do); it falls back to a
+> fixed-fps screenshot loop for pages that don't.
 
 ## When to Export
 

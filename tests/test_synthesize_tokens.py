@@ -15,6 +15,7 @@ def test_on_colors_are_wcag_correct_on_light():
     assert _cr(t["on-primary"], t["primary"]) >= 3.0
     assert _cr(t["foreground"], t["background"]) >= 4.5   # body text on the canvas -> AA-normal
     assert _cr(t["muted-foreground"], t["background"]) >= 4.5
+    assert _cr(t["muted-foreground"], t["muted"]) >= 4.5  # muted text on its own muted surface
     assert t["ring"] == t["primary"]
     assert t["is_dark"] is False
 
@@ -30,3 +31,14 @@ def test_defaults_background_when_only_primary_given():
     t = synthesize({"primary": "#2563eb"})
     assert "background" in t and "foreground" in t
     assert _cr(t["foreground"], t["background"]) >= 4.5
+
+
+def test_wcag_correct_on_mid_tone_backgrounds():
+    # P0 regression: the crossover is ~0.18, not 0.4 — a mid-tone bg must still get
+    # max-contrast body + muted text on the CANVAS that clears AA (was silently returning
+    # a failing white). (A mid-tone `muted` SURFACE can't carry AA text at all — that's a
+    # property of mid-tone canvases, not a synthesizer bug — so we don't assert it here.)
+    for bg in ("#777777", "#8a8a8a", "#a0a0a0"):
+        t = synthesize({"primary": "#2563eb", "background": bg})
+        assert _cr(t["foreground"], t["background"]) >= 4.5, f"foreground fails on {bg}"
+        assert _cr(t["muted-foreground"], t["background"]) >= 4.5, f"muted-fg fails on bg {bg}"
