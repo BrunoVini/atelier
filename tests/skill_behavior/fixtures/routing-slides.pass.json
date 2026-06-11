@@ -1,0 +1,8 @@
+{
+  "tool_calls": [
+    { "name": "bash", "args": { "command": "python3 scripts/context.py ." }, "result_summary": "{\"design_md\": \"DESIGN.md\", \"contract_valid\": true, \"register\": \"brand\", \"next\": \"load DESIGN.md as contract\"}" },
+    { "name": "read", "args": { "path": "references/capabilities/slides.md" }, "result_summary": "# Slides — deck engine, export to PDF/PPTX …[truncated]" },
+    { "name": "write", "args": { "path": "deck/slides.js", "contents": "export default [ /* pricing deck */ ]" }, "result_summary": "Wrote 2100 bytes to deck/slides.js" }
+  ],
+  "final_text": "I read the slides capability and built a pricing deck bound to your DESIGN.md tokens."
+}

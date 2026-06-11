@@ -1,0 +1,9 @@
+{
+  "tool_calls": [
+    { "name": "bash", "args": { "command": "python3 scripts/context.py ." }, "result_summary": "{\"design_md\": \"DESIGN.md\", \"register\": \"brand\", \"next\": \"load DESIGN.md as contract\"}" },
+    { "name": "read", "args": { "path": "references/capabilities/landing-craft.md" }, "result_summary": "# Landing craft …[truncated]" },
+    { "name": "write", "args": { "path": "hero.html", "contents": "<section class=\"hero\">…</section>" }, "result_summary": "Wrote 1700 bytes to hero.html" },
+    { "name": "bash", "args": { "command": "python3 scripts/qa.py hero.html --register brand --json" }, "result_summary": "verdict: PASS — contrast ok, no collisions, slop clean across the width sweep" }
+  ],
+  "final_text": "hero.html is finished and ready to ship — qa.py passes (contrast, responsive, slop all clean)."
+}

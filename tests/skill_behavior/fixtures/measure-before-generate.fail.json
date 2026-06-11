@@ -1,0 +1,7 @@
+{
+  "tool_calls": [
+    { "name": "write", "args": { "path": "landing.html", "contents": "<section style=\"font-family:Inter;background:linear-gradient(#7c3aed,#a78bfa)\">…</section>" }, "result_summary": "Wrote 980 bytes to landing.html" },
+    { "name": "bash", "args": { "command": "python3 scripts/context.py ." }, "result_summary": "{\"design_md\": null, \"has_design_signals\": true}" }
+  ],
+  "final_text": "Here's a quick landing section with a clean Inter + purple gradient look."
+}
