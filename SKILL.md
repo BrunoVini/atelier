@@ -122,6 +122,7 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 | Realistic content / empty·loading·error states | `references/capabilities/content.md` | `seed_content.py` |
 | A motion / interaction spec | `references/capabilities/motion-spec.md` | `export_tokens.py` |
 | Make a layout work across screens / fix the tablet mid-range | `references/capabilities/responsive.md` | `responsive_check.mjs` |
+| Defensive / robust layout — "won't break with long content", overflow, missing images, user scrollbars (PT: css defensivo, layout robusto, "não quebra com conteúdo longo", transbordo) | `references/capabilities/defensive-css.md` | `slop_ported.py` (input-zoom-ios, img-no-max-width, bg-no-no-repeat) |
 | Multi-brand / dark mode / white-label theming | `references/workflows/cross-platform.md` | `export_tokens.py` |
 | Native theme handoff (SwiftUI / Flutter / React Native) | `references/workflows/cross-platform.md` | `export_native.py` |
 | i18n / RTL support | `references/capabilities/i18n-rtl.md` | `check_rtl.py` |

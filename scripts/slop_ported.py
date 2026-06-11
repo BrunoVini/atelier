@@ -491,4 +491,73 @@ def ported_tells(html, allowed=None):
                     "run past ~75ch; constrain prose containers (65–75ch)")
                 break
 
+    # 24. input-zoom-ios (Defensive CSS) — a form control with font-size < 16px makes
+    #     iOS Safari zoom the page on focus. A real, deterministic bug → important.
+    #     Two sources: a CSS rule whose selector targets input/select/textarea, or an
+    #     inline style on one of those tags. Match the smallest declared size.
+    _CTRL_SEL = re.compile(r"(?:^|[\s,>+~])(?:input|select|textarea)\b", re.I)
+    _FS = re.compile(r"font-size\s*:\s*([\d.]+)(px|rem|em)\b", re.I)
+    zoom_px = None
+    for sel, body in blocks:
+        is_ctrl = bool(_CTRL_SEL.search(sel)) or sel.lower() in ("input", "select",
+                                                                  "textarea")
+        if not is_ctrl:
+            continue
+        m = _FS.search(body)
+        if not m:
+            continue
+        px = float(m.group(1)) * (1 if m.group(2).lower() == "px" else 16)
+        if 0 < px < 16 and (zoom_px is None or px < zoom_px):
+            zoom_px = px
+    if zoom_px is not None:
+        add("important", "input-zoom-ios",
+            f"{zoom_px:g}px font on a form control — iOS Safari zooms the page on focus "
+            "below 16px; set input/select/textarea font-size to ≥16px")
+
+    # 13. img-no-max-width (Defensive CSS) — an inline-styled <img> with a fixed px width
+    #     and no max-width overflows a narrow container. Scoped to INLINE style + fixed-px
+    #     width to stay low-FP: a stylesheet `img{max-width:100%}` or a Tailwind w-full/
+    #     max-w-* class is the common safe pattern and clears the check.
+    global_img_max = any(
+        re.search(r"(?:^|[\s,>+~])img\b", sel, re.I) and
+        re.search(r"max-(?:width|inline-size)\s*:", body, re.I)
+        for sel, body in blocks)
+    if not global_img_max:
+        for m in re.finditer(r"<img\b[^>]*>", html, re.I):
+            tag = m.group(0)
+            sm = re.search(r"\bstyle\s*=\s*([\"'])(.*?)\1", tag, re.I)
+            if not sm:
+                continue
+            style = sm.group(2)
+            wm = re.search(r"(?<![-\w])width\s*:\s*([\d.]+)px\b", style, re.I)
+            if not wm:
+                continue                          # only fixed-px width is the overflow risk
+            if re.search(r"max-(?:width|inline-size)\s*:", style, re.I):
+                continue
+            cm = _CLASS_ATTR.search(tag)
+            if cm and re.search(r"\bmax-w-|\bw-full\b", cm.group(1)):
+                continue                          # Tailwind responsive width covers it
+            add("polish", "img-no-max-width",
+                f"an <img> with width:{wm.group(1)}px and no max-width — it overflows a "
+                "narrower container; add `max-width: 100%` (img { max-width: 100% })")
+            break
+
+    # 6. bg-no-no-repeat (Defensive CSS) — a non-tiling background image (url(), not a
+    #    gradient) with no background-repeat tiles when the box outgrows the image.
+    for sel, body in blocks:
+        bm = re.search(r"background(?:-image)?\s*:\s*([^;}{]+)", body, re.I)
+        if not bm:
+            continue
+        val = bm.group(1)
+        if "url(" not in val.lower():
+            continue                              # gradient / color — repeat is irrelevant
+        # background-repeat may be in the shorthand value or its own declaration
+        if re.search(r"\bno-repeat\b", body, re.I) or \
+           re.search(r"background-repeat\s*:", body, re.I):
+            continue
+        add("polish", "bg-no-no-repeat",
+            f"a url() background ({sel.strip()[:40]}) with no background-repeat — it "
+            "tiles when the box outgrows the image; add `background-repeat: no-repeat`")
+        break
+
     return findings

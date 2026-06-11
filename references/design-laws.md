@@ -61,6 +61,10 @@ and the code's threshold differ, **the code's number is authoritative** and note
   → enforced by: `slop_ported.py` / `tight-leading`
 - **Body font-size ≥14px.** (Code flags body text **<12px**; aim for ≥14px regardless.)
   → enforced by: `slop_ported.py` / `tiny-body-text`
+- **Form inputs: font-size ≥16px.** Below 16px iOS Safari zooms the page on focus — a
+  real bug, not a taste call. Applies to `input` / `select` / `textarea`. (Defensive CSS,
+  defensivecss.dev.)
+  → enforced by: `slop_ported.py` / `input-zoom-ios` (important)
 - **Wide tracking is for short uppercase labels only.** (Code flags **>0.05em** on
   non-uppercase body text.)
   → enforced by: `slop_ported.py` / `wide-tracking`
@@ -84,6 +88,14 @@ and the code's threshold differ, **the code's number is authoritative** and note
 - **No rounded card with a colored top/right/bottom stripe** (and no left side-stripe
   border): the stripe clashes with the corners.
   → enforced by: `slop_ported.py` / `accent-border-on-rounded`, `slop_check.py` / `card-left-border`
+- **Images get `max-width: 100%`.** An image wider than its container overflows the
+  page. (Code flags the gross case: an *inline-styled* `<img>` with a fixed px width and
+  no `max-width`. Defensive CSS — see `capabilities/defensive-css.md` for the full set,
+  most of which is rendered/judgment.)
+  → enforced by: `slop_ported.py` / `img-no-max-width`
+- **`url()` backgrounds get `background-repeat: no-repeat`.** A non-tiling background
+  image tiles when the box outgrows it. (Defensive CSS; gradients are exempt.)
+  → enforced by: `slop_ported.py` / `bg-no-no-repeat`
 
 ## Motion
 

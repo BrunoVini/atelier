@@ -27,6 +27,7 @@ practice, and framework idioms — expressed in atelier's own selection and word
 | `font-substitutes.csv` | proprietary face → closest open-source analogue + tracking |
 | `brand-exemplars.csv` | real-brand design languages as cold-start *seeds* only |
 | `reflex-reject.csv` | product-category → the *second-order* reflex choices (the "safe" post-correction cliché) to push past |
+| `defensive-css.csv` | the 25 Defensive CSS techniques (tip → problem, defensive pattern, whether statically checkable, severity) |
 
 ## Attribution — reflex-reject
 
@@ -36,6 +37,19 @@ choice is itself a category cliché. That framing — and the term *reflex-rejec
 is informed by **impeccable** (Apache-2.0, `pbakaus/impeccable`). The concept is a
 fact/idea, not protected expression; the category rows, hue anchors, and notes here
 are atelier's own observation and wording, cross-referenced with `products.csv`.
+
+## Attribution — defensive-css
+
+The `defensive-css.csv` catalog and `../capabilities/defensive-css.md` guide encode the
+25 **Defensive CSS** techniques by **Ahmad Shadeed** (defensivecss.dev, `defensive-css/tip/<slug>/`).
+Defensive CSS — writing styles that survive long content, varying viewports, the user's
+scrollbar, missing images, and touch input — is Shadeed's framing and term. The individual
+techniques (e.g. `img { max-width: 100% }`, `font-size: 16px` on inputs to stop iOS zoom,
+`overscroll-behavior: contain`) are publicly-known CSS facts and carry no copyright; atelier's
+selection into `static`/`rendered`/`judgment` classes, the severity hints, the per-tip notes,
+and the three ported deterministic checks (`input-zoom-ios`, `img-no-max-width`,
+`bg-no-no-repeat` in `scripts/slop_ported.py`) are atelier's own observation and wording.
+The `slug` column maps each row back to its `defensivecss.dev/tip/<slug>/` source page.
 
 ## How it's used
 
