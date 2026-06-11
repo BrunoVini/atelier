@@ -61,16 +61,33 @@ def read_stdin():
         return {}
 
 
+def is_own_scratch(p):
+    """atelier's own scratch is not a deliverable — never gate on it.
+
+    The sweep contact sheets live UNDER .../atelier-responsive/<slug>/ and are
+    named <slug>-sweep.html (so a basename check misses them — match the
+    directory in the full path); the reveal_check no-JS probes are atelier-nojs*.
+    This must apply to EVERY collection path (cwd walk included): if the session
+    cwd is /tmp — or any dir the sweep writes under — gating our own contact
+    sheet re-sweeps it, emits another sheet, and self-amplifies forever
+    (<slug>_sweep_html_sweep_html...).
+    """
+    return ("atelier-responsive" in p
+            or os.path.basename(p).startswith("atelier-nojs"))
+
+
 def recent_html(root, now):
     out = []
     if not root or not os.path.isdir(root):
         return out
     for dp, dns, fns in os.walk(root):
-        dns[:] = [d for d in dns if d not in SKIP_DIRS]
+        dns[:] = [d for d in dns if d not in SKIP_DIRS and d != "atelier-responsive"]
         for fn in fns:
             if not fn.endswith(".html"):
                 continue
             p = os.path.join(dp, fn)
+            if is_own_scratch(p):
+                continue
             try:
                 if now - os.path.getmtime(p) <= RECENT_SECS:
                     out.append(p)
@@ -135,11 +152,7 @@ def main():
     tmp_globs = (glob.glob(os.path.join(TMP_ROOT, "*.html"))
                  + glob.glob(os.path.join(TMP_ROOT, "atelier*/**/*.html"), recursive=True))
     for p in tmp_globs:
-        # atelier's own scratch is not a deliverable — never gate on it. The sweep contact
-        # sheets live UNDER /tmp/atelier-responsive/<slug>/ and are named <slug>-sweep.html
-        # (so a basename check misses them — match the directory in the full path); the
-        # reveal_check no-JS probes (if any leak) are atelier-nojs*.
-        if "atelier-responsive" in p or os.path.basename(p).startswith("atelier-nojs"):
+        if is_own_scratch(p):
             continue
         try:
             if now - os.path.getmtime(p) <= RECENT_SECS:

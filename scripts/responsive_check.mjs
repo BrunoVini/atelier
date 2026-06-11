@@ -175,6 +175,10 @@ function contactSheet(rows) {
   }).join('');
   return `<!DOCTYPE html><meta charset="utf-8"><title>atelier — responsive sweep</title>
 <style>body{font-family:ui-serif,Georgia,serif;margin:0 auto;max-width:1100px;padding:32px}
+/* slugs/selectors are arbitrary unbroken tokens (foo_bar_baz_qux) — without a wrap
+   opportunity they force the doc wider than narrow viewports (the sheet itself
+   would fail its own sweep). Intrinsic fix, not a nudge: allow breaks anywhere. */
+h1,figcaption,li{overflow-wrap:anywhere}
 figure{margin:0 0 28px;border:1px solid #0002;padding:12px}figcaption{font-weight:600;margin-bottom:8px}
 img{display:block;border:1px solid #0001;max-width:100%;height:auto}ul{font:13px/1.5 monospace}ul.of{color:#b00}ul.ov{color:#a60}ul.dv{color:#789}</style>
 <h1>Responsive sweep — ${slug}</h1>${cells}`;
