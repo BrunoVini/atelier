@@ -196,6 +196,10 @@ def build_one(harness, out_dir):
     if os.path.exists(harness_out):
         shutil.rmtree(harness_out)
     skill_dir = os.path.join(harness_out, cfg["skill_root"])
+    # Write-confinement guard: a future typo'd `..` in skill_root must never let
+    # us write outside the harness out dir.
+    assert os.path.abspath(skill_dir).startswith(os.path.abspath(harness_out) + os.sep), \
+        f"skill_root escapes out: {cfg['skill_root']!r}"
     os.makedirs(skill_dir, exist_ok=True)
 
     # 1. Shaped SKILL.md.

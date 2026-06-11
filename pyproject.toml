@@ -24,7 +24,7 @@ version = "0.1.0"  # keep in sync with .claude-plugin/plugin.json
 description = "Repo-aware design studio: deterministic design QA gate (design-lint, contrast-audit, house-rules, overlap-risk) as a standalone stdlib CLI."
 readme = "README.md"
 requires-python = ">=3.8"
-license = "Apache-2.0"
+license = { text = "Apache-2.0" }  # table form: accepted by setuptools 61+ (bare PEP 639 SPDX string requires 77+)
 authors = [{ name = "Bruno Vinicius", email = "brunovinissouza@gmail.com" }]
 keywords = ["design", "design-system", "frontend", "design-tokens", "ui", "ux", "contrast", "ci", "lint"]
 dependencies = []  # stdlib-only by design
