@@ -760,3 +760,57 @@ def test_clean_minimal_page_stays_clean():
                  css="body{font-family:'Sohne',sans-serif;line-height:1.6}"
                      "h1{font-family:'Tiempos',serif;font-size:48px}p{font-size:16px;max-width:65ch}")
     assert _kinds(html, "important") == set()
+
+
+def _ported_kinds(css):
+    from slop_ported import ported_tells
+    return {f["kind"] for f in ported_tells(_page(css=css))}
+
+
+def test_label_line_height_flags_loose_leading_on_labels():
+    # FLAG 1: an eyebrow class with body-sized unitless leading
+    assert "label-line-height" in _ported_kinds(".eyebrow{font-size:12px;line-height:1.6}")
+    # FLAG 2: a badge class (clearly a label) at 1.5 even without a tiny font-size
+    assert "label-line-height" in _ported_kinds(".badge{line-height:1.5}")
+    # FLAG 3: a small button label with em leading >=1.5
+    assert "label-line-height" in _ported_kinds(".btn{font-size:13px;line-height:1.7em}")
+    # FLAG 4: a px line-height that is loose relative to a px font-size (24/12 = 2.0)
+    assert "label-line-height" in _ported_kinds(".chip{font-size:12px;line-height:24px}")
+    # FLAG 5 (bonus): a nav-item set loose
+    assert "label-line-height" in _ported_kinds(".nav-link{font-size:14px;line-height:1.8}")
+
+
+def test_label_line_height_does_not_overfire():
+    # NOT 1: a label with proper tight leading
+    assert "label-line-height" not in _ported_kinds(".label{font-size:12px;line-height:1.1}")
+    # NOT 2: a body paragraph at 1.6 (bodyish, not a label) — correct for prose
+    assert "label-line-height" not in _ported_kinds("p{font-size:16px;line-height:1.6}")
+    # NOT 3: a label with NO line-height declared
+    assert "label-line-height" not in _ported_kinds(".eyebrow{font-size:12px;color:#333}")
+    # NOT 4: a large heading at 1.5 (not label-ish, large size)
+    assert "label-line-height" not in _ported_kinds("h1{font-size:48px;line-height:1.5}")
+    # NOT 5: a label at 1.4 (tight enough — below the 1.5 threshold)
+    assert "label-line-height" not in _ported_kinds(".tag{font-size:12px;line-height:1.4}")
+    # NOT 6: a px line-height on a label with NO px font-size to compare → skip (unsure)
+    assert "label-line-height" not in _ported_kinds(".badge{line-height:30px}")
+    # NOT 7: `navy` near-miss must not match the `nav` hint (word boundary)
+    assert "label-line-height" not in _ported_kinds(".navy-text{font-size:12px;line-height:1.6}")
+    # NOT 8: a wrapper/container selector at body size must NOT over-fire
+    assert "label-line-height" not in _ported_kinds(".nav-container{line-height:1.6}")
+
+
+def test_label_line_height_container_vs_genuine_label():
+    # a wrapper/container selector (no small font-size) must NOT flag
+    assert "label-line-height" not in _ported_kinds(".tag-list{line-height:1.6}")
+    assert "label-line-height" not in _ported_kinds(".chip-group{line-height:1.6}")
+    # a genuine label class still flags even without a tiny font-size
+    assert "label-line-height" in _ported_kinds(".badge{line-height:1.5}")
+
+
+def test_label_line_height_percent_leading():
+    # a small/label selector with line-height >=150% flags (160% treated as 1.6)
+    assert "label-line-height" in _ported_kinds(".eyebrow{font-size:12px;line-height:160%}")
+    # a body paragraph at 160% does NOT flag (bodyish, prose)
+    assert "label-line-height" not in _ported_kinds("p{font-size:16px;line-height:160%}")
+    # a label at 140% is tight enough (below the 1.5 threshold)
+    assert "label-line-height" not in _ported_kinds(".badge{font-size:12px;line-height:140%}")

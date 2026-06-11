@@ -98,6 +98,29 @@ def _bodyish(sel):
                 or "prose" in s)
 
 
+# Small-UI label hints: an eyebrow / kicker / badge / chip / tag / button / nav item /
+# caption. These want TIGHT leading (~1.0–1.25); a body-sized line-height makes the
+# label float, unanchored, in its box. `\bnav\b`/`\btag\b` are word-bounded so they
+# don't catch `navy`/`tagline`; `btn`/`button`/`label`/etc. match as class/element hints.
+# ONE source of truth for the token alternation — `_LABELISH_RX` and the
+# `clearly_label` class regex (in the label-line-height rule) both build from it.
+_LABEL_TOKENS = r"label|eyebrow|kicker|overline|badge|chip|tag|pill|caption|btn|button|nav"
+# Generic container words: real enough as a label hint, but also common in wrapper
+# selectors — require a small font-size before we treat them as a "clearly a label".
+_LABEL_CONTAINER_WORDS = {"nav", "tag", "chip"}
+# Container suffixes/prefixes that mark a wrapper, not the label itself.
+_LABEL_CONTAINER_RX = re.compile(
+    r"-(?:list|group|container|wrapper|bar|nav)\b|\bnav-", re.I)
+_LABELISH_RX = re.compile(rf"\b(?:{_LABEL_TOKENS})\b", re.I)
+# a label CLASS: a leading `.`-class token containing one of the label tokens.
+_LABEL_CLASS_RX = re.compile(rf"\.[a-z0-9_-]*(?:{_LABEL_TOKENS})", re.I)
+
+
+def _labelish(sel):
+    """Does this selector target small UI text used as a LABEL (not prose/headings)?"""
+    return bool(_LABELISH_RX.search(sel))
+
+
 # split a multi-layer box-shadow on top-level commas (not the commas inside rgba()/hsl())
 _SHADOW_LAYER_SPLIT = re.compile(r",(?![^()]*\))")
 _COLOR_FN = re.compile(r"(?:rgba?|hsla?|oklch|color)\([^)]*\)", re.I)
@@ -371,6 +394,60 @@ def ported_tells(html, allowed=None):
                 add("polish", "wide-tracking",
                     f"letter-spacing {m.group(1)}em on body text ({sel.strip()[:40]}) — "
                     "wide tracking is for short uppercase labels only")
+
+    # 13b. label-line-height — small UI LABEL text set with body-sized leading.
+    #   Labels (eyebrow/badge/chip/button/nav/caption) want tight leading (~1.0–1.25);
+    #   a line-height ≥1.5 on a label makes it look unanchored/loose. Conservative:
+    #   only fires when the selector is label-ish AND not body/prose, and either the
+    #   font-size is small (≤14px) OR the selector is clearly a label class. Only
+    #   unitless/em line-heights ≥1.5 count — UNLESS a px line-height + px font-size are
+    #   BOTH present (then compare the ratio); if a px line-height has no font-size to
+    #   compare against, skip (can't know if it's loose).
+    for sel, body in blocks:
+        if "label-line-height" in {f["kind"] for f in findings}:
+            break
+        if not _labelish(sel) or _bodyish(sel):
+            continue
+        # font-size of this rule (px-normalized), if any
+        fm = re.search(r"font-size\s*:\s*([\d.]+)(px|rem|em)\b", body, re.I)
+        fs_px = (float(fm.group(1)) * (1 if fm.group(2).lower() == "px" else 16)
+                 if fm else None)
+        small = fs_px is not None and fs_px <= 14
+        # a class-form label selector (a leading `.`-class token containing a label
+        # token) is "clearly a label" even without a small font-size — BUT not when:
+        #   • the selector reads as a wrapper/container (`-list`/`-group`/`-container`/
+        #     `-wrapper`/`-bar`/`-nav`/`nav-`), or
+        #   • the only matched token is a generic container word (nav/tag/chip) and the
+        #     font-size isn't small — those over-fire on real containers.
+        clearly_label = bool(_LABEL_CLASS_RX.search(sel))
+        if clearly_label and _LABEL_CONTAINER_RX.search(sel):
+            clearly_label = False
+        if clearly_label and not small:
+            matched = {m.group(0).lower() for m in _LABELISH_RX.finditer(sel)}
+            if matched and matched <= _LABEL_CONTAINER_WORDS:
+                clearly_label = False
+        if not (small or clearly_label):
+            continue
+        loose = None
+        # unitless, em, or % line-height ≥1.5 (160% is treated as 1.6).
+        m = re.search(r"line-height\s*:\s*([\d.]+)(em|%)?(?=[;}\s]|$)", body, re.I)
+        if m:
+            val = float(m.group(1)) / 100 if m.group(2) == "%" else float(m.group(1))
+            if val >= 1.5:
+                loose = m.group(0).split(":", 1)[-1].strip()
+        else:
+            # px line-height: only judge it loose when a px font-size is ALSO present
+            # (so we can compute the real ratio); otherwise skip (unsure).
+            lm = re.search(r"line-height\s*:\s*([\d.]+)px\b", body, re.I)
+            if lm and fm and fm.group(2).lower() == "px" and fs_px:
+                ratio = float(lm.group(1)) / fs_px
+                if ratio >= 1.5:
+                    loose = f"{lm.group(1)}px"
+        if loose is not None:
+            add("polish", "label-line-height",
+                f"line-height {loose} on a small UI label ({sel.strip()[:40]}) — "
+                "labels want tight leading (~1.0–1.25); body-sized leading makes them "
+                "look unanchored")
 
     # 16. layout-transition — animating width/height/padding/margin causes jank.
     for m in re.finditer(r"transition(?:-property)?\s*:\s*([^;}{]+)", html, re.I):
