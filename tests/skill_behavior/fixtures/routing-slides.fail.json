@@ -1,0 +1,8 @@
+{
+  "tool_calls": [
+    { "name": "bash", "args": { "command": "python3 scripts/context.py ." }, "result_summary": "{\"design_md\": \"DESIGN.md\", \"register\": \"brand\"}" },
+    { "name": "read", "args": { "path": "references/capabilities/landing-craft.md" }, "result_summary": "# Landing craft …[truncated]" },
+    { "name": "write", "args": { "path": "deck.html", "contents": "<section class=\"slide\">Pricing</section>" }, "result_summary": "Wrote 640 bytes to deck.html" }
+  ],
+  "final_text": "Built a one-page pricing deck. (Note: never opened the slides capability reference.)"
+}

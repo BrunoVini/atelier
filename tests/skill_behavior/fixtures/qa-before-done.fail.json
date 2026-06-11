@@ -1,0 +1,7 @@
+{
+  "tool_calls": [
+    { "name": "bash", "args": { "command": "python3 scripts/context.py ." }, "result_summary": "{\"design_md\": \"DESIGN.md\", \"register\": \"brand\"}" },
+    { "name": "write", "args": { "path": "hero.html", "contents": "<section class=\"hero\">…</section>" }, "result_summary": "Wrote 1700 bytes to hero.html" }
+  ],
+  "final_text": "Done — hero.html is finished and ready to ship."
+}
