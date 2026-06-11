@@ -53,3 +53,62 @@ def test_ratchet_auto_tightens_on_decrease(tmp_path):
     # reintroduce a 2nd drift -> exceeds the tightened baseline -> fail
     (tmp_path / "a.css").write_text("a{color:#ff00ff}\nd{color:#00ff00}")
     assert _check([repo, "--ratchet"]).returncode == 1
+
+
+# --- Phase C: step toggles, --quiet, CLI override ---
+
+def test_disabled_step_is_skipped_not_gating(tmp_path):
+    repo = _repo(tmp_path)            # has 1 off-contract color -> design-lint would FAIL
+    # disable design-lint via .atelier.json -> SKIP, not a gate, so the run PASSES
+    (tmp_path / ".atelier.json").write_text('{"checks":{"design-lint":false}}')
+    r = _check([repo])
+    assert r.returncode == 0
+    assert "[SKIP] design-lint (disabled in config)" in r.stdout
+
+
+def test_quiet_hides_detail_keeps_steps_and_verdict(tmp_path):
+    repo = _repo(tmp_path)            # 1 drift -> FAIL, with a "drift ..." detail line
+    full = _check([repo])
+    quiet = _check([repo, "--quiet"])
+    # exit code unchanged
+    assert full.returncode == quiet.returncode == 1
+    # step summary + verdict still present
+    assert "design-lint" in quiet.stdout
+    assert "atelier check: FAIL" in quiet.stdout
+    # per-finding detail line suppressed
+    assert "drift " not in quiet.stdout
+    assert "drift " in full.stdout
+
+
+def test_cli_max_drift_overrides_config(tmp_path):
+    repo = _repo(tmp_path)            # 1 drift
+    # config would gate at 0; CLI --max-drift 5 overrides -> PASS
+    (tmp_path / ".atelier.json").write_text('{"check":{"max_drift":0}}')
+    assert _check([repo]).returncode == 1
+    assert _check([repo, "--max-drift", "5"]).returncode == 0
+
+
+def test_root_config_overrides_legacy(tmp_path):
+    repo = _repo(tmp_path)            # 1 drift
+    # legacy allows drift up to 5 (would PASS); root tightens to 0 (FAIL)
+    (tmp_path / "design" / "atelier.config.json").write_text(
+        '{"colors":{"ink":"#111111","paper":"#ffffff"},"check":{"max_drift":5}}')
+    # NOTE: legacy file also doubles as the tokens contract location in _repo;
+    # write tokens separately so resolve still works.
+    (tmp_path / "design" / "design-tokens.json").write_text(
+        '{"colors":{"ink":"#111111","paper":"#ffffff"}}')
+    assert _check([repo]).returncode == 0          # legacy max_drift=5 -> pass
+    (tmp_path / ".atelier.json").write_text('{"check":{"max_drift":0}}')
+    assert _check([repo]).returncode == 1          # root override -> fail
+
+
+def test_corrupt_config_yields_clean_exit_2(tmp_path):
+    # a corrupt .atelier.json must print a clean ::error:: and exit 2 — NOT a traceback
+    repo = _repo(tmp_path)
+    (tmp_path / ".atelier.json").write_text('{"check": {"max_drift": 0,,}}')   # invalid JSON
+    r = _check([repo])
+    assert r.returncode == 2
+    assert "::error:: corrupt atelier config:" in r.stdout
+    # no Python traceback leaked to either stream
+    assert "Traceback (most recent call last)" not in (r.stdout + r.stderr)
+    assert "JSONDecodeError" not in (r.stdout + r.stderr)
