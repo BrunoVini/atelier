@@ -14,10 +14,13 @@ severity (the 298 prior tests prove this is byte-identical). These tests prove:
   - no-register output is unchanged.
 """
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 from slop_check import check_html, apply_register, _REGISTER_ESCALATION
+
+_SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "scripts")
 
 
 PAGE = "<!doctype html><html><head>{head}</head><body>{body}</body></html>"
@@ -140,6 +143,41 @@ def test_apply_register_only_rewrites_severity_keyed_by_kind():
     assert out[0]["severity"] == "important"     # in the product map
     assert out[1]["severity"] == "polish"         # untouched (not in the map)
     assert out[1]["kind"] == "vague-cta" and out[1]["detail"] == "d"   # shape preserved
+
+
+# the snapshot above guards against a typo INTO the map; this guards against the map
+# pointing at a DEAD kind — a rule whose `kind` was renamed (escalation would then
+# silently never fire). Derive the kinds the rules actually emit from source and assert
+# every escalation key is among them. Both files emit findings in exactly two forms:
+#   • slop_ported.py: a local `add(sev, "kind", detail)` helper;
+#   • slop_check.py:  dict literals `{... "kind": "kind-name" ...}`
+# (slop_ported also uses the dict-literal form for a couple of rules), so the two regexes
+# below together cover every emission form present.
+_ADD_KIND = re.compile(r"""add\(\s*['"][^'"]+['"]\s*,\s*['"]([a-z0-9-]+)['"]""")
+_DICT_KIND = re.compile(r"""['"]kind['"]\s*:\s*['"]([a-z0-9-]+)['"]""")
+
+
+def _emitted_kinds():
+    emitted = set()
+    for fname in ("slop_ported.py", "slop_check.py"):
+        src = open(os.path.join(_SCRIPTS_DIR, fname), encoding="utf-8").read()
+        emitted |= set(_ADD_KIND.findall(src))
+        emitted |= set(_DICT_KIND.findall(src))
+    return emitted
+
+
+def test_escalation_keys_are_kinds_some_rule_actually_emits():
+    # Guard against a dead escalation key: if a rule's `kind` is renamed but the map
+    # is not updated, escalation silently never fires. Every key in either inner map
+    # must be a `kind` some rule in slop_ported.py / slop_check.py actually emits.
+    emitted = _emitted_kinds()
+    escalation_keys = set()
+    for inner in _REGISTER_ESCALATION.values():
+        escalation_keys |= set(inner)
+    orphans = escalation_keys - emitted
+    assert escalation_keys <= emitted, (
+        f"escalation map keys point at kinds no rule emits (renamed/dead?): {sorted(orphans)} "
+        f"— emitted kinds: {sorted(emitted)}")
 
 
 def test_escalation_map_targets_are_documented_kinds():

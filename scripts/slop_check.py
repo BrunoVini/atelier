@@ -448,7 +448,8 @@ _REGISTER_ESCALATION = {
 def apply_register(findings, register):
     """Post-process pass: escalate the severity of existing findings per the active
     register. No register -> findings returned unchanged (exact default behavior).
-    Preserves the {severity, kind, detail, ...} shape; only `severity` is rewritten."""
+    Preserves the {severity, kind, detail, ...} shape; only `severity` is rewritten.
+    Mutates `findings` in place and returns the same list (not a copy)."""
     escalation = _REGISTER_ESCALATION.get(register)
     if not escalation:
         return findings
