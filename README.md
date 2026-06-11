@@ -251,14 +251,29 @@ Three phases, one contract — measure first, generate on-contract, then keep it
 
 </details>
 
-## How it works
-
-The first time you do visual work in a repo with no `DESIGN.md`, atelier offers to
-generate one by measuring your code, then exports tokens (only when no token source
-already exists). Every later generation reads the contract and stays inside it; the
-lint, contrast, overlap, and CI tools keep it that way.
-
 ## Quick start
+
+You don't run scripts — you ask. In any repo, describe the work in natural language
+or reach for one of the [commands](#commands):
+
+```text
+make a pricing page that matches our app          → measures the repo, then builds on-contract
+/atelier:design-md                                 → write the DESIGN.md contract from the code
+/atelier:review src/components/Hero.tsx            → score + self-QA an artifact, register-aware
+/atelier:preview http://localhost:5173             → live-iterate on your running Vite/Next app
+/atelier:check .                                    → run the deterministic gate (great in CI)
+```
+
+The first time you do visual work in a repo with no `DESIGN.md`, atelier offers to write
+one by measuring your code (and exports tokens only when no token source exists). Every
+later generation reads that contract and stays inside it. Routing for every capability is
+in `SKILL.md`; depth lives in `references/`.
+
+For CI or scripting, the deterministic gate also ships as a standalone, dependency-free
+CLI — see [`atelier check`](#standalone-cli--atelier-check) above.
+
+<details>
+<summary><b>The scripts atelier runs for you</b> (invoked automatically; listed for transparency / direct CI use)</summary>
 
 ```bash
 python3 scripts/context.py <repo>                           # step-0: contract state, register, stack
@@ -283,7 +298,7 @@ node scripts/screenshot.mjs page.html shot.png             # capture for review/
 node scripts/diff_screens.mjs page.html                    # visual-regression diff
 ```
 
-Routing for every capability is in `SKILL.md`; depth lives in `references/`.
+</details>
 
 ## Development
 
