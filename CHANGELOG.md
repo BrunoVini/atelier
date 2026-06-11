@@ -132,6 +132,15 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - i18n / RTL logical-property linting.
 - Design planning + a 5-seat Design Council (for / against / neutral / UX / craft → a
   synthesized verdict) for hard, multi-surface calls.
+- Named refinement moves (`references/capabilities/refine.md`): bolder / quieter (intensity
+  ±), distill, harden (empty / loading / error / long-content states), and one earned
+  delight — register-aware and bound to the quantified motion limits, so "make it pop" or
+  "tone it down" is a contract-safe move, not a free-for-all.
+- Live mode against the *running* dev server (`scripts/preview/live-proxy.cjs` +
+  `live_detect.py`): an overlay-injecting reverse proxy detects Vite / Next, lets you pick an
+  element and slide parametrized variants (range / steps / toggle, all on-contract), and the
+  accept is gated — the variant is written to source, `qa.py` runs, and a FAIL (or a qa it
+  couldn't run) auto-reverts to the original bytes, so a bad variant never sticks.
 
 #### Govern — keep it coherent, accessible, on-contract
 
@@ -251,6 +260,30 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   knobs, real component compilation, freehand annotations); `import_reference` `light-dark()`
   / `color-scheme` dark-mode pairing; a published Nielsen 0–4 rubric; a Claude-specific
   defect profile for `slop_check`; and a cross-artifact critique backlog view.
+- Expanded the static slop battery with deterministic anti-pattern rules adapted from
+  `impeccable` (Apache-2.0, pbakaus/impeccable) — accent-border-on-rounded, nested / ghost
+  cards, icon-tile stacks, flat type hierarchy, oversized hero, extreme tracking, tight
+  leading, justified / all-caps body, layout-property animation, bounce easing, and more —
+  each with a flag + a no-flag test, gating through `qa.py` at the right severity.
+- Quantified design laws (`references/design-laws.md`): one page of numeric thresholds
+  (line length 65–75ch, ≤3 fonts, hero ≤6rem, tracking floor, easing) cross-linked to the
+  check that enforces each, so the law and the gate can't drift apart.
+- Brand vs. product registers (`references/registers/`): an optional `register` in the
+  contract that modulates slop severity — decoration-cost tells (glassmorphism, oversized
+  hero) gate on `product`; generic / monotonous tells gate on `brand` — with the escalation
+  map guarded against a rule rename. No change when the register is unset.
+- Second-order anti-sameness (`references/knowledge/reflex-reject.csv` + design-philosophy):
+  catches the *predictable* "safe" choice for a product category (every fintech →
+  emerald + serif display) on top of the obvious AI tells, wired into `cold_start_ledger.py`.
+- Defensive CSS (defensivecss.dev, Ahmad Shadeed): all 25 techniques cataloged
+  (`references/knowledge/defensive-css.csv`) with a guide, and the cleanly static, low-false-
+  positive ones shipped as rules — iOS input-zoom (`font-size<16px` on text controls, gating),
+  image overflow, background-repeat — disciplined to catalog FP-prone tips as judgment, not
+  noise.
+- Opt-in skill-behavior suite (`tests/skill_behavior/`): a pluggable-agent harness that
+  asserts the model follows SKILL.md by its tool-call *trace* (measure-before-generate,
+  routing, `qa.py`-before-done, collision reaction); the assertion engine is verified offline
+  via recorded traces, the live LLM runner degrades cleanly without a key.
 
 #### Tooling & capture
 
@@ -262,6 +295,17 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   fallback.
 - Packaged as a Claude Code plugin (`atelier`) distributed via the `atelier-dev`
   marketplace.
+- Standalone `atelier check` CLI (`pyproject.toml` + `atelier/` package, zero runtime deps):
+  runs the deterministic design gate on any repo via `uvx` / `pipx` / `python3 -m atelier
+  check`, reusing the in-skill battery; bundled-data resolution survives the installed wheel
+  layout (guarded by an installed-layout test and a build-backend smoke test).
+- Multi-harness build (`scripts/build_dist.py` + `HARNESSES.md`): transforms the single
+  source into Claude Code, Codex, and Cursor trees (config-driven, one dict entry per new
+  harness), documenting the per-harness capability matrix and the Claude-only collision-hook
+  degradation.
+- Step-0 context resolver (`scripts/context.py`): reports the contract state (DESIGN.md,
+  register, token source, framework, implied next step) in one JSON, replacing several
+  separate file reads at the start of a repo task.
 
 ### Changed
 
