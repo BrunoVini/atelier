@@ -32,17 +32,36 @@ def test_flags_enterprise_buzzword_wave():
             "mission-critical", "world-class"} <= labels
 
 
+def test_flags_buzzword_subset_in_running_copy():
+    # a smaller, different subset must flag too — not only the full five-phrase wave
+    from prose_check import prose_tells
+    bad = "A best-in-class editor with industry-leading performance."
+    labels = {label for _, label in prose_tells(bad)}
+    assert {"best-in-class", "industry-leading"} <= labels
+
+
 def test_buzzword_in_code_span_does_not_flag():
     from prose_check import prose_tells
     doc = "The linter bans `enterprise-grade` and `best-in-class` in copy."
     assert prose_tells(doc) == []
 
 
-def test_aphoristic_cadence_flags_at_three():
+def test_aphoristic_cadence_flags_three_not_a_aphorisms():
+    # the "Not a X. A Y." manufactured-contrast form on its own
+    from prose_check import prose_tells
+    bad = ("Not a dashboard. A control room. "
+           "Not a theme. A system you can extend. "
+           "Not a demo. A product you can ship.")
+    labels = [label for _, label in prose_tells(bad)]
+    assert labels.count("aphoristic cadence") >= 3
+
+
+def test_aphoristic_cadence_flags_three_short_rebuttals():
+    # the "X. No Y." / "X. Just Y." short-rebuttal form on its own
     from prose_check import prose_tells
     bad = ("Fast builds. No waiting. "
            "Simple pricing. Just one plan. "
-           "Not a framework. A way of working.")
+           "One config file. No surprises.")
     labels = [label for _, label in prose_tells(bad)]
     assert labels.count("aphoristic cadence") >= 3
 

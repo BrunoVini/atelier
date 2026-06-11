@@ -629,6 +629,24 @@ def test_gpt_theater_copy_flags_under_profile():
     assert "gpt-theater-copy" in _kinds(html, profile="gpt")
 
 
+def test_gpt_theater_copy_flags_other_noun_pairings():
+    html = _page(body="<p>We don't do compliance theater on this team.</p>")
+    assert "gpt-theater-copy" in _kinds(html, profile="gpt")
+
+
+def test_plural_theaters_in_legit_copy_does_not_flag():
+    # "theater" as an actual venue (plural) — \btheater\b does not match "theaters"
+    html = _page(body="<p>Find showtimes at nearby theaters tonight.</p>")
+    assert "gpt-theater-copy" not in _kinds(html, profile="gpt")
+
+
+def test_gpt_ghost_card_flags_border_width_form_with_shadow_first():
+    # different declaration order + border-width longhand + rgba shadow (blur 48px)
+    html = _page(css=".panel{box-shadow:0 24px 48px rgba(15,23,42,.18);"
+                     "border-width:1px;border-style:solid;border-color:#e5e7eb}")
+    assert "gpt-ghost-card" in _kinds(html, profile="gpt")
+
+
 def test_gpt_tells_do_not_fire_without_profile():
     html = _page(body="<p>No security theater here.</p>",
                  css=".card{border:1px solid #eee;box-shadow:0 8px 32px rgba(0,0,0,.12)}")
