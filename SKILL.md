@@ -19,6 +19,12 @@ repo wins over anything invented from scratch.
 
 Before producing ANY visual output in a repository, resolve the design contract.
 
+**Step 0 — run `python3 scripts/context.py <repo>` first.** It resolves the gate in
+one shot — whether a `DESIGN.md` contract exists and validates, the register, the
+existing `token_source`, the framework, whether design signals are present, and the
+implied next step — replacing several separate file reads. Then follow the gate
+below.
+
 ```dot
 digraph gate {
   "Visual task in a repo" [shape=ellipse];

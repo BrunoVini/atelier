@@ -57,6 +57,44 @@ When the task IS to show anti-design (e.g. a "what is AI slop" demo), isolate th
 bad sample in an honest container with a dashed border + "Counter-example — do
 not do this" badge, so it serves the narrative without polluting the page.
 
+### Second-order traps — the *safe* cliché after the obvious one
+
+There are two traps, not one. The **first trap** is the obvious tell — Inter, a
+purple-on-white gradient, three centered feature cards, glassmorphism for no
+reason — and `slop_check.py` already catches that surface. The **second trap** is
+quieter and more dangerous: once you've learned to avoid the obvious defaults, you
+reach for the *next* most predictable choice, the one that has become the "safe
+distinctive" pick *for that category*. Every fintech lands on emerald-mint with a
+serif display; every developer tool goes mono-everywhere on near-black with a violet
+accent; every health app reaches for soft sky-blue and rounds every corner. None of
+those trips the first-order blocklist — and that's exactly why it's a trap. It is
+training-data convergence one tier deeper.
+
+The rule: **when a greenfield choice is guessable from the category plus the
+anti-references alone, it isn't a decision — it's a reflex.** Before committing,
+name in one sentence what you're about to build the way a competitor in that
+category would describe theirs; if that sentence fits the modal product in the
+category, restart and source the direction from *this* product's actual story — what
+it does, the material it works with, the place or audience it serves — not from the
+category label. A category is not a recipe; treating it as one is the reflex.
+
+The lookup is `references/knowledge/reflex-reject.csv` — per category, the reflex
+fonts, the predictable post-correction aesthetic, the cliché hue anchors (named +
+hex), and a one-line hint toward a fresher direction. The automated guard is
+`scripts/cold_start_ledger.py`: pass `--category <cat>` to `check` and it warns when
+the proposed font is on that category's reflex list *or* the palette's dominant hue
+sits within ΔE of a reflex anchor. This is orthogonal to the ledger's recent-output
+collision check — the reflex check fires even on the very first output, where there
+is nothing recent to collide with.
+
+This is the same instinct the register guidance encodes from the other side: a
+brand surface that picked its font by category reflex reads as template, not voice
+(`references/registers/brand.md`); a product surface earns familiarity but still
+shouldn't reach for the category's decorative default (`references/registers/
+product.md`). The reflex-reject lists apply to *new* choices only — when an existing
+brand has already committed to a font or a lane as its identity, identity-
+preservation wins and variants don't second-guess what's already shipping.
+
 For the quantified version of these rules — the exact thresholds (line length,
 hero/body sizes, tracking, line-height, font count, easing) and which the QA
 battery enforces — see `design-laws.md`.

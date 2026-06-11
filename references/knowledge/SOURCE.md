@@ -26,6 +26,16 @@ practice, and framework idioms — expressed in atelier's own selection and word
 | `reasoning.csv` | greenfield cold-start aid: pattern + style + mood per category |
 | `font-substitutes.csv` | proprietary face → closest open-source analogue + tracking |
 | `brand-exemplars.csv` | real-brand design languages as cold-start *seeds* only |
+| `reflex-reject.csv` | product-category → the *second-order* reflex choices (the "safe" post-correction cliché) to push past |
+
+## Attribution — reflex-reject
+
+The `reflex-reject.csv` entry encodes the *second-order anti-slop* idea: after a
+designer learns to avoid the obvious AI tells, the next most predictable "safe"
+choice is itself a category cliché. That framing — and the term *reflex-reject* —
+is informed by **impeccable** (Apache-2.0, `pbakaus/impeccable`). The concept is a
+fact/idea, not protected expression; the category rows, hue anchors, and notes here
+are atelier's own observation and wording, cross-referenced with `products.csv`.
 
 ## How it's used
 
