@@ -491,4 +491,111 @@ def ported_tells(html, allowed=None):
                     "run past ~75ch; constrain prose containers (65–75ch)")
                 break
 
+    # 24. input-zoom-ios (Defensive CSS) — a TEXT-ENTRY form control with font-size < 16px
+    #     makes iOS Safari zoom the page on focus. A real, deterministic bug → important.
+    #     iOS only zooms text-entry controls, so non-text <input> types (checkbox, radio,
+    #     hidden, file, range, color, submit, reset, button, image) render no editable text
+    #     and CANNOT trigger the zoom — they must NOT flag. <textarea>/<select> are always
+    #     text-bearing. Two sources: a CSS rule whose selector targets input/select/textarea,
+    #     or an inline style on one of those tags. Match the smallest declared size.
+    _CTRL_SEL = re.compile(r"(?:^|[\s,>+~])(?:input|select|textarea)\b", re.I)
+    _FS = re.compile(r"font-size\s*:\s*([\d.]+)(px|rem|em)\b", re.I)
+    # iOS does not zoom these <input> types (no editable text rendered):
+    _NONTEXT_TYPES = ("checkbox", "radio", "hidden", "file", "range", "color",
+                      "submit", "reset", "button", "image")
+    _NONTEXT_TYPE_RX = re.compile(
+        r"\[\s*type\s*=\s*[\"']?(?:%s)[\"']?\s*\]" % "|".join(_NONTEXT_TYPES), re.I)
+
+    def _fs_px(body):
+        m = _FS.search(body)
+        if not m:
+            return None
+        return float(m.group(1)) * (1 if m.group(2).lower() == "px" else 16)
+
+    zoom_px = None
+    # (a) CSS rules from <style> blocks (parsed directly, NOT via css_blocks — which
+    #     collapses an inline style to a bare tag-name pseudo-selector and drops the
+    #     input's `type`; those inline styles are handled in (b) below).
+    for css in _STYLE_BLOCK_RX.findall(html):
+        css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+        for sel, body in _CSS_RULE_RX.findall(css):
+            if not _CTRL_SEL.search(sel):
+                continue
+            # an input-only selector qualified to a non-text type can't trigger the zoom
+            if re.search(r"(?:^|[\s,>+~])input", sel, re.I) and \
+               not re.search(r"(?:^|[\s,>+~])(?:select|textarea)", sel, re.I) and \
+               _NONTEXT_TYPE_RX.search(sel):
+                continue
+            px = _fs_px(body)
+            if px is not None and 0 < px < 16 and (zoom_px is None or px < zoom_px):
+                zoom_px = px
+    # (b) inline styles on input/select/textarea, read from raw HTML so the `type`
+    #     attribute is available (css_blocks drops it).
+    for m in re.finditer(r"<(input|select|textarea)\b([^>]*)>", html, re.I):
+        tag, attrs = m.group(1).lower(), m.group(2)
+        sm = re.search(r"\bstyle\s*=\s*([\"'])(.*?)\1", attrs, re.I | re.S)
+        if not sm:
+            continue
+        if tag == "input":
+            tm = re.search(r"\btype\s*=\s*[\"']?([\w-]+)", attrs, re.I)
+            if tm and tm.group(1).lower() in _NONTEXT_TYPES:
+                continue                          # non-text input → no iOS zoom
+        px = _fs_px(sm.group(2))
+        if px is not None and 0 < px < 16 and (zoom_px is None or px < zoom_px):
+            zoom_px = px
+    if zoom_px is not None:
+        add("important", "input-zoom-ios",
+            f"{zoom_px:g}px font on a form control — iOS Safari zooms the page on focus "
+            "below 16px; set input/select/textarea font-size to ≥16px")
+
+    # 13. img-no-max-width (Defensive CSS) — an inline-styled <img> with a fixed px width
+    #     and no max-width overflows a narrow container. Scoped to INLINE style + fixed-px
+    #     width to stay low-FP: a stylesheet `img{max-width:100%}` or a Tailwind w-full/
+    #     max-w-* class is the common safe pattern and clears the check.
+    global_img_max = any(
+        re.search(r"(?:^|[\s,>+~])img\b", sel, re.I) and
+        re.search(r"max-(?:width|inline-size)\s*:", body, re.I)
+        for sel, body in blocks)
+    if not global_img_max:
+        for m in re.finditer(r"<img\b[^>]*>", html, re.I):
+            tag = m.group(0)
+            sm = re.search(r"\bstyle\s*=\s*([\"'])(.*?)\1", tag, re.I)
+            if not sm:
+                continue
+            style = sm.group(2)
+            wm = re.search(r"(?<![-\w])width\s*:\s*([\d.]+)px\b", style, re.I)
+            if not wm:
+                continue                          # only fixed-px width is the overflow risk
+            if re.search(r"max-(?:width|inline-size)\s*:", style, re.I):
+                continue
+            cm = _CLASS_ATTR.search(tag)
+            if cm and re.search(r"\bmax-w-|\bw-full\b", cm.group(1)):
+                continue                          # Tailwind responsive width covers it
+            add("polish", "img-no-max-width",
+                f"an <img> with width:{wm.group(1)}px and no max-width — it overflows a "
+                "narrower container; add `max-width: 100%` (img { max-width: 100% })")
+            break
+
+    # 6. bg-no-no-repeat (Defensive CSS) — a non-tiling background image (url(), not a
+    #    gradient) with no background-repeat tiles when the box outgrows the image.
+    #    Limitation: repeat is only resolved WITHIN the declaring block — a separate rule
+    #    on the same selector that sets background-repeat won't be matched (accepted FP).
+    for sel, body in blocks:
+        bm = re.search(r"background(?:-image)?\s*:\s*([^;}{]+)", body, re.I)
+        if not bm:
+            continue
+        val = bm.group(1)
+        if "url(" not in val.lower():
+            continue                              # gradient / color — repeat is irrelevant
+        # A repeat is "set" if any explicit repeat keyword appears in the shorthand value
+        # (no-repeat, repeat-x/-y, repeat, round, space) or background-repeat is declared
+        # on its own — all are deliberate author choices, so don't flag.
+        if re.search(r"\b(?:no-repeat|repeat-x|repeat-y|repeat|round|space)\b", body, re.I) or \
+           re.search(r"background-repeat\s*:", body, re.I):
+            continue
+        add("polish", "bg-no-no-repeat",
+            f"a url() background ({sel.strip()[:40]}) with no background-repeat — it "
+            "tiles when the box outgrows the image; add `background-repeat: no-repeat`")
+        break
+
     return findings

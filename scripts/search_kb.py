@@ -32,6 +32,7 @@ _DOMAIN_FILE = {
     "stack-guidance": "stack-guidance.csv",
     "reasoning": "reasoning.csv",
     "brand-exemplars": "brand-exemplars.csv",
+    "defensive-css": "defensive-css.csv",
 }
 _KEYWORD_WEIGHT = 3.0  # the `keywords` column counts triple
 

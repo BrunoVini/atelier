@@ -55,6 +55,11 @@ Rule-by-rule diff of impeccable's 41 registry rules vs atelier's deterministic c
 | repeating-stripes-gradient     | covered (gated)| slop_check codex-stripe-gradient               |
 | theater-slop-phrase            | PORTED (gated) | gpt-theater-copy (--profile gpt)               |
 | image-hover-transform          | covered (gated)| slop_check gemini-img-hover-scale              |
+
+Provenance — Defensive CSS: slop_ported.ported_tells ALSO hosts three rules ported from
+Defensive CSS (defensivecss.dev, Ahmad Shadeed): input-zoom-ios (important),
+img-no-max-width and bg-no-no-repeat (polish). Those rules and their flag/no-flag fixtures
+live in tests/test_defensive_css.py; the 25-tip catalog is references/knowledge/defensive-css.csv.
 """
 import os
 import sys
