@@ -8,10 +8,19 @@ recent one, so the next project picks a different direction. Scoped strictly to 
 start; NEVER overrides a measured repo's contract.
 
     python3 cold_start_ledger.py record <font> <archetype> <#hex> [<#hex> ...]
-    python3 cold_start_ledger.py check  <font> <archetype> <#hex> [<#hex> ...]
+    python3 cold_start_ledger.py check  <font> <archetype> <#hex> [<#hex> ...] [--category <cat>]
+
+There are TWO orthogonal anti-sameness defenses:
+  • recent-collision  — the proposed look is materially the same as one of atelier's
+    OWN recent cold-start outputs (the tool converging on itself);
+  • category reflex-reject — the proposed look is the predictable "safe" choice for
+    its product CATEGORY even on the very first output (the second-order trap). This
+    is opt-in via `--category`; with no category it never fires and behavior is
+    byte-identical to the recent-collision-only ledger.
 """
 import json
 import os
+import re
 import sys
 
 from scan_repo import _hex_to_rgb, _delta_e
@@ -19,6 +28,9 @@ from scan_repo import _hex_to_rgb, _delta_e
 DEFAULT_LEDGER = os.environ.get("ATELIER_LEDGER") or os.path.expanduser("~/.atelier/cold-start.jsonl")
 DELTA_E = 12.0   # mean nearest-neighbor ΔE between palettes below this (same font+archetype) = "same look"
 RECENT = 5       # only compare against the last N cold-start outputs
+REFLEX_DELTA_E = 12.0   # palette hue within this ΔE of a category's reflex anchor = "the safe pick"
+REFLEX_CSV = os.path.join(
+    os.path.dirname(__file__), "..", "references", "knowledge", "reflex-reject.csv")
 
 
 def _norm_font(font):
@@ -92,20 +104,147 @@ def too_similar(fp, ledger=DEFAULT_LEDGER, n=RECENT):
     return None
 
 
+# --- category reflex-reject (the SECOND-order trap) --------------------------
+# Orthogonal to recent-collision: even atelier's very FIRST output for a category
+# can be the predictable "safe" choice for that category (every fintech →
+# emerald/teal + Space Grotesk). reflex-reject.csv curates those per category; this
+# warns when a proposed font is in the category's reflex font list OR any palette
+# color sits within ΔE of a reflex hue anchor.
+_HEX_IN = re.compile(r"#[0-9a-fA-F]{3,8}\b")
+
+
+def _split_field(raw):
+    """Split a reflex CSV multi-value field on ; or , into stripped tokens."""
+    out = []
+    for part in (raw or "").replace(";", ",").split(","):
+        part = part.strip()
+        if part:
+            out.append(part)
+    return out
+
+
+def _norm_cat(c):
+    return (c or "").strip().lower()
+
+
+def load_reflex(csv_path=REFLEX_CSV):
+    """Parse reflex-reject.csv -> {norm_category: {fonts:[...], styles:[...],
+    hues:[(label,#hex)...], note:str}}. Tolerant: a missing/torn file yields {}."""
+    import csv
+    out = {}
+    if not os.path.exists(csv_path):
+        return out
+    try:
+        with open(csv_path, encoding="utf-8", newline="") as fh:
+            for row in csv.DictReader(fh):
+                cat = _norm_cat(row.get("category"))
+                if not cat:
+                    continue
+                hues = []
+                for tok in _split_field(row.get("reflex_palette_hues")):
+                    m = _HEX_IN.search(tok)
+                    if m:
+                        label = tok[:m.start()].strip() or tok
+                        hues.append((label, m.group(0)))
+                out[cat] = {
+                    "fonts": [_norm_font(f) for f in _split_field(row.get("reflex_fonts"))],
+                    "styles": _split_field(row.get("reflex_styles")),
+                    "hues": hues,
+                    "note": (row.get("note") or "").strip(),
+                }
+    except Exception:
+        return out
+    return out
+
+
+def reflex_reject_hit(font, palette, category, csv_path=REFLEX_CSV):
+    """Return a structured warning if the proposed (font, palette) is the reflex
+    "safe" choice for `category`, else None. Fires when the normalized font is in the
+    category's reflex_fonts OR any palette color is within REFLEX_DELTA_E of a reflex
+    hue anchor. Returns None on no match, an unknown category, or no category."""
+    if not category:
+        return None
+    table = load_reflex(csv_path)
+    row = table.get(_norm_cat(category))
+    if not row:
+        return None
+    reasons = []
+    nf = _norm_font(font)
+    if nf and nf in row["fonts"]:
+        reasons.append({"kind": "font", "matched": nf})
+    # (rgb, hex) pairs from ONE filtered pass so the reported hex always corresponds to
+    # the rgb that matched — a "#" string that fails to parse is skipped in both.
+    pal_pairs = []
+    for h in (palette or []):
+        if isinstance(h, str) and h.startswith("#"):
+            try:
+                pal_pairs.append((_hex_to_rgb(h), h))
+            except Exception:
+                pass
+    hue_hits = []
+    for label, anchor in row["hues"]:
+        try:
+            a_rgb = _hex_to_rgb(anchor)
+        except Exception:
+            continue
+        for prgb, phex in pal_pairs:
+            if _delta_e(prgb, a_rgb) <= REFLEX_DELTA_E:
+                hue_hits.append({"palette": phex, "anchor": anchor, "label": label})
+                break
+    if hue_hits:
+        reasons.append({"kind": "palette", "hits": hue_hits})
+    if not reasons:
+        return None
+    return {"category": _norm_cat(category), "reasons": reasons,
+            "reflex_fonts": row["fonts"], "reflex_styles": row["styles"], "note": row["note"]}
+
+
+def _extract_category(argv):
+    """Pull an optional trailing `--category <cat>` out of argv (no argparse, to match
+    the file's positional style). Returns (category_or_None, argv_without_category)."""
+    out, cat, i = [], None, 0
+    while i < len(argv):
+        tok = argv[i]
+        if tok == "--category" and i + 1 < len(argv):
+            cat = argv[i + 1]
+            i += 2
+            continue
+        if tok.startswith("--category="):
+            cat = tok.split("=", 1)[1]
+            i += 1
+            continue
+        out.append(tok)
+        i += 1
+    return cat, out
+
+
 if __name__ == "__main__":
-    a = sys.argv[1:]
+    category, a = _extract_category(sys.argv[1:])
     if len(a) >= 4 and a[0] in ("record", "check"):
         fp = fingerprint(a[1], a[2], a[3:])
         if a[0] == "record":
             record(fp)
             print("recorded:", json.dumps(fp))
         else:
+            fired = False
             hit = too_similar(fp)
             if hit:
                 print("⚠ too similar to a recent cold-start output — pick a different direction:")
                 print("  prior:", json.dumps(hit))
+                fired = True
+            reflex = reflex_reject_hit(a[1], a[3:], category)
+            if reflex:
+                print(f"⚠ this is the reflex 'safe' choice for category {reflex['category']!r} "
+                      "— the second-order trap; push for a more specific direction:")
+                print("  reasons:", json.dumps(reflex["reasons"]))
+                if reflex["note"]:
+                    print("  why:", reflex["note"])
+                fired = True
+            if fired:
                 sys.exit(1)
-            print("✓ distinct from recent cold-start outputs.")
+            print("✓ distinct from recent cold-start outputs"
+                  + (" and not the category reflex." if category else "."))
         sys.exit(0)
-    print("usage: cold_start_ledger.py record|check <font> <archetype> <#hex> [<#hex> ...]")
+    print("usage: cold_start_ledger.py record|check <font> <archetype> <#hex> [<#hex> ...] "
+          "[--category <cat>]")
     sys.exit(2)
