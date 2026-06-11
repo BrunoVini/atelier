@@ -11,10 +11,11 @@ import re
 from collections import Counter
 from html.parser import HTMLParser
 
-# small local copies of slop_check's extraction regexes (no circular import)
-_FONT_DECL = re.compile(r"font-family\s*:\s*([^;{}]+)", re.I)
-_GFONT = re.compile(r"family=([A-Za-z0-9+]+)", re.I)
-_TAG = re.compile(r"<[^>]+>")
+# canonical home of the shared extraction regexes — slop_check imports these
+# (dependency direction is slop_check → slop_ported, so no circular import)
+FONT_DECL = re.compile(r"font-family\s*:\s*([^;{}]+)", re.I)
+GFONT = re.compile(r"family=([A-Za-z0-9+]+)", re.I)
+TAG = re.compile(r"<[^>]+>")
 _FONT_FALLBACKS = {"serif", "sans-serif", "monospace", "inherit", "initial", "unset",
                    "system-ui", "ui-serif", "ui-sans-serif", "ui-monospace", "emoji",
                    "-apple-system", "blinkmacsystemfont"}
@@ -38,25 +39,39 @@ _TW_TEXT_SIZES = {"text-xs": 12, "text-sm": 14, "text-base": 16, "text-lg": 18,
                   "text-xl": 20, "text-2xl": 24, "text-3xl": 30, "text-4xl": 36,
                   "text-5xl": 48, "text-6xl": 60, "text-7xl": 72, "text-8xl": 96,
                   "text-9xl": 128}
-_DARK_BG = re.compile(
-    r"background(?:-color)?\s*:\s*(?:#(?:0[0-9a-f]|1[0-9a-f]|2[0-3])[0-9a-f]{4}\b|"
-    r"#[01][0-9a-f]{2}\b|rgb\(\s*\d{1,2}\s*,\s*\d{1,2}\s*,\s*\d{1,2}\s*\))", re.I)
+_BG_DECL = re.compile(
+    r"background(?:-color)?\s*:\s*(#[0-9a-f]{3,8}\b|rgba?\([^)]*\))", re.I)
 _TW_DARK_BG = re.compile(r"\bbg-(?:gray|slate|zinc|neutral|stone)-(?:800|9\d\d)\b")
 _CHROMATIC_TW_BG = re.compile(
     r"\bbg-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|"
     r"violet|purple|fuchsia|pink|rose)-\d+\b")
 
 
-def _css_blocks(html):
+def css_blocks(html):
     """(selector, declarations) pairs from <style> blocks + inline style attrs
     (inline styles use the tag name as the selector)."""
     out = []
     for css in _STYLE_BLOCK_RX.findall(html):
         css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
         out.extend((sel.strip(), body) for sel, body in _CSS_RULE_RX.findall(css))
-    for m in re.finditer(r"<(\w+)[^>]*\bstyle\s*=\s*[\"']([^\"']*)[\"']", html, re.I):
-        out.append((m.group(1).lower(), m.group(2)))
+    for m in re.finditer(r"<(\w+)[^>]*\bstyle\s*=\s*([\"'])(.*?)\2", html, re.I | re.S):
+        out.append((m.group(1).lower(), m.group(3)))
     return out
+
+
+def _parse_rgb(s):
+    """(r, g, b) from a #hex or rgb()/rgba() string, else None."""
+    s = s.strip().lower()
+    m = re.match(r"#([0-9a-f]{6}|[0-9a-f]{3})\b", s)
+    if m:
+        h = m.group(1)
+        if len(h) == 3:
+            h = "".join(c * 2 for c in h)
+        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    m = re.match(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", s)
+    if m:
+        return tuple(int(x) for x in m.groups())
+    return None
 
 
 def _is_neutral_css_color(s):
@@ -65,18 +80,15 @@ def _is_neutral_css_color(s):
         return False
     if s.split()[0] in _NAMED_NEUTRAL:
         return True
-    m = re.match(r"#([0-9a-f]{3}|[0-9a-f]{6})\b", s)
-    if m:
-        h = m.group(1)
-        if len(h) == 3:
-            h = "".join(c * 2 for c in h)
-        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-        return max(r, g, b) - min(r, g, b) < 30
-    m = re.match(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", s)
-    if m:
-        r, g, b = (int(x) for x in m.groups())
-        return max(r, g, b) - min(r, g, b) < 30
+    rgb = _parse_rgb(s)
+    if rgb:
+        return max(rgb) - min(rgb) < 30
     return False                                   # var()/oklch/named hue → treat as accent
+
+
+def _is_dark_css_color(s):
+    rgb = _parse_rgb(s)
+    return bool(rgb) and max(rgb) < 0x40
 
 
 def _bodyish(sel):
@@ -86,11 +98,28 @@ def _bodyish(sel):
                 or "prose" in s)
 
 
-def _shadow_blur_px(value):
-    """Third length of a box-shadow layer ≈ blur radius (jsdom/browser agnostic)."""
+# split a multi-layer box-shadow on top-level commas (not the commas inside rgba()/hsl())
+_SHADOW_LAYER_SPLIT = re.compile(r",(?![^()]*\))")
+_COLOR_FN = re.compile(r"(?:rgba?|hsla?|oklch|color)\([^)]*\)", re.I)
+
+
+def shadow_layers(value):
+    """A box-shadow value split into its layers."""
+    return [layer.strip() for layer in _SHADOW_LAYER_SPLIT.split(value) if layer.strip()]
+
+
+def _layer_blur_px(layer):
+    """Third length of ONE box-shadow layer ≈ blur radius (color stripped first, so
+    color-first syntax and the numbers inside rgba() don't shift the indices)."""
+    layer = _COLOR_FN.sub(" ", layer)
     nums = [float(a or b) for a, b in
-            re.findall(r"(\d+(?:\.\d+)?)px|(?<![\d.])(0)(?![\d.\w])", value)]
+            re.findall(r"(\d+(?:\.\d+)?)px|(?<![\d.])(0)(?![\d.\w])", layer)]
     return nums[2] if len(nums) >= 3 else 0
+
+
+def shadow_blur_px(value):
+    """Largest per-layer blur radius of a (possibly multi-layer) box-shadow value."""
+    return max((_layer_blur_px(layer) for layer in shadow_layers(value)), default=0)
 
 
 class _CardNesting(HTMLParser):
@@ -123,6 +152,8 @@ class _CardNesting(HTMLParser):
         pass
 
     def handle_endtag(self, tag):
+        if not any(t == tag for t, _ in self.stack):
+            return                                # stray end tag — don't unwind the stack
         while self.stack:
             t, c = self.stack.pop()
             if c:
@@ -138,39 +169,43 @@ def ported_tells(html, allowed=None):
     def add(sev, kind, detail):
         findings.append({"severity": sev, "kind": kind, "detail": detail})
 
-    blocks = _css_blocks(html)
+    blocks = css_blocks(html)
     class_attrs = _CLASS_ATTR.findall(html)
     full_page = bool(_FULL_PAGE.search(html))
 
     # fonts in play (first family of each stack + Google Fonts links)
     fonts = set()
-    for decl in _FONT_DECL.findall(html):
+    for decl in FONT_DECL.findall(html):
         first = decl.split(",")[0].strip().strip("'\"").lower()
         if first and "var(" not in first:
             fonts.add(first)
-    for fam in _GFONT.findall(html):
+    for fam in GFONT.findall(html):
         fonts.add(fam.replace("+", " ").lower())
 
     # 1. accent-border-on-rounded — colored top/right/bottom stripe on a rounded element
-    #    (slop_check already flags the left-border form as card-left-border).
-    if re.search(r"border-radius|\brounded(?:-\w+)?\b", html, re.I):
-        flagged = False
-        for m in re.finditer(r"border-(top|bottom|right)\s*:\s*((?:[2-9]|\d{2,})"
-                             r"(?:\.\d+)?)px\s+(?:solid|dashed)\s+([^;}\"']+)", html, re.I):
-            if not _is_neutral_css_color(m.group(3)):
+    #    (slop_check already flags the left-border form as card-left-border). The radius
+    #    and the stripe must live in the SAME declaration block / class attr — a rounded
+    #    hero elsewhere on the page doesn't make an unrelated flat stripe a clash.
+    flagged = False
+    for sel, body in blocks:
+        if not re.search(r"border-radius\s*:", body, re.I):
+            continue
+        m = re.search(r"border-(top|bottom|right)\s*:\s*((?:[2-9]|\d{2,})"
+                      r"(?:\.\d+)?)px\s+(?:solid|dashed)\s+([^;}\"']+)", body, re.I)
+        if m and not _is_neutral_css_color(m.group(3)):
+            add("polish", "accent-border-on-rounded",
+                f"{m.group(2)}px {m.group(1)} accent border on a rounded element — "
+                "the stripe clashes with the corners; drop the border or the radius")
+            flagged = True
+            break
+    if not flagged:
+        for cls in class_attrs:
+            if re.search(r"\bborder-[trb]-[2-9]\b", cls) and \
+               re.search(r"\brounded(?:-\w+)?\b", cls):
                 add("polish", "accent-border-on-rounded",
-                    f"{m.group(2)}px {m.group(1)} accent border on a rounded element — "
-                    "the stripe clashes with the corners; drop the border or the radius")
-                flagged = True
+                    "Tailwind accent border + rounded on the same element — "
+                    "drop the stripe or the radius")
                 break
-        if not flagged:
-            for cls in class_attrs:
-                if re.search(r"\bborder-[trb]-[2-9]\b", cls) and \
-                   re.search(r"\brounded(?:-\w+)?\b", cls):
-                    add("polish", "accent-border-on-rounded",
-                        "Tailwind accent border + rounded on the same element — "
-                        "drop the stripe or the radius")
-                    break
 
     # 2. gradient-text — decorative gradient fill on text (a hard AI tell).
     grad_text = False
@@ -273,7 +308,7 @@ def ported_tells(html, allowed=None):
         m = re.search(r"font-size\s*:\s*clamp\([^)]*?([\d.]+)(px|rem)\s*\)", body, re.I)
         if m:
             h1_sizes.append(float(m.group(1)) * (1 if m.group(2).lower() == "px" else 16))
-    h1_texts = [re.sub(r"\s+", " ", _TAG.sub(" ", t)).strip()
+    h1_texts = [re.sub(r"\s+", " ", TAG.sub(" ", t)).strip()
                 for t in re.findall(r"<h1\b[^>]*>(.*?)</h1>", html, re.I | re.S)]
     if h1_sizes and h1_texts and max(h1_sizes) >= 72 and max(map(len, h1_texts)) >= 40:
         add("polish", "oversized-h1",
@@ -366,16 +401,25 @@ def ported_tells(html, allowed=None):
             "ease-out-quart/quint/expo instead")
 
     # 18 + 22. dark page tells: colored glow shadows, neon cyan text.
-    dark = bool(_DARK_BG.search(html)) or any(_TW_DARK_BG.search(c) for c in class_attrs)
+    dark = any(_is_dark_css_color(v) for v in _BG_DECL.findall(html)) or \
+        any(_TW_DARK_BG.search(c) for c in class_attrs)
     if dark:
+        glow = None
         for m in re.finditer(r"box-shadow\s*:\s*([^;}{]+)", html, re.I):
-            cm = re.search(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", m.group(1))
-            if not cm:
-                continue
-            r, g, b = (int(x) for x in cm.groups())
-            if max(r, g, b) - min(r, g, b) < 30:
-                continue
-            if _shadow_blur_px(m.group(1)) > 4:
+            # chromaticity and blur must come from the SAME layer — a neutral
+            # elevation layer must not mask (or stand in for) a colored glow layer
+            for layer in shadow_layers(m.group(1)):
+                cm = re.search(r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)", layer)
+                if not cm:
+                    continue
+                r, g, b = (int(x) for x in cm.groups())
+                if max(r, g, b) - min(r, g, b) < 30:
+                    continue
+                if _layer_blur_px(layer) > 4:
+                    glow = (r, g, b)
+                    break
+            if glow:
+                r, g, b = glow
                 add("polish", "dark-glow",
                     f"colored glow (rgb({r},{g},{b})) on a dark page — the default "
                     "“cool” AI dark-mode look; light surfaces purposefully instead")
@@ -395,7 +439,9 @@ def ported_tells(html, allowed=None):
         if 0 < v < 200:
             vals.append(v)
     for m in re.finditer(r"\bgap\s*:\s*([\d.]+)px", html, re.I):
-        vals.append(float(m.group(1)))
+        v = float(m.group(1))
+        if 0 < v < 200:
+            vals.append(v)
     for cls in class_attrs:
         for m in re.finditer(r"\b(?:p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap)-(\d+)\b", cls):
             vals.append(int(m.group(1)) * 4)
@@ -411,6 +457,8 @@ def ported_tells(html, allowed=None):
     # 20. broken-image — empty/placeholder src ships a broken-image box.
     for m in re.finditer(r"<img\b[^>]*>", html, re.I):
         tag = m.group(0)
+        if re.search(r"\bsrcset\s*=", tag, re.I):
+            continue                                  # a srcset IS a source
         sm = re.search(r"\bsrc\s*=\s*([\"'])(.*?)\1", tag, re.I)
         if sm is None:
             if re.search(r"\bsrc\s*=", tag, re.I):
@@ -436,7 +484,7 @@ def ported_tells(html, allowed=None):
     # 23. line-length-risk — long paragraphs with no max-width anywhere.
     if not re.search(r"max-width|max-inline-size|\bmax-w-", html, re.I):
         for m in re.finditer(r"<p\b[^>]*>(.*?)</p>", html, re.I | re.S):
-            t = re.sub(r"\s+", " ", _TAG.sub(" ", m.group(1))).strip()
+            t = re.sub(r"\s+", " ", TAG.sub(" ", m.group(1))).strip()
             if len(t) > 240:
                 add("polish", "line-length-risk",
                     f"a {len(t)}-char paragraph and no max-width anywhere — lines will "

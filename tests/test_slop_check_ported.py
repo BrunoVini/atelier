@@ -103,6 +103,25 @@ def test_accent_border_without_radius_does_not_flag():
     assert "accent-border-on-rounded" not in _kinds(html)
 
 
+def test_radius_and_accent_stripe_on_different_blocks_do_not_flag():
+    # The radius and the accent stripe must live in the SAME declaration block — a rounded
+    # hero elsewhere on the page doesn't make an unrelated flat stripe a clash.
+    html = _page(css=".hero{border-radius:24px}.flag{border-top:4px solid #7c3aed}")
+    assert "accent-border-on-rounded" not in _kinds(html)
+
+
+# --- inline-style extraction with mixed quotes (minor 4) -------------------------
+
+def test_inline_style_with_nested_quoted_font_extracts_full_block():
+    # style="font-family: 'Inter', serif; border-radius:..; border-top:.." — the old regex
+    # truncated the captured declarations at the first single quote, dropping everything
+    # after the font family. The block-based accent-border rule only sees the radius+stripe
+    # if the WHOLE attribute is extracted.
+    html = _page(body='<div style="font-family: \'Inter\', serif; '
+                      'border-radius:12px; border-top:4px solid #7c3aed">x</div>')
+    assert "accent-border-on-rounded" in _kinds(html)
+
+
 # --- gradient-text ----------------------------------------------------------------
 
 def test_gradient_text_css_flags_important():
@@ -220,6 +239,13 @@ def test_card_grid_wrapper_does_not_flag():
     # "card-grid" / "cards" are containers OF cards, not cards themselves
     html = _page(body='<div class="card-grid cards"><div class="card">a</div></div>')
     assert "nested-cards" not in _kinds(html)
+
+
+def test_stray_end_tag_does_not_unwind_card_stack():
+    # A stray </span> (nothing matching on the stack) must NOT pop the open outer card —
+    # otherwise the still-nested inner card would be missed.
+    html = _page(body='<div class="card"></span><div class="inner-card">x</div></div>')
+    assert "nested-cards" in _kinds(html)
 
 
 # --- icon-tile-stack ------------------------------------------------------------------
@@ -501,6 +527,44 @@ def test_colored_glow_on_light_page_does_not_flag():
     assert "dark-glow" not in _kinds(html)
 
 
+def test_multilayer_neutral_elevation_plus_colored_glow_flags():
+    # A neutral elevation layer FIRST then a colored glow layer — reading only the first
+    # layer's blur (2px) + the first rgba in the whole value would miss it. Per-layer
+    # evaluation must catch the colored glow layer (blur 40px).
+    html = _page(css="body{background:#0a0a0f}"
+                     ".card{box-shadow:0 1px 2px rgba(0,0,0,.4),0 0 40px rgba(124,58,237,.6)}")
+    assert "dark-glow" in _kinds(html)
+
+
+def test_color_first_shadow_syntax_flags():
+    # color-first box-shadow syntax shifts length indices unless color is stripped first;
+    # blur is the 3rd length (12px), not the 1st (4px).
+    html = _page(css="body{background:#0b0b12}.card{box-shadow:rgba(0,200,100,.5) 0 4px 12px}")
+    assert "dark-glow" in _kinds(html)
+
+
+def test_neutral_elevation_layer_does_not_stand_in_for_colored_glow():
+    # A wide neutral elevation layer must NOT be mistaken for a colored glow just because
+    # a separate tiny layer happens to be colored with a small blur.
+    html = _page(css="body{background:#0a0a0f}"
+                     ".card{box-shadow:0 0 2px rgba(124,58,237,.6),0 8px 40px rgba(0,0,0,.5)}")
+    assert "dark-glow" not in _kinds(html)
+
+
+def test_bright_green_hex_bg_is_not_dark():
+    # #23ff00 has a low red channel but is a bright green — must NOT classify as a dark
+    # page, so neither dark-glow nor neon-on-dark should fire.
+    html = _page(css="body{background:#23ff00}.card{box-shadow:0 0 24px rgba(124,58,237,.6)}"
+                     ".stat{color:#22d3ee}")
+    kinds = _kinds(html)
+    assert "dark-glow" not in kinds and "neon-on-dark" not in kinds
+
+
+def test_bright_green_short_hex_bg_is_not_dark():
+    html = _page(css="body{background:#0f0}.stat{color:#22d3ee}")
+    assert "neon-on-dark" not in _kinds(html)
+
+
 # --- monotonous-spacing -------------------------------------------------------------------------------------
 
 def test_same_spacing_everywhere_flags():
@@ -524,6 +588,14 @@ def test_few_spacing_values_do_not_flag():
     assert "monotonous-spacing" not in _kinds(_page(css=".a{padding:16px}.b{margin:16px}"))
 
 
+def test_huge_gap_value_is_filtered_from_spacing_rhythm():
+    # gap values must get the same 0<v<200 filter as padding/margin — an outlier 9999px
+    # gap (or a 0) must not skew the monotony statistics. A genuinely monotonous page of
+    # 16px paddings still flags; one giant gap mixed in must not change that.
+    css = "".join(f".s{i}{{padding:16px;margin:16px}}" for i in range(6)) + ".x{gap:9999px}"
+    assert "monotonous-spacing" in _kinds(_page(css=css))
+
+
 # --- broken-image ---------------------------------------------------------------------------------------------
 
 def test_empty_src_flags_important():
@@ -543,6 +615,12 @@ def test_real_src_does_not_flag():
 
 def test_data_uri_does_not_flag():
     html = _page(body='<img src="data:image/svg+xml,%3Csvg/%3E" alt="">')
+    assert "broken-image" not in _kinds(html)
+
+
+def test_img_with_srcset_and_no_src_does_not_flag():
+    # a srcset IS a source — a responsive <img> with only srcset must not read as broken
+    html = _page(body='<img srcset="hero-2x.webp 2x, hero.webp 1x" alt="hero">')
     assert "broken-image" not in _kinds(html)
 
 

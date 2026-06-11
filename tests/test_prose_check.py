@@ -66,6 +66,25 @@ def test_aphoristic_cadence_flags_three_short_rebuttals():
     assert labels.count("aphoristic cadence") >= 3
 
 
+def test_two_hybrid_phrases_do_not_double_count_into_cadence():
+    # "Not a X. No Y." hybrids match BOTH the not-a and short-rebuttal patterns; before
+    # span-dedupe, 2 phrases produced 4 hits and tripped the >=3 threshold. After dedupe,
+    # 2 distinct phrases = 2 hits, below threshold — must NOT flag.
+    from prose_check import prose_tells
+    ok = "Not a problem. No setup needed. Not an issue. No config required."
+    assert all(label != "aphoristic cadence" for _, label in prose_tells(ok))
+
+
+def test_three_hybrid_phrases_still_flag_cadence():
+    # 3 distinct hybrid phrases = 3 deduped hits — at the documented threshold, must flag.
+    from prose_check import prose_tells
+    bad = ("Not a problem. No setup needed. "
+           "Not an issue. No config required. "
+           "Not a chore. No manual steps.")
+    labels = [label for _, label in prose_tells(bad)]
+    assert labels.count("aphoristic cadence") >= 3
+
+
 def test_single_rebuttal_sentence_does_not_flag_cadence():
     # once is voice; the repeated pattern is the tell
     from prose_check import prose_tells

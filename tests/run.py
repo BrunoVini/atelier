@@ -95,6 +95,10 @@ def _load_module(path):
 def _run_test(fn):
     """Run one test, injecting a fresh tmp_path when the signature asks for it."""
     params = inspect.signature(fn).parameters
+    unknown = [p for p in params if p != "tmp_path"]
+    if unknown:
+        raise Skip(f"unsupported fixture(s): {', '.join(unknown)} "
+                   "(this runner only provides tmp_path)")
     if "tmp_path" in params:
         with tempfile.TemporaryDirectory(prefix="atelier-test-") as d:
             fn(tmp_path=Path(d))

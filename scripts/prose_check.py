@@ -49,8 +49,16 @@ _CADENCE_MIN = 3
 
 
 def _cadence_tells(text):
-    hits = [m.group(0).strip()[:80]
-            for rx in (_NOT_A, _SHORT_REBUTTAL) for m in rx.finditer(text)]
+    # The two patterns overlap on hybrids ("Not a problem. No setup needed." matches
+    # both) — dedupe by span so one phrase counts once toward the threshold.
+    spans = sorted((m.start(), m.end(), m.group(0).strip()[:80])
+                   for rx in (_NOT_A, _SHORT_REBUTTAL) for m in rx.finditer(text))
+    hits, last_end = [], -1
+    for start, end, h in spans:
+        if start < last_end:
+            continue                              # overlaps the previous hit — same phrase
+        hits.append(h)
+        last_end = end
     if len(hits) < _CADENCE_MIN:
         return []
     return [(h, "aphoristic cadence") for h in hits]
