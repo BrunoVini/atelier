@@ -20,6 +20,78 @@ _SURFACE_HINTS = ("background", "bg", "surface", "card", "muted", "base", "paper
 
 AA_NORMAL, AA_LARGE, AAA_NORMAL = 4.5, 3.0, 7.0
 
+# ---------------------------------------------------------------------------
+# APCA (Accessible Perceptual Contrast Algorithm, APCA-W3 / 0.0.98G-4g) — an
+# OPTIONAL perceptual contrast metric alongside WCAG. Returns Lc (signed): positive
+# for normal polarity (dark text on light), negative for reverse (light on dark);
+# callers compare abs(Lc). Level guidance: ~90 = body, ~75 = ~18px, ~60 = large/bold,
+# ~45 = headline. The default APCA gate target (when opted in) is 60.
+# ---------------------------------------------------------------------------
+_APCA = {
+    "normBG": 0.56, "normTXT": 0.57, "revBG": 0.65, "revTXT": 0.62,
+    "scale": 1.14, "loBoWoffset": 0.027, "loWoBoffset": 0.027,
+    "deltaYmin": 0.0005, "loClip": 0.1,
+}
+APCA_DEFAULT_TARGET = 60.0
+
+
+def _apca_y(hex_color):
+    """sRGB hex → APCA screen luminance Y (simple-sRGB ^2.4, then black soft-clamp)."""
+    r, g, b = _hex_to_rgb(hex_color)
+    lin = [(c / 255.0) ** 2.4 for c in (r, g, b)]
+    y = 0.2126729 * lin[0] + 0.7151522 * lin[1] + 0.0721750 * lin[2]
+    if y < 0.022:
+        y = y + (0.022 - y) ** 1.414
+    return y
+
+
+def apca_lc(text_hex, bg_hex):
+    """APCA-W3 lightness contrast (Lc), signed. Pure function over two hex colors.
+    A malformed/unparseable hex returns 0.0 (no contrast) rather than raising —
+    consistent with how the module treats unparseable colors as non-failing."""
+    try:
+        ytxt, ybg = _apca_y(text_hex), _apca_y(bg_hex)
+    except (ValueError, TypeError, AttributeError):
+        return 0.0
+    if abs(ybg - ytxt) < _APCA["deltaYmin"]:
+        return 0.0
+    if ybg > ytxt:  # normal polarity: dark text on a light background
+        sapc = (ybg ** _APCA["normBG"] - ytxt ** _APCA["normTXT"]) * _APCA["scale"]
+        return 0.0 if sapc < _APCA["loClip"] else (sapc - _APCA["loBoWoffset"]) * 100.0
+    # reverse polarity: light text on a dark background
+    sapc = (ybg ** _APCA["revBG"] - ytxt ** _APCA["revTXT"]) * _APCA["scale"]
+    return 0.0 if sapc > -_APCA["loClip"] else (sapc + _APCA["loWoBoffset"]) * 100.0
+
+
+def _resolve_apca_config(target):
+    """Read OPTIONAL APCA config from the resolved contract. Returns
+    (gate_on: bool, apca_target: float|None). Default = WCAG, no APCA gate.
+
+    Recognized contract fields (both additive, opt-in):
+      • `apca_target`: a number (e.g. 60) — reports/uses that target.
+      • `contrast`: {"algorithm": "apca"|"wcag", "apca_target": 60} — `algorithm:"apca"`
+        opts INTO the APCA gate; `apca_target` sets its level (default 60).
+    """
+    from contract import resolve_contract
+    try:
+        c = resolve_contract(target)
+    except Exception:
+        return (False, None)
+    gate_on, tgt = False, None
+    val = c.get("apca_target")
+    if isinstance(val, (int, float)):
+        tgt = float(val)
+    contrast = c.get("contrast")
+    if isinstance(contrast, dict):
+        if str(contrast.get("algorithm", "")).lower() == "apca":
+            gate_on = True
+        ct = contrast.get("apca_target")
+        if isinstance(ct, (int, float)):
+            tgt = float(ct)
+    if gate_on and tgt is None:
+        tgt = APCA_DEFAULT_TARGET
+    return (gate_on, tgt)
+
 
 def _load_colors(target):
     """Return {name: '#hex'} resolved from a tokens.json OR the repo's DESIGN.md."""
@@ -118,6 +190,10 @@ def audit(colors):
                 "aaa_normal": ratio >= AAA_NORMAL,
                 "required": required, "passes": passes,
                 "informational": informational,
+                # APCA Lc (signed) is computed alongside WCAG and carried additively.
+                # Existing consumers (check.py, _format, gate_failures) ignore it; the
+                # APCA gate and --apca output read it. abs(Lc) is the perceptual contrast.
+                "apca_lc": round(apca_lc(colors[t], colors[s]), 1),
             }
             if not passes and not informational:
                 row["suggest"] = _nearest_passing(colors[t], colors[s], required)
@@ -130,8 +206,17 @@ def gate_failures(rows):
     return [r for r in rows if not r["informational"] and not r["passes"]]
 
 
-def _format(rows):
-    lines = ["Contrast audit (WCAG):", ""]
+def apca_gate_failures(rows, target=APCA_DEFAULT_TARGET):
+    """OPT-IN APCA gate: enforced pairs whose abs(Lc) is below `target`. Independent of
+    the WCAG gate — used only when APCA gating is explicitly opted into (contract
+    `contrast.algorithm:"apca"` or the `--apca-gate` CLI flag)."""
+    return [r for r in rows
+            if not r["informational"] and abs(r.get("apca_lc", 0.0)) < target]
+
+
+def _format(rows, apca=False, apca_target=None):
+    title = "Contrast audit (WCAG + APCA):" if apca else "Contrast audit (WCAG):"
+    lines = [title, ""]
     for r in sorted(rows, key=lambda x: x["ratio"]):
         if r.get("informational"):
             tag = "low (brand×brand — informational)"
@@ -140,27 +225,68 @@ def _format(rows):
         else:
             need = "AA-large 3:1" if r["required"] == AA_LARGE else "AA 4.5:1"
             tag = f"FAIL (needs {need}; suggest {r.get('suggest', '?')})"
-        lines.append(f"  {r['ratio']:>5}:1  {r['text']} on {r['surface']:<14} {tag}")
+        apca_col = f"  Lc {abs(r.get('apca_lc', 0.0)):>5.1f}" if apca else ""
+        lines.append(f"  {r['ratio']:>5}:1{apca_col}  "
+                     f"{r['text']} on {r['surface']:<14} {tag}")
     fails = len(gate_failures(rows))
     lines.append("")
     lines.append(f"{len(rows)} pairings, {fails} fail their required WCAG level "
                  "(AA 4.5:1 for text, 3:1 for heading roles).")
+    if apca:
+        tgt = apca_target if apca_target is not None else APCA_DEFAULT_TARGET
+        af = len(apca_gate_failures(rows, tgt))
+        lines.append(f"APCA: {af} enforced pair(s) below Lc {tgt:g} "
+                     "(~90 body, ~75 ~18px, ~60 large/bold, ~45 headline).")
     return "\n".join(lines)
+
+
+def _arg_value(args, flag):
+    """Value for `--flag=VALUE` or `--flag VALUE`; True if the bare flag is present."""
+    for i, a in enumerate(args):
+        if a == flag:
+            nxt = args[i + 1] if i + 1 < len(args) else None
+            return nxt if (nxt and not nxt.startswith("-")) else True
+        if a.startswith(flag + "="):
+            return a.split("=", 1)[1]
+    return None
 
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a]
-    if not args or args[0].startswith("-"):
-        print("usage: audit_contrast.py <repo | design-tokens.json | DESIGN.md> [--json]")
+    target = next((a for a in args if not a.startswith("-")), None)
+    if not target:
+        print("usage: audit_contrast.py <repo | design-tokens.json | DESIGN.md> "
+              "[--json] [--apca] [--apca-gate[=N]]")
         sys.exit(2)
-    themes = load_themed_colors(args[0])
+
+    # APCA opt-in: contract config OR CLI flag. `--apca` reports it; `--apca-gate[=N]`
+    # also turns on the (additive) APCA gate. Neither touches the default WCAG gate.
+    cfg_gate, cfg_target = _resolve_apca_config(target)
+    gate_arg = _arg_value(args, "--apca-gate")
+    apca_gate_on = cfg_gate or gate_arg is not None
+    apca_target = cfg_target
+    if isinstance(gate_arg, str):
+        try:
+            apca_target = float(gate_arg)
+        except ValueError:
+            apca_target = apca_target or APCA_DEFAULT_TARGET
+    elif gate_arg is True and apca_target is None:
+        apca_target = APCA_DEFAULT_TARGET
+    if apca_gate_on and apca_target is None:
+        apca_target = APCA_DEFAULT_TARGET
+    show_apca = ("--apca" in args) or apca_gate_on
+
+    themes = load_themed_colors(target)
     by_theme = {name: audit(cols) for name, cols in themes.items()}
-    fails = sum(len(gate_failures(rows)) for rows in by_theme.values())
+    wcag_fails = sum(len(gate_failures(rows)) for rows in by_theme.values())
+    apca_fails = (sum(len(apca_gate_failures(rows, apca_target)) for rows in by_theme.values())
+                  if apca_gate_on else 0)
     if "--json" in args:
         print(json.dumps(by_theme if len(by_theme) > 1 else by_theme["base"], indent=2))
     else:
         for name, rows in by_theme.items():
             if len(by_theme) > 1:
                 print(f"\n=== {name} theme ===")
-            print(_format(rows))
-    sys.exit(1 if fails else 0)
+            print(_format(rows, apca=show_apca, apca_target=apca_target))
+    # The WCAG gate is unchanged by default; APCA can only ADD failures when opted in.
+    sys.exit(1 if (wcag_fails or apca_fails) else 0)

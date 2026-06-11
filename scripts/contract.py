@@ -134,6 +134,15 @@ def _contract_from_block(block, path):
         out["elevation"] = elev
     if dark:
         out["dark_colors"] = dark
+    # OPTIONAL contrast config (additive, opt-in): `apca_target` (a number) and/or a
+    # `contrast` object {"algorithm":"apca"|"wcag","apca_target":60}. Surfaced verbatim
+    # so audit_contrast can offer APCA alongside WCAG without changing the default gate.
+    at = block.get("apca_target")
+    if isinstance(at, (int, float)):
+        out["apca_target"] = at
+    contrast = block.get("contrast")
+    if isinstance(contrast, dict):
+        out["contrast"] = contrast
     if dropped or dark_dropped:
         out["machine_block_dropped"] = dropped + dark_dropped
     return out

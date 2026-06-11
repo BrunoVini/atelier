@@ -27,8 +27,22 @@ and the code's threshold differ, **the code's number is authoritative** and note
 - **Body-text contrast ≥4.5:1; large text (≥18px, or bold ≥14px) ≥3:1.** Light gray
   "for elegance" on a tinted near-white is the most common legibility miss.
   → enforced by: `audit_contrast.py`
+- **APCA (perceptual contrast), optional.** Alongside the default WCAG gate, `audit_contrast.py`
+  can report and (when opted in) gate on APCA Lc — the APCA-W3 perceptual metric, which models
+  polarity (dark-on-light vs light-on-dark) more faithfully than the WCAG ratio. Level guidance:
+  **~90 body, ~75 ≈18px, ~60 large/bold, ~45 headline.** Opt in per repo via DESIGN.md
+  (`apca_target` number, or a `contrast` object `{"algorithm":"apca","apca_target":60}`) or the
+  CLI `--apca` (report) / `--apca-gate[=N]` (gate, default target 60). WCAG stays the default;
+  APCA only ever ADDS gate failures when explicitly opted in.
+  → enforced by: `audit_contrast.py` / `--apca` (optional, opt-in)
 
 ## Typography
+
+> **Pre-scan:** `typography_preflight.py <page.html>` surfaces the typographic FACTS
+> (font families, the size set + smallest body size, line-heights, the modular-scale
+> ratio span, whether a measure/max-width is set) and runs the typographic tells below
+> in one place, BEFORE generation or judgment. It's advisory (no CI gate) and reuses
+> the same deterministic rules — a fast read on a page's type system at a glance.
 
 - **Body line length 65–75ch.** Longer lines lose the eye on the return sweep; cap
   prose containers with a `max-width`/measure. (Code flags a long paragraph with **no
@@ -59,6 +73,12 @@ and the code's threshold differ, **the code's number is authoritative** and note
 - **Body line-height 1.5–1.7.** Tight leading crushes multi-line copy. (Code flags
   unitless line-height **<1.3** on body text.)
   → enforced by: `slop_ported.py` / `tight-leading`
+- **Small UI labels want TIGHT leading (~1.0–1.25).** Eyebrows, badges, chips, buttons,
+  nav items and captions are single-line tokens — a body-sized line-height (**≥1.5**) makes
+  them float, unanchored, in their box. (Code flags a label-ish selector with line-height
+  ≥1.5 when the font-size is small (≤14px) or the selector is clearly a label class; px
+  line-heights are judged only when a px font-size is present to compare against.)
+  → enforced by: `slop_ported.py` / `label-line-height`
 - **Body font-size ≥14px.** (Code flags body text **<12px**; aim for ≥14px regardless.)
   → enforced by: `slop_ported.py` / `tiny-body-text`
 - **Form inputs: font-size ≥16px.** Below 16px iOS Safari zooms the page on focus — a
