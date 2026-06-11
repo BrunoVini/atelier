@@ -27,6 +27,10 @@ import re
 import sys
 from collections import Counter
 
+# rules ported from impeccable (Apache-2.0, pbakaus/impeccable) live in slop_ported.py;
+# this file stays the single entry point and merges their findings into the battery.
+from slop_ported import _css_blocks, _shadow_blur_px, ported_tells
+
 _SLOP_FONTS = {"inter", "roboto", "arial", "helvetica", "system-ui",
                "-apple-system", "blinkmacsystemfont", "segoe ui", "open sans", "lato"}
 _PURPLE = re.compile(
@@ -369,6 +373,7 @@ def _warm_neutral_default(html, contract):
     return []
 
 
+
 def _profile_tells(html, profile):
     if not profile:
         return []
@@ -386,6 +391,26 @@ def _profile_tells(html, profile):
         if re.search(r"repeating-linear-gradient", html, re.I):
             findings.append({"severity": "polish", "kind": "codex-stripe-gradient",
                              "detail": "repeating stripe gradient — a Codex decorative default"})
+    elif p == "gpt":
+        # "ghost card": hairline border + wide diffuse shadow in the same rule —
+        # commit to a defined edge OR a soft elevation, not both (ported from
+        # impeccable's gpt-thin-border-wide-shadow, gated the same way).
+        for sel, body in _css_blocks(html):
+            if not re.search(r"border\s*:\s*1(?:px)?\b|"
+                             r"border(?:-(?:top|right|bottom|left))?-width\s*:\s*1px", body, re.I):
+                continue
+            sm = re.search(r"box-shadow\s*:\s*([^;}]+)", body, re.I)
+            if sm and _shadow_blur_px(sm.group(1)) >= 16:
+                findings.append({"severity": "polish", "kind": "gpt-ghost-card",
+                                 "detail": "hairline border + wide diffuse shadow on one card — "
+                                           "a GPT signature; pick a defined edge or a soft "
+                                           "elevation, not both"})
+                break
+        m = re.search(r"\b\w+\s+theater\b", _visible_text(html), re.I)
+        if m:
+            findings.append({"severity": "polish", "kind": "gpt-theater-copy",
+                             "detail": f"“{m.group(0)}” — the ‘X theater’ framing is a GPT copy "
+                                       "tic; say plainly what the thing does or doesn't do"})
     elif p == "gemini":
         if re.search(r"<img\b", html, re.I) and \
            re.search(r":hover[^{]*\{[^}]*transform\s*:\s*scale", html, re.I):
@@ -452,6 +477,7 @@ def check_html(html, allowed_fonts=None, profile=None, contract=None):
     findings.extend(_a11y_tells(html))
     findings.extend(_proof_tells(html))
     findings.extend(_dead_anchor_tells(html))
+    findings.extend(ported_tells(html, allowed))    # impeccable-ported static rules
     findings.extend(_profile_tells(html, profile))
     return findings
 
