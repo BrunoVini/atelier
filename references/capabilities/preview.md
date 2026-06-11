@@ -165,6 +165,42 @@ This is atelier doing live iteration *better* than tools that re-extract every
 session: the variants are bounded by the explicit contract, and the write path is
 guarded + reversible.
 
+### Named refinement moves (the refine picker)
+
+The view→edit loop above takes an explicit `old`/`new`. To drive it with the *named*
+moves — bolder / quieter / simplify / harden / one delight beat — use the refine picker
+(see `references/capabilities/refine.md`). The stable interface is the
+`scripts/edit_apply.py variants` CLI; the preview server exposes it over one read-only
+endpoint so the browser never re-derives the design:
+
+```
+POST /variants   { "mode": "range"|"steps"|"toggle", "prop": "<css-prop>",
+                   "current": { "<css-prop>": "<value>" }, "n": 5, "contract": "<optional override>" }
+  -> { "ok": true, "mode, "variants": [ { "label", "mode", "styles": {…}, "rationale" }, … ] }
+```
+
+`contract` defaults to the project dir the server was started with (`--project-dir`), so
+the variants are bound to the repo's own contract. **Every variant the endpoint returns
+is already proven on-contract** by the engine's `variants_are_on_contract` guard — an
+off-contract value is a bug, never something the user is offered. `range` slides one
+property across its contract scale, so it works when the contract declares that scale
+(`radius` for `border-radius`, `spacing` for `padding`/`gap`); it returns `[]` only when
+that specific scale is absent. `steps` is the discrete named set; `toggle` flips one
+property on/off (`box-shadow` uses the contract's `elevation` when declared).
+
+The browser client wires this into `window.atelier`:
+
+- `atelier.variants(mode, { prop, current, n, contract })` → the parsed payload.
+- `atelier.openPicker({ element, mode, prop, current, onAccept, onReject })` → an opt-in
+  contextual bar on a selected element. It previews a chosen variant by writing its styles
+  onto the live element (no source write), then **Accept** (your `onAccept(variant)`, which
+  typically calls `atelier.applyEdit(...)`) or **Reject** (`onReject`). The bar is additive
+  and never auto-mounted — the default serving path is untouched if it's never called.
+
+Group a run of decisions into a **session** (`session-start`, then `accept` / `reject` /
+`manual`, `session-log`, and an opt-in `session-commit`); see refine.md for the session
+model and its git guards (work tree only, named files only, never push).
+
 ## When the app can't run standalone (needs a backend / env / integrations)
 
 Rendering needs a page that actually renders. **First, check whether it's already
