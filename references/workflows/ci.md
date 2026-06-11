@@ -19,6 +19,57 @@ python3 scripts/check.py .
 }
 ```
 
+A repo-ROOT **`.atelier.json`** is also read and **merged OVER**
+`design/atelier.config.json` (the root file wins per key; deep-merged, so you can
+override one threshold without restating the section). It adds a `checks` object
+(alias `rules`) that toggles individual gate **steps** on/off — `design-lint`,
+`contrast-audit`, `house-rules`, `overlap-risk` (default `true`). A disabled step
+is **skipped** (not computed, not gating) and prints `[SKIP] <step> (disabled in
+config)`. An explicit CLI flag (e.g. `--max-drift N`) still overrides config.
+
+```jsonc
+// .atelier.json (repo root)
+{
+  "check": { "max_drift": 0, "max_overlap_risk": 0, "allow_contrast_fail": false },
+  "checks": { "overlap-risk": false }
+}
+```
+
+## Inline suppression
+
+ESLint-style directives, inside any comment (`//`, `/* */`, `<!-- -->`, `#`),
+optionally followed by space-separated rule kinds (no kinds = all kinds):
+
+```css
+a { color: #ff00ff } /* atelier-disable-line color */
+/* atelier-disable-next-line font */
+.brand { font-family: "Comic Sans" }
+/* atelier-disable depth */        /* whole-file, for depth findings */
+```
+
+- **`design-lint`** findings have real line numbers, so `-line` / `-next-line`
+  suppress per line, matched by the finding's `kind` (`color`, `font`, `depth`).
+- **slop-check** rules run over the whole document (no line numbers), so all
+  three forms degrade to **file-scoped by-kind** suppression there.
+
+No directive present → output is unchanged.
+
+## `--quiet`
+
+`python3 scripts/check.py . --quiet` hides the verbose per-finding detail lines
+but keeps the per-step `[PASS|FAIL|SKIP]` summary and the final
+`atelier check: PASS|FAIL`. Exit codes are unchanged; it composes with `--sarif`
+(quiet only affects human stdout, never the SARIF file).
+
+## `--url` — static slop battery on a remote page
+
+`python3 scripts/check.py --url https://example.com` fetches a remote page
+(stdlib `urllib`, http/https only, 10s timeout, ~5 MB cap) and runs the
+contract-free anti-slop battery on it — the standalone-detector use case. No token
+contract is involved (so no contrast/drift). Exits 1 if any finding is
+`important`, else 0; honors `--quiet` and `--json`. Other schemes or a network
+error exit 2 with a clean `::error::` message (no traceback).
+
 ## GitHub Actions
 
 Drop `templates/ci/github-actions.yml` into the target repo as

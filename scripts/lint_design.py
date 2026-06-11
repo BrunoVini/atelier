@@ -112,6 +112,11 @@ def lint_repo(root, contract_path):
                 continue
             rel = os.path.relpath(p, root)
             file_shadows, tw_shadows = [], set()
+            # Inline suppression directives (atelier-disable*) found in this
+            # file's source; built once per file. No directives => no-op.
+            from suppressions import LineSuppressions
+            suppr = LineSuppressions(lines)
+            file_findings = []
             for i, line in enumerate(lines, 1):
                 # collect box-shadow values (for the depth rules) with line numbers
                 for decl in _SHADOW.findall(line):
@@ -127,7 +132,7 @@ def lint_repo(root, contract_path):
                             fix = f"map to the nearest contract color '{name}' (use its token)"
                         else:
                             fix = "off-palette — pick a contract color or justify"
-                        findings.append({
+                        file_findings.append({
                             "file": rel, "line": i, "kind": "color", "value": raw,
                             "severity": "important", "fix": fix,
                         })
@@ -140,7 +145,7 @@ def lint_repo(root, contract_path):
                     if d > DELTA_E:
                         fix = (f"map to the nearest contract color '{name}' (use its token)"
                                if name and d <= 40 else "off-palette — pick a contract color")
-                        findings.append({
+                        file_findings.append({
                             "file": rel, "line": i, "kind": "color",
                             "value": f"{token} ({hexv})", "severity": "important", "fix": fix,
                         })
@@ -149,12 +154,18 @@ def lint_repo(root, contract_path):
                     fam = decl.split(",")[0].strip().strip("'\"")
                     if (fam and fam.lower() not in _GENERIC_FONTS
                             and "var(" not in fam.lower() and fonts and fam not in fonts):
-                        findings.append({
+                        file_findings.append({
                             "file": rel, "line": i, "kind": "font", "value": fam,
                             "severity": "important",
                             "fix": f"use a contract font: {', '.join(sorted(fonts))}",
                         })
-            findings.extend(_depth_findings(file_shadows, sorted(tw_shadows), rel, depth))
+            file_findings.extend(_depth_findings(file_shadows, sorted(tw_shadows), rel, depth))
+            # Drop findings suppressed by an inline directive in THIS file. With
+            # no directives present, suppr.suppressed(...) is always False, so the
+            # returned set is byte-identical to the pre-suppression behavior.
+            for f in file_findings:
+                if not suppr.suppressed(f["line"], f["kind"]):
+                    findings.append(f)
     return findings
 
 

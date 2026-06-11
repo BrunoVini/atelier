@@ -36,6 +36,10 @@ commands:
                  forwards: --contract <json> --max-drift N --allow-contrast-fail
                            --max-overlap-risk N --ratchet --update-baseline
                            --sarif <path>  (SARIF 2.1.0; '-' = stdout)
+                           --quiet  (hide per-finding lines; keep steps + verdict)
+  check --url <http(s) url>
+                 run the static anti-slop battery on a REMOTE page (no contract).
+                 forwards: --quiet --json. Exit 1 if any `important` finding.
 
 run `{PROG} check --help` for details. stdlib-only; no network, local paths only.
 """
@@ -48,12 +52,18 @@ def _cmd_check(argv):
             "usage: atelier check <path> [--contract <json>] [--max-drift N]\n"
             "                            [--allow-contrast-fail] [--max-overlap-risk N]\n"
             "                            [--ratchet] [--update-baseline]\n"
-            "                            [--sarif <path>]\n\n"
+            "                            [--sarif <path>] [--quiet]\n"
+            "       atelier check --url <http(s) url> [--quiet] [--json]\n\n"
             "Run the design gate on a local repo directory. Needs a contract:\n"
             "design/design-tokens.json or a DESIGN.md in the target. Exit 0=pass,\n"
             "1=fail, 2=usage/no-contract.\n\n"
             "--sarif <path>  write a SARIF 2.1.0 report (for GitHub code-scanning);\n"
-            "                use '-' for stdout. Written regardless of pass/fail."
+            "                use '-' for stdout. Written regardless of pass/fail.\n"
+            "--quiet         hide the per-finding detail lines; keep the per-step\n"
+            "                [PASS|FAIL|SKIP] summary and the final verdict.\n"
+            "--url <url>     fetch a REMOTE page and run the static anti-slop battery\n"
+            "                on it (no token contract; the standalone-detector use\n"
+            "                case). http/https only. Exit 1 if any `important` tell."
         )
         return 0
     if not argv:

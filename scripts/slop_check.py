@@ -525,7 +525,21 @@ def check_html(html, allowed_fonts=None, profile=None, contract=None, register=N
     # wins; otherwise fall back to the contract's `register` field. None -> no-op.
     if register is None and isinstance(contract, dict):
         register = contract.get("register")
-    return apply_register(findings, register)
+    apply_register(findings, register)   # (mutates findings in place; return value intentionally unused)
+
+    # Inline suppression (file-scoped). slop rules run over the WHOLE document and
+    # carry no line numbers, so atelier-disable-line/-next-line can't map to a
+    # finding line — all three directive forms therefore DEGRADE to file-scoped
+    # by-kind suppression here: any kind named by a directive (or all kinds for a
+    # bare `atelier-disable`) is filtered out. Gated on directives actually being
+    # present, so with none the output is byte-identical to before.
+    from suppressions import file_disabled_kinds
+    disabled_kinds, disable_all = file_disabled_kinds(html)
+    if disable_all:
+        return []
+    if disabled_kinds:
+        findings = [f for f in findings if f.get("kind") not in disabled_kinds]
+    return findings
 
 
 if __name__ == "__main__":
