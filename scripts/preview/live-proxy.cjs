@@ -50,6 +50,17 @@ function isHtml(headers) {
   return ct.indexOf('text/html') !== -1;
 }
 
+// Decide whether we may buffer+inject this response. We only inject when the body is
+// HTML AND it is NOT content-encoded (gzip/br/deflate). The proxy strips accept-encoding
+// upstream so stock Vite/Next sends identity and injection works; but if a gzipping
+// caching layer encodes the body, decoding it as utf-8 to inject would CORRUPT it. In
+// that case we pass the body through untouched. Pure predicate, unit-tested.
+function shouldInject(headers) {
+  if (!isHtml(headers)) return false;
+  const enc = (headers['content-encoding'] || headers['Content-Encoding'] || '').toLowerCase().trim();
+  return enc === '' || enc === 'identity';
+}
+
 // ── CLI parsing ──────────────────────────────────────────────────────────────
 function parseArgs(argv) {
   const out = { injectOnly: false };
@@ -80,6 +91,18 @@ function shellPython(scriptArgs, cb, timeout) {
   });
 }
 
+// Is `file` confined within projectDir? Resolves symlinks where the path exists
+// (fs.realpathSync) so a symlink can't escape the project root; falls back to the
+// lexical resolved path for a not-yet-existing file. Returns false if projectDir unset
+// (callers REQUIRE projectDir for writing endpoints and 403 before calling this).
+function isConfined(file, projectDir) {
+  if (!projectDir) return false;
+  const real = (p) => { try { return fs.realpathSync(p); } catch (_) { return path.resolve(p); } };
+  const root = real(path.resolve(projectDir));
+  const target = real(path.resolve(String(file)));
+  return target === root || target.indexOf(root + path.sep) === 0;
+}
+
 function handleControl(req, res, opts) {
   const scriptsDir = path.resolve(__dirname, '..');
   const journalDir = opts.journalDir || path.join(require('os').tmpdir(), 'atelier-live', 'journal');
@@ -103,14 +126,18 @@ function handleControl(req, res, opts) {
 
   if (req.url === '/__atelier/accept' && req.method === 'POST') {
     if (opts.injectOnly) { res.writeHead(403); res.end('{"ok":false,"reason":"--inject-only: accept disabled"}'); return true; }
+    // Writing endpoints REQUIRE --project-dir: without a confinement root, an absolute
+    // `file` path could write anywhere. Refuse fail-closed (mirrors /variants 400ing
+    // without a contract).
+    if (!opts.projectDir) { res.writeHead(403); res.end('{"ok":false,"reason":"--project-dir required for accept (writes are confined to it)"}'); return true; }
     readBody(req, (p) => {
       if (!p || !p.file || !p.old || !p.qa_target || !p.session) {
         res.writeHead(400);
         return res.end('{"ok":false,"reason":"accept needs file, old anchor, qa_target and session (no magic source-mapping)"}');
       }
-      // Confine writes to the project dir, mirroring the preview server's guard.
+      // Confine writes to the project dir (symlink-resolved), mirroring the preview server.
       const target = path.resolve(String(p.file));
-      if (opts.projectDir && target.indexOf(path.resolve(opts.projectDir) + path.sep) !== 0) {
+      if (!isConfined(target, opts.projectDir)) {
         res.writeHead(403);
         return res.end('{"ok":false,"reason":"edits are confined to the project dir"}');
       }
@@ -129,6 +156,8 @@ function handleControl(req, res, opts) {
 
   if (req.url === '/__atelier/revert' && req.method === 'POST') {
     if (opts.injectOnly) { res.writeHead(403); res.end('{"ok":false,"reason":"--inject-only: revert disabled"}'); return true; }
+    // revert WRITES to source too (restores from backup), so it also requires --project-dir.
+    if (!opts.projectDir) { res.writeHead(403); res.end('{"ok":false,"reason":"--project-dir required for revert (writes are confined to it)"}'); return true; }
     readBody(req, (p) => {
       if (!p || !p.journal_id) { res.writeHead(400); return res.end('{"ok":false,"reason":"journal_id required"}'); }
       const args = [path.join(scriptsDir, 'edit_apply.py'), 'revert', journalDir, String(p.journal_id)];
@@ -150,8 +179,10 @@ function proxyRequest(req, res, opts) {
     host: up.hostname, port: up.port || 80, method: req.method,
     path: req.url, headers: headers,
   }, (proxyRes) => {
-    if (isHtml(proxyRes.headers)) {
+    if (shouldInject(proxyRes.headers)) {
       // Buffer the HTML body, inject, then send. (Dev-server HTML documents are small.)
+      // Only reached for identity-encoded HTML — content-encoded bodies pass through
+      // untouched below so we never corrupt a gzip/br/deflate body by utf-8 decoding it.
       const chunks = [];
       proxyRes.on('data', (c) => chunks.push(c));
       proxyRes.on('end', () => {
@@ -166,7 +197,8 @@ function proxyRequest(req, res, opts) {
         res.end(injected);
       });
     } else {
-      // Non-HTML: stream through byte-identical (assets, JSON, source maps, etc.).
+      // Non-HTML OR content-encoded HTML: stream through byte-identical with the
+      // ORIGINAL headers (incl. content-encoding) so a gzip/br/deflate body stays valid.
       res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
       proxyRes.pipe(res);
     }
@@ -243,4 +275,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { inject, isHtml, parseArgs, makeServer, INJECTION };
+module.exports = { inject, isHtml, shouldInject, isConfined, parseArgs, makeServer, INJECTION };

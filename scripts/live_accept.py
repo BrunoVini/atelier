@@ -52,12 +52,22 @@ def get_agent(name="on-contract"):
     raise ValueError(f"unknown variant agent: {name!r}")
 
 
+QA_CMD = [sys.executable, os.path.join(HERE, "qa.py")]  # overridable in tests
+
+
 def _run_qa(qa_target, contract=None, register=None, timeout=200):
-    """Run qa.py --json on `qa_target` and return (verdict, results_list). The static
-    path runs with no browser (rendered checks come back `unknown` and never gate), so
-    this is deterministic offline — slop/contrast/overlap still gate. Returns
-    ('UNKNOWN', []) only if qa.py itself could not be run/parsed (never silently passes)."""
-    cmd = [sys.executable, os.path.join(HERE, "qa.py"), qa_target, "--json"]
+    """Run qa.py --json on `qa_target` and return (verdict, results_list). Three states:
+
+      • 'PASS'  — qa ran, produced a parseable verdict, no gating check failed (rendered
+                  checks may be `unknown` with no browser; those never gate). KEEP.
+      • 'FAIL'  — qa ran and a gating check actually failed (e.g. slop). REVERT.
+      • 'ERROR' — qa COULD NOT produce a parseable verdict: subprocess error, non-JSON,
+                  or unexpected shape. We cannot vouch for the edit, so this fails CLOSED
+                  (the caller reverts). NEVER collapse this into a non-gating UNKNOWN.
+
+    The static path runs with no browser (rendered checks come back `unknown` and never
+    gate), so a clean offline run still PASSES and slop/contrast/overlap still gate."""
+    cmd = QA_CMD + [qa_target, "--json"]
     if contract:
         cmd += ["--contract", contract]
     if register:
@@ -65,15 +75,21 @@ def _run_qa(qa_target, contract=None, register=None, timeout=200):
     try:
         p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except (OSError, subprocess.SubprocessError) as e:
-        return "UNKNOWN", [{"name": "qa", "status": "unknown", "detail": str(e)}]
+        # qa.py could not be run at all → fail closed.
+        return "ERROR", [{"name": "qa", "status": "error", "detail": str(e)}]
     out = p.stdout or ""
     try:
         results = json.loads(out[out.index("["):out.rindex("]") + 1])
     except (ValueError, IndexError):
-        return "UNKNOWN", [{"name": "qa", "status": "unknown",
-                            "detail": (p.stderr or out).strip()[-500:]}]
+        # qa.py ran but emitted non-array / garbage output → can't vouch → fail closed.
+        return "ERROR", [{"name": "qa", "status": "error",
+                          "detail": (p.stderr or out).strip()[-500:]}]
+    if not isinstance(results, list):
+        return "ERROR", [{"name": "qa", "status": "error",
+                          "detail": "qa output was not a JSON array"}]
     # Mirror qa.verdict: FAIL iff a gating check actually failed; unknown never gates.
-    failed = any(r.get("gating") and r.get("status") == "fail" for r in results)
+    failed = any(isinstance(r, dict) and r.get("gating") and r.get("status") == "fail"
+                 for r in results)
     return ("FAIL" if failed else "PASS"), results
 
 
@@ -85,17 +101,18 @@ def accept_variant(file, old, new, qa_target, journal_dir, session,
       (a) edit_apply.accept(file, old, new, …)  — journaled, reversible, refuses
           generated files, requires a unique `old` anchor;
       (b) run qa.py on `qa_target` (static path works offline);
-      (c) if qa FAILS, edit_apply.revert the edit so the source is byte-restored, and
-          return the failure so the picker shows it and the bad variant never sticks;
+      (c) if qa FAILS *or* ERRORs (couldn't produce a verdict), edit_apply.revert the
+          edit so the source is byte-restored — a bad OR un-QA-able variant never sticks
+          (fail CLOSED). The failure is returned so the picker shows it;
       (d) if qa PASSES, keep it; the session accept is already recorded by step (a).
 
     Returns {ok, qa, reverted, journal_id?, reason?}:
       • ok True  -> edit applied AND qa passed (kept).
-      • ok False, reverted True  -> edit applied but qa failed; auto-reverted.
+      • ok False, reverted True  -> edit applied but qa failed/errored; auto-reverted.
       • ok False, reverted False -> edit never applied (anchor/guard rejected it),
-        nothing to revert.
-    A qa verdict of UNKNOWN does NOT auto-revert (we don't trust a null we can't
-    explain — same contract as qa.py's `unknown`); it's reported and the edit is kept."""
+        nothing to revert; OR auto-revert itself FAILED and the file is STILL MODIFIED.
+    qa=="ERROR" means qa.py could not be run or emitted unparseable output; we refuse to
+    vouch for an un-QA'd edit, so it reverts exactly like a FAIL (fail closed)."""
     applied = edit_apply.accept(file, old, new, journal_dir, session,
                                 label=label, rationale=rationale, now=now)
     if not applied.get("ok"):
@@ -107,14 +124,22 @@ def accept_variant(file, old, new, qa_target, journal_dir, session,
     journal_id = applied["journal_id"]
     qa_verdict, qa_results = _run_qa(qa_target, contract=contract, register=register)
 
-    if qa_verdict == "FAIL":
+    if qa_verdict in ("FAIL", "ERROR"):
         rev = edit_apply.revert(journal_dir, journal_id)
-        return {"ok": False, "reverted": bool(rev.get("ok")), "qa": qa_verdict,
+        reverted = bool(rev.get("ok"))
+        gate = "qa failed" if qa_verdict == "FAIL" else "qa could not run (ERROR)"
+        if reverted:
+            reason = f"{gate} — auto-reverted; variant did not stick"
+        else:
+            # Revert itself failed (e.g. backup missing): the file is STILL MODIFIED.
+            # Tell the truth loudly instead of claiming a clean revert.
+            reason = (f"{gate} AND REVERT FAILED ({rev.get('reason')}) — file {file} is "
+                      f"STILL MODIFIED; restore manually from backup")
+        return {"ok": False, "reverted": reverted, "qa": qa_verdict,
                 "qa_results": qa_results, "journal_id": journal_id,
-                "revert": rev,
-                "reason": "qa failed — auto-reverted; variant did not stick"}
+                "revert": rev, "reason": reason}
 
-    # PASS or UNKNOWN: keep the edit (UNKNOWN never gates, so it never reverts).
+    # PASS only: keep the edit. (ERROR/FAIL already reverted above; nothing else passes.)
     return {"ok": True, "reverted": False, "qa": qa_verdict,
             "qa_results": qa_results, "journal_id": journal_id}
 
