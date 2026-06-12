@@ -32,6 +32,11 @@ builder writes only under `--out` and never modifies the live repo source.
 | **Claude Code** | `.claude/skills/atelier/` + `.claude-plugin/plugin.json` + `marketplace.json` | `name`, `description`, `license` | **Yes** | `scripts/qa.py` | `.claude/agents/` (plugin) | Canonical source. Carries `hooks/` (Stop/SubagentStop collision gate). |
 | **Codex CLI** | `.agents/skills/atelier/` | `name`, `description` | No | `scripts/qa.py` | nested `<skill>/agents/*.toml` (auto-discovered) | Codex validates only name+description; `license` demoted into the body. atelier ships no subagents today. |
 | **Cursor** | `.cursor/skills/atelier/` | `name`, `description`, `license` | No | `scripts/qa.py` | none in skill format | Cursor also reads `.agents/skills/` and `.claude/skills/` as fallbacks. |
+| **Gemini CLI** | `.gemini/skills/atelier/` | `name`, `description` | No | `scripts/qa.py` | none in skill format | Gemini validates only name+description (even `license` is parsed-but-ignored, so it is demoted into the body). Also reads `.agents/skills/`. |
+| **GitHub Copilot** | `.github/skills/atelier/` | `name`, `description`, `license` | No | `scripts/qa.py` | none in skill format | Copilot (Agents) accepts the spec `license`. Also reads `.agents/skills/` and `.claude/skills/`. |
+| **Kiro** | `.kiro/skills/atelier/` | `name`, `description`, `license` | No | `scripts/qa.py` | none in skill format | Kiro accepts the spec `license`. No documented fallback dirs. |
+| **OpenCode** | `.opencode/skills/atelier/` | `name`, `description`, `license` | No | `scripts/qa.py` | none in skill format | OpenCode accepts the spec `license`. Also reads `.agents/skills/` and `.claude/skills/`. |
+| **Pi** | `.pi/skills/atelier/` | `name`, `description`, `license` | No | `scripts/qa.py` | none in skill format | Pi accepts the spec `license`. Also reads `.agents/skills/`. |
 
 Always-carried source dirs (every harness): `scripts/`, `references/`, `assets/`,
 `templates/`. Only Claude Code carries `hooks/`.
@@ -40,9 +45,7 @@ Always-carried source dirs (every harness): `scripts/`, `references/`, `assets/`
 
 Adding any of these is one entry in the `HARNESSES` dict in `build_dist.py` (its
 install dir, accepted frontmatter, source dirs, `plugin` flag). Per impeccable's
-matrix: Gemini CLI (`.gemini/skills/`, validates name+description only), GitHub
-Copilot (`.github/skills/`), Kiro (`.kiro/skills/`), OpenCode (`.opencode/skills/`),
-Pi (`.pi/skills/`), Qoder (`.qoder/skills/`), Trae (`.trae/`, `.trae-cn/`),
+matrix: Qoder (`.qoder/skills/`), Trae (`.trae/`, `.trae-cn/`),
 Rovo Dev (`.rovodev/skills/`).
 
 ## Degradation by harness
@@ -63,10 +66,27 @@ harnesses' skill mechanisms.
   the loop, not on the harness compelling it. Treat the prose contract as the
   enforcement ceiling on these harnesses, and run `qa.py` explicitly.
 
-Honest summary of the gap: on Claude Code a forgotten re-check is *blocked*; on
-Codex/Cursor a forgotten re-check is only *discouraged*. The builder reflects this
+Honest summary of the gap: on Claude Code a forgotten re-check is *blocked*; on every
+other harness a forgotten re-check is only *discouraged*. The builder reflects this
 by including `hooks/` only in the Claude tree and printing the omission for the
 others.
+
+## What runs when you install
+
+Across every harness, installing or cloning atelier executes **nothing**:
+
+- **No install scripts, no postinstall, no telemetry, no network fetch on install.**
+  A build/clone copies files; it does not run them.
+- **Stdlib-only Python / Node-builtins-only `.mjs`.** Nothing to install to use the
+  core skill; the scripts run only when explicitly invoked (by you or by the agent
+  during a task), never in the background.
+- **The one harness-driven exception is the Claude-Code collision hook**, and it ships
+  **only to the Claude build**. `hooks/hooks.json` registers
+  `hooks/atelier-collision-gate.py` on `Stop` / `SubagentStop`; the Claude harness
+  auto-runs it to gate on rendered layout collisions before an agent finishes. It
+  reads files locally and makes **no network calls**. Every other harness omits
+  `hooks/` entirely (see the matrix above) and degrades to the `qa.py` self-QA loop —
+  so on those harnesses nothing auto-runs at all.
 
 ## Frontmatter shaping
 

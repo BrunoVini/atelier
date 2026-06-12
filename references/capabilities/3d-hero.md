@@ -5,6 +5,19 @@ skill. atelier does **not** build a GPU stack — it routes the 3D work to the
 `webgpu-threejs-tsl` skill and contributes the part that keeps the result on-brand:
 the design tokens, and the fallbacks.
 
+## The specialist skill (separate, maintained)
+
+The renderer/shader work belongs to a **separate, independently maintained skill**:
+
+- **Skill name:** `webgpu-threejs-tsl`
+- **Source repo:** `webgpu-claude-skill` (the skill ships from that repo; it is not
+  vendored into atelier and is not maintained here).
+- **Owns:** the WebGPU/WebGL renderer, Three.js scene graph, TSL node materials,
+  shader authoring, and GPU performance craft.
+
+If `webgpu-threejs-tsl` is not installed, say so and stop at the fallback: ship the
+static on-contract hero (see below) rather than hand-rolling a renderer in atelier.
+
 ## Route the 3D work out
 
 When the user wants a shader background, a WebGPU/Three.js hero, a TSL material, a
@@ -24,9 +37,33 @@ shader craft live. Don't reimplement it here.
      motion durations/easing so the 3D motion matches the rest of the page's tempo.
    - **Depth/elevation** stays consistent with §4 — a 3D hero shouldn't fight a
      flat (borders-only) system elsewhere.
-3. **Hand the skill a brief**, not a blank prompt: "scene = <intent>; palette =
-   `<brand/accent/surface hexes from the contract>`; motion tempo = `<duration/ease>`;
-   must degrade per below."
+3. **Hand the skill a brief**, not a blank prompt. Use this exact handoff format so
+   `webgpu-threejs-tsl` has everything it needs and nothing it must guess:
+
+   ```text
+   Skill: webgpu-threejs-tsl
+   scene:    <intent — e.g. "slow-drifting particle field behind the H1">
+   palette:  brand=<#hex> accent=<#hex> surface=<#hex>   (from the DESIGN.md contract)
+   motion:   duration=<ms> easing=<token>                (match the page's tempo)
+   depth:    <flat | subtle-elevation | layered>         (consistent with §4)
+   mount:    <selector/region the canvas occupies>
+   fallbacks: atelier owns them — render decorative, aria-hidden, must degrade per below.
+   ```
+
+   The brief is one-way: atelier supplies the contract values, the specialist returns
+   the scene. atelier does not review the shader internals — it re-checks the result
+   against the contract and the fallback requirements.
+
+## The division of labour
+
+Crisp split, so nothing falls between the two skills:
+
+- **`webgpu-threejs-tsl` owns:** the renderer, the scene graph, TSL/shader materials,
+  and GPU perf craft inside the working path.
+- **atelier owns the fallbacks and the contract:** reduced-motion behaviour, the
+  no-WebGPU / no-WebGL path, the performance budget (DPR/particle caps), and the
+  accessibility contract (decorative, no focus trap, content never depends on it).
+  These are atelier's responsibility whether or not the specialist skill is present.
 
 ## Fallbacks are mandatory (atelier owns these)
 
@@ -44,6 +81,6 @@ A 3D hero that breaks for a third of users is a failure, not a flourish:
 
 ## Out of scope (don't build it here)
 
-The renderer, shader/TSL authoring, and node-material craft belong to
-`webgpu-threejs-tsl`. atelier's job is the contract handoff + the fallbacks — keep
-this bridge thin.
+The renderer, shader/TSL authoring, and node-material craft belong to the separate
+`webgpu-threejs-tsl` skill (repo `webgpu-claude-skill`). atelier's job is the contract
+handoff + the fallbacks — keep this bridge thin.

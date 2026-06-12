@@ -39,6 +39,29 @@ atelier is authored once and also builds for **Codex** and **Cursor** via
 collision-gate hook that forces a re-check before an agent stops is Claude-Code-only —
 a documented degradation; the self-QA loop (`qa.py`) runs on every harness.
 
+## What runs when you install
+
+No surprises. Installing or cloning atelier runs **nothing**:
+
+- **No install scripts, no postinstall, no telemetry, no network fetch.** atelier is
+  authored as a skill — adding the plugin/marketplace or cloning the repo copies files;
+  it does not execute anything. Nothing phones home, ever.
+- **Stdlib-only / Node-builtins-only.** The Python scripts use only the standard
+  library; the optional `.mjs` helpers use only Node built-ins (plus a headless
+  browser you provide). There is nothing to `pip install` or `npm install` to use the
+  core skill.
+- **Scripts run only when explicitly invoked** — by you, or by the agent during a
+  design task. None run on install or in the background.
+- **The Claude-Code collision hook is the one thing the harness auto-runs**, and only
+  on the Claude build. `hooks/hooks.json` registers `hooks/atelier-collision-gate.py`
+  on `Stop` / `SubagentStop`: it re-checks the rendered output for layout collisions
+  before an agent is allowed to finish, and **gates** (blocks the stop) if it finds
+  one. It runs locally, reads files, and makes **no network calls**.
+- **The hook ships only to the Claude build.** Other harnesses (Codex, Cursor, Gemini,
+  Copilot, Kiro, OpenCode, Pi) don't carry `hooks/` and can't be force-gated — they
+  fall back to the `qa.py` self-QA loop. See the per-harness degradation matrix in
+  [HARNESSES.md](HARNESSES.md).
+
 ## Commands
 
 atelier triggers on natural language for everything; these slash commands are explicit

@@ -5,16 +5,17 @@ atelier is authored once as a Claude Code native skill (the repo root: SKILL.md 
 scripts/ references/ assets/ templates/ hooks/ commands/ + .claude-plugin/). Other harnesses
 (Codex, Cursor, ...) read skills from different directories and accept a different
 slice of SKILL.md frontmatter. This script transforms the one source into a faithful
-per-harness tree under --out, without ever touching the live repo.
+per-harness tree under --out, without ever touching the live repo. Eight harnesses
+ship today: claude, codex, cursor, gemini, copilot, kiro, opencode, pi.
 
 It is the Python stdlib port of impeccable's config-driven provider factory
 (scripts/build.js + scripts/lib/transformers/providers.js). Each harness is one
 entry in the HARNESSES dict below: its install layout, the frontmatter fields it
 accepts, the source dirs it carries, and whether it gets the Claude-only collision
-hook. Adding a 4th harness is adding a dict entry. Nothing else changes.
+hook. Adding another harness is adding a dict entry. Nothing else changes.
 
 Usage:
-    python3 scripts/build_dist.py [--harness claude|codex|cursor|all] [--out DIR]
+    python3 scripts/build_dist.py [--harness claude|codex|cursor|gemini|copilot|kiro|opencode|pi|all] [--out DIR]
 
 Defaults: --harness all, --out <repo>/dist (gitignored).
 
@@ -79,6 +80,48 @@ HARNESSES = {
         # Cursor reads .cursor/skills/<name>/ (also .agents/, .claude/ as fallbacks).
         "skill_root": os.path.join(".cursor", "skills", SKILL_NAME),
         "frontmatter": ["license"],  # Cursor accepts the spec `license` field.
+        "include_dirs": ["scripts", "references", "assets", "templates"],
+        "plugin": False,
+    },
+    "gemini": {
+        "display": "Gemini CLI",
+        # Gemini reads .gemini/skills/<name>/ (also .agents/skills/ as fallback).
+        "skill_root": os.path.join(".gemini", "skills", SKILL_NAME),
+        # Gemini validates only name + description; even `license` is parsed-but-
+        # ignored, so it is demoted into the body to keep the licensing visible.
+        "frontmatter": [],
+        "include_dirs": ["scripts", "references", "assets", "templates"],
+        "plugin": False,
+    },
+    "copilot": {
+        "display": "GitHub Copilot",
+        # Copilot (Agents) reads .github/skills/<name>/ (also .agents/, .claude/).
+        "skill_root": os.path.join(".github", "skills", SKILL_NAME),
+        "frontmatter": ["license"],  # Copilot accepts the spec `license` field.
+        "include_dirs": ["scripts", "references", "assets", "templates"],
+        "plugin": False,
+    },
+    "kiro": {
+        "display": "Kiro",
+        # Kiro reads .kiro/skills/<name>/ (no documented fallback dirs).
+        "skill_root": os.path.join(".kiro", "skills", SKILL_NAME),
+        "frontmatter": ["license"],  # Kiro accepts the spec `license` field.
+        "include_dirs": ["scripts", "references", "assets", "templates"],
+        "plugin": False,
+    },
+    "opencode": {
+        "display": "OpenCode",
+        # OpenCode reads .opencode/skills/<name>/ (also .agents/, .claude/).
+        "skill_root": os.path.join(".opencode", "skills", SKILL_NAME),
+        "frontmatter": ["license"],  # OpenCode accepts the spec `license` field.
+        "include_dirs": ["scripts", "references", "assets", "templates"],
+        "plugin": False,
+    },
+    "pi": {
+        "display": "Pi",
+        # Pi reads .pi/skills/<name>/ (also .agents/skills/ as fallback).
+        "skill_root": os.path.join(".pi", "skills", SKILL_NAME),
+        "frontmatter": ["license"],  # Pi accepts the spec `license` field.
         "include_dirs": ["scripts", "references", "assets", "templates"],
         "plugin": False,
     },
