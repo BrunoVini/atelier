@@ -90,6 +90,15 @@ const SWEEP_PROBE = `(async () => {
     if (!dash.length) return null;
     const pattern = dash.reduce((s, n) => s + n, 0);
     if (pattern <= 0) return null;
+    // A dash pattern SHORTER than the path repeats — dashoffset is cyclic and the
+    // stroke stays visible at any offset (a decorative dashed line, marching ants).
+    // Hiding requires the pattern to swallow the whole path (the ink-draw trick:
+    // dasharray >= length). Respect pathLength — when set, the dash space is
+    // normalized to it, not to the real geometry.
+    const lenAttr = el.getAttribute && parseFloat(el.getAttribute('pathLength'));
+    let pathLen = lenAttr > 0 ? lenAttr : NaN;
+    if (isNaN(pathLen)) { try { pathLen = el.getTotalLength(); } catch { pathLen = NaN; } }
+    if (!isNaN(pathLen) && pattern < pathLen - 2) return null;                  // repeating dash — visible by construction
     const off = Math.abs(parseFloat(cs.strokeDashoffset) || 0);
     // undrawn iff the offset has pushed (nearly) the whole pattern off the path.
     // tolerate 2px slack so a fully-drawn (offset 0) or partial stroke is NOT flagged.

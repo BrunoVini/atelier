@@ -148,15 +148,17 @@ _PADDING = (
 STUCK_STROKE = (
     '<!doctype html><html><head><meta charset="utf-8"><style>'
     'svg{width:300px;height:120px}'
-    # base hidden (ink) state: whole dash pattern pushed off the path
-    '.ink{stroke:#c00;stroke-width:3;fill:none;stroke-dasharray:40;stroke-dashoffset:40}'
+    # base hidden (ink) state: a dash pattern as long as the path (pathLength=100),
+    # pushed fully off it — the classic draw-on trick's hidden frame.
+    '.ink{stroke:#c00;stroke-width:3;fill:none;stroke-dasharray:100;stroke-dashoffset:100}'
     # a bespoke idle animation that does NOT touch dashoffset — and, being the single
-    # `animation` shorthand, leaves the stroke stuck at the hidden dashoffset:40 forever.
+    # `animation` shorthand, leaves the stroke stuck at the hidden dashoffset:100 forever.
     '.ink{animation:wiggle 2s ease-in-out infinite}'
     '@keyframes wiggle{0%{stroke-width:3}50%{stroke-width:4}100%{stroke-width:3}}'
     '</style></head><body>' + _PADDING +
-    '<svg viewBox="0 0 100 40"><path class="ink" d="M2 20 L98 20"/>'
-    '<path class="ink" d="M2 30 L98 30"/><path class="ink" d="M2 10 L98 10"/></svg>'
+    '<svg viewBox="0 0 100 40"><path class="ink" pathLength="100" d="M2 20 L98 20"/>'
+    '<path class="ink" pathLength="100" d="M2 30 L98 30"/>'
+    '<path class="ink" pathLength="100" d="M2 10 L98 10"/></svg>'
     '</body></html>'
 )
 
@@ -164,11 +166,45 @@ STUCK_STROKE = (
 DRAWN_STROKE = (
     '<!doctype html><html><head><meta charset="utf-8"><style>'
     'svg{width:300px;height:120px}'
-    '.ink{stroke:#c00;stroke-width:3;fill:none;stroke-dasharray:40;stroke-dashoffset:0}'
+    '.ink{stroke:#c00;stroke-width:3;fill:none;stroke-dasharray:100;stroke-dashoffset:0}'
     '</style></head><body>' + _PADDING +
-    '<svg viewBox="0 0 100 40"><path class="ink" d="M2 20 L98 20"/>'
-    '<path class="ink" d="M2 30 L98 30"/><path class="ink" d="M2 10 L98 10"/></svg>'
+    '<svg viewBox="0 0 100 40"><path class="ink" pathLength="100" d="M2 20 L98 20"/>'
+    '<path class="ink" pathLength="100" d="M2 30 L98 30"/>'
+    '<path class="ink" pathLength="100" d="M2 10 L98 10"/></svg>'
     '</body></html>'
+)
+
+# A decorative dashed line: the pattern (4 4) is far shorter than the path, so the
+# dash repeats and the stroke is VISIBLE at any dashoffset (offsets are cyclic).
+# It must never be mistaken for an undrawn ink stroke, even with offset >= pattern.
+DECORATIVE_DASH = (
+    '<!doctype html><html><head><meta charset="utf-8"><style>'
+    'svg{width:300px;height:120px}'
+    '.dashed{stroke:#c00;stroke-width:3;fill:none;stroke-dasharray:4 4;stroke-dashoffset:8}'
+    '</style></head><body>' + _PADDING +
+    '<svg viewBox="0 0 100 40"><path class="dashed" d="M2 20 L98 20"/>'
+    '<path class="dashed" d="M2 30 L98 30"/><path class="dashed" d="M2 10 L98 10"/></svg>'
+    '</body></html>'
+)
+
+# The healthy engine pattern the guidance prescribes: strokes start hidden, an
+# entrance animation draws them, and on animationend the engine RELEASES them —
+# strips the dash state entirely so the resting state is the natural stroke.
+# Mid-flight samples (the sweep polls every ~60ms) must see the partial draw.
+RELEASED_STROKE = (
+    '<!doctype html><html><head><meta charset="utf-8"><style>'
+    'svg{width:300px;height:120px}'
+    '.ink{stroke:#c00;stroke-width:3;fill:none;stroke-dasharray:100;stroke-dashoffset:100;'
+    'animation:draw 0.5s linear forwards}'
+    '@keyframes draw{to{stroke-dashoffset:0}}'
+    '</style></head><body>' + _PADDING +
+    '<svg viewBox="0 0 100 40"><path class="ink" pathLength="100" d="M2 20 L98 20"/>'
+    '<path class="ink" pathLength="100" d="M2 30 L98 30"/>'
+    '<path class="ink" pathLength="100" d="M2 10 L98 10"/></svg>'
+    '<script>document.querySelectorAll(".ink").forEach(function(el){'
+    'el.addEventListener("animationend",function(){'
+    'el.classList.remove("ink");el.style.stroke="#c00";el.style.strokeWidth="3";el.style.fill="none";});});'
+    '</script></body></html>'
 )
 
 
@@ -190,5 +226,27 @@ def test_drawn_svg_strokes_pass(tmp_path):
     if _no_browser(r):
         return
     assert r.returncode == 0, f"fully-drawn resting strokes must PASS\n{r.stderr}"
+    out = json.loads(r.stdout)
+    assert out["strokes_stuck"] == 0, out
+
+
+def test_decorative_dashed_strokes_pass(tmp_path):
+    p = tmp_path / "dashed.html"
+    p.write_text(DECORATIVE_DASH)
+    r = _run(p)
+    if _no_browser(r):
+        return
+    assert r.returncode == 0, f"a repeating decorative dash is visible by construction and must PASS\n{r.stderr}"
+    out = json.loads(r.stdout)
+    assert out["strokes_stuck"] == 0, out
+
+
+def test_released_engine_strokes_pass(tmp_path):
+    p = tmp_path / "released.html"
+    p.write_text(RELEASED_STROKE)
+    r = _run(p)
+    if _no_browser(r):
+        return
+    assert r.returncode == 0, f"an engine that draws then RELEASES its strokes must PASS\n{r.stderr}"
     out = json.loads(r.stdout)
     assert out["strokes_stuck"] == 0, out
