@@ -25,16 +25,17 @@ Schema (all optional):
         "design-lint": true,
         "contrast-audit": true,
         "house-rules": true,
-        "overlap-risk": true
+        "overlap-risk": true,
+        "a11y": true
       }
     }
 """
 import json
 import os
 
-# The four gate steps a config may toggle. Anything else under `checks`/`rules`
+# The gate steps a config may toggle. Anything else under `checks`/`rules`
 # is ignored (forward-compatible).
-GATE_STEPS = ("design-lint", "contrast-audit", "house-rules", "overlap-risk")
+GATE_STEPS = ("design-lint", "contrast-audit", "house-rules", "overlap-risk", "a11y")
 
 
 def _read_json(path):

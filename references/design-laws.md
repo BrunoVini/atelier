@@ -164,6 +164,31 @@ and the code's threshold differ, **the code's number is authoritative** and note
   marketing-multiplier stats on a greenfield product.
   → enforced by: `slop_check.py` / `proof` tells
 
+## Accessibility
+
+Static smoke test (stdlib HTML parse). `important` findings gate the QA verdict
+and the Stop hook; the heuristic ones are advisory (polish). A decorative image
+declares `alt=""` — that is correct and is never flagged.
+
+- **Every `<img>` carries an `alt`.** Describe the image, or use `alt=""` for a
+  purely decorative one. (`aria-hidden`/`role="presentation"` images are exempt.)
+  → enforced by: `a11y_check.py` / `img-missing-alt` (important)
+- **Every form control has an accessible name.** Associate a `<label for=ID>`,
+  wrap the control in a `<label>`, or set `aria-label`/`aria-labelledby`/`title`.
+  → enforced by: `a11y_check.py` / `input-missing-label` (important)
+- **Every control has a name** — an icon-only `<button>` or link needs an
+  `aria-label`/`title` (or an `<img alt>`/`<svg><title>` inside it).
+  → enforced by: `a11y_check.py` / `control-missing-name` (important)
+- **Every page declares landmark regions** — at least `<main>` (and ideally
+  `<header>`/`<nav>`/`<footer>`), or equivalent `role=`.
+  → enforced by: `a11y_check.py` / `missing-landmarks` (polish)
+- **Exactly one `<h1>` per document.** Zero leaves the page without a main
+  heading; more than one breaks the outline.
+  → enforced by: `a11y_check.py` / `no-h1`, `multiple-h1` (polish)
+- **No positive `tabindex`.** `tabindex` > 0 disrupts the natural focus order;
+  use `0` or `-1`.
+  → enforced by: `a11y_check.py` / `positive-tabindex` (polish)
+
 ## Not yet auto-checked (candidates for a later phase)
 
 Laws impeccable states and atelier documents, cheaply checkable statically but with

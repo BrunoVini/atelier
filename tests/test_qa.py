@@ -3,7 +3,7 @@ import os
 import subprocess
 import sys
 
-from qa import CheckResult, verdict, format_evidence, _slop, _contrast
+from qa import CheckResult, verdict, format_evidence, _slop, _contrast, _a11y
 
 _QA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                    "scripts", "qa.py")
@@ -126,6 +126,44 @@ def test_trailing_valueless_contract_exits_2_no_traceback(tmp_path):
     assert r.returncode == 2
     assert "--contract requires a value" in r.stdout
     assert "Traceback" not in r.stderr   # no IndexError traceback
+
+
+def test_a11y_layer_gates_on_important_violation():
+    # an icon-only / no-alt page yields a gating a11y FAIL; a clean one passes.
+    bad = _a11y("<body><main><h1>x</h1><img src='a.png'></main></body>")
+    assert bad.status == "fail" and bad.gating
+    assert "img-missing-alt" in bad.detail
+    good = _a11y("<body><main><h1>x</h1><img src='a.png' alt='ok'></main></body>")
+    assert good.status == "pass"
+
+
+def test_inaccessible_artifact_makes_hook_fail(tmp_path):
+    # An img with no alt is an UNAMBIGUOUS a11y violation: the --hook must BLOCK
+    # (exit 1), not report done. (Verdict path: gating a11y fail -> FAIL -> 1.)
+    page = tmp_path / "bad.html"
+    page.write_text(
+        "<!doctype html><html lang='en'><head><title>x</title></head>"
+        "<body><main><h1>Hi</h1><img src='hero.png'></main></body></html>")
+    r = subprocess.run([sys.executable, _QA, str(page), "--hook"],
+                       text=True, capture_output=True, timeout=120)
+    assert r.returncode == 1, f"a11y violation must BLOCK the hook; got {r.returncode}\n{r.stdout}\n{r.stderr}"
+    assert "a11y" in r.stdout
+
+
+def test_accessible_artifact_does_not_fail_on_a11y(tmp_path):
+    page = tmp_path / "good.html"
+    page.write_text(
+        "<!doctype html><html lang='en'><head><title>x</title></head>"
+        "<body><main><h1>Hi</h1><img src='hero.png' alt='A hero'>"
+        "<form><label for='q'>Search</label><input id='q' type='text'>"
+        "<button>Go</button></form></main></body></html>")
+    r = subprocess.run([sys.executable, _QA, str(page), "--hook", "--json"],
+                       text=True, capture_output=True, timeout=120)
+    # the a11y layer itself must not be a fail (other layers may be unknown w/o browser)
+    import json as _json
+    results = _json.loads(r.stdout)
+    a11y = next(x for x in results if x["name"] == "a11y")
+    assert a11y["status"] == "pass", a11y
 
 
 def test_non_utf8_html_exits_2_not_1_no_traceback(tmp_path):
