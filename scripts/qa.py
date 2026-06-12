@@ -64,6 +64,22 @@ def _slop(html, contract=None, profile=None, register=None):
     )
 
 
+def _a11y(html):
+    """Static accessibility layer for an HTML artifact. `important` a11y
+    violations (no-alt image, unnamed control/input) GATE the verdict and the
+    bound Stop hook; heuristic findings are advisory (polish). Defensive:
+    check_a11y never raises, so this can never crash the battery."""
+    from a11y_check import check_a11y
+    findings = check_a11y(html)
+    important = [f for f in findings if f["severity"] == "important"]
+    advisory = [f for f in findings if f["severity"] != "important"]
+    return CheckResult(
+        "a11y", "fail" if important else "pass", True,
+        {"important": len(important), "advisory": len(advisory)},
+        "; ".join(sorted({f["kind"] for f in important})) or "clean",
+    )
+
+
 def _contrast(contract=None, colors=None):
     from audit_contrast import audit, gate_failures, _load_colors
     if colors is None:
@@ -204,10 +220,17 @@ def _static(repo, contract):
     spec = [("design-lint", "design-lint", "drift", "findings"),
             ("contrast-audit", "contrast", "aa_fails", "fails"),
             ("house-rules", "house-rules", "violations", "violations"),
-            ("overlap-risk", "overlap-risk", "risks", "risks")]
+            ("overlap-risk", "overlap-risk", "risks", "risks"),
+            ("a11y", "a11y", "violations", "violations")]
     out = []
     for step, name, label, key in spec:
-        s = by[step]
+        s = by.get(step)
+        if s is None:           # step absent (older check.run) — skip defensively
+            continue
+        # a skipped step records no count key; report it as a non-gating pass.
+        if s.get("skipped"):
+            out.append(CheckResult(name, "pass", False, {}, "skipped"))
+            continue
         out.append(CheckResult(name, "pass" if s["ok"] else "fail", True, {label: s[key]}, ""))
     return out
 
@@ -231,6 +254,10 @@ def _battery(target, contract, widths, hook, kind=None, register=None):
         # Anti-slop binds in the self-QA loop too (important findings gate the --hook), not
         # only in full mode — a fabricated logo wall or missing focus ring should block "done".
         results.append(_slop(html, contract=contract, register=register))
+        # Static a11y binds in the self-QA loop too: important violations (an image
+        # with no alt, an unnamed icon control, an unlabeled input) gate the verdict
+        # and the bound Stop hook — a page nobody can use should never read "done".
+        results.append(_a11y(html))
         if not hook:                                  # full-mode-only layer (needs a contract)
             if contract:
                 results.append(_contrast(contract=contract))

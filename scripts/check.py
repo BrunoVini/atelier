@@ -15,6 +15,7 @@ from lint_design import lint_repo
 from audit_contrast import audit, gate_failures, _load_colors
 from check_rules import check as check_house_rules
 from overlap_risk import scan_repo_overlap_risk
+from a11y_check import scan_repo_a11y
 
 
 def run(repo, contract, max_drift=0, allow_contrast_fail=False, max_overlap_risk=0,
@@ -75,6 +76,23 @@ def run(repo, contract, max_drift=0, allow_contrast_fail=False, max_overlap_risk
         overlaps = []
         results["steps"].append({"step": "overlap-risk", "skipped": True, "ok": True})
 
+    # Static accessibility — scans the repo's HTML files and gates on `important`
+    # a11y violations only (no-alt image, unnamed control/input); heuristic findings
+    # (landmarks, h1 count, positive tabindex) are reported but advisory. Mirrors the
+    # overlap-risk step's gate-on-gating-severity discipline. Default-on and gating
+    # like the other four steps; toggle off via the `checks`/`rules` config. A repo
+    # with no HTML simply produces zero findings and passes.
+    if _on("a11y"):
+        a11y = scan_repo_a11y(repo)
+        a11y_gating = [f for f in a11y if f["severity"] == "important"]
+        a11y_ok = not a11y_gating
+        results["steps"].append({"step": "a11y", "violations": len(a11y_gating), "ok": a11y_ok})
+        results["ok"] &= a11y_ok
+    else:
+        a11y = []
+        results["steps"].append({"step": "a11y", "skipped": True, "ok": True})
+
+    results["a11y_findings"] = a11y
     results["drift"] = drift
     results["contrast_fails"] = [f"{r['text']} on {r['surface']} ({r['ratio']}:1)" for r in fails]
     # Additive structured contrast detail for SARIF/tooling consumers. Existing
@@ -319,6 +337,9 @@ def main(argv=None):
                 print(f"    house-rule {v['file']}:{v['line']} forbidden '{v['forbidden']}'{tip}")
             for o in [f for f in res.get("overlap_risks", []) if f["severity"] in ("critical", "important")][:20]:
                 print(f"    overlap-risk {o['file']}:{o['line']} {o['kind']} — {o['detail']}")
+            for a in [f for f in res.get("a11y_findings", []) if f["severity"] == "important"][:20]:
+                loc = f":{a['line']}" if "line" in a else ""
+                print(f"    a11y {a.get('file','')}{loc} {a['kind']} — {a['detail']}")
         print("\natelier check:", "PASS" if res["ok"] else "FAIL")
     return 0 if res["ok"] else 1
 
