@@ -187,6 +187,25 @@ DECORATIVE_DASH = (
     '</body></html>'
 )
 
+# Template geometry inside <defs>/<symbol>: an undrawn-looking dash on a DEFINITION
+# is invisible by design (a <use> renders a shadow copy elsewhere; the node itself
+# paints nothing — display:inline, visibility:visible, but zero client rects). It must
+# never be counted as a stuck draw-stroke. Here the only painted stroke (drawn via
+# <use>) rests fully drawn, so the page must PASS.
+DEFS_TEMPLATE = (
+    '<!doctype html><html><head><meta charset="utf-8"><style>'
+    'svg{width:300px;height:120px}'
+    '.ink{stroke:#c00;stroke-width:3;fill:none;stroke-dasharray:100;stroke-dashoffset:100}'
+    '</style></head><body>' + _PADDING +
+    '<svg viewBox="0 0 100 40">'
+    '<defs><path class="ink" pathLength="100" d="M2 20 L98 20"/>'
+    '<path class="ink" pathLength="100" d="M2 30 L98 30"/></defs>'
+    '<symbol id="s"><path class="ink" pathLength="100" d="M2 10 L98 10"/></symbol>'
+    '<path stroke="#080" stroke-width="3" fill="none" stroke-dasharray="100" '
+    'stroke-dashoffset="0" pathLength="100" d="M2 35 L98 35"/></svg>'
+    '</body></html>'
+)
+
 # The healthy engine pattern the guidance prescribes: strokes start hidden, an
 # entrance animation draws them, and on animationend the engine RELEASES them —
 # strips the dash state entirely so the resting state is the natural stroke.
@@ -248,5 +267,19 @@ def test_released_engine_strokes_pass(tmp_path):
     if _no_browser(r):
         return
     assert r.returncode == 0, f"an engine that draws then RELEASES its strokes must PASS\n{r.stderr}"
+    out = json.loads(r.stdout)
+    assert out["strokes_stuck"] == 0, out
+
+
+def test_defs_template_strokes_not_tracked(tmp_path):
+    # Undrawn dash on a <defs>/<symbol> definition paints nothing directly — it must
+    # not be counted as a stuck draw-stroke (false positive). The one painted stroke
+    # rests fully drawn, so the page passes and the templates are never tracked.
+    p = tmp_path / "defs.html"
+    p.write_text(DEFS_TEMPLATE)
+    r = _run(p)
+    if _no_browser(r):
+        return
+    assert r.returncode == 0, f"undrawn dash on a <defs>/<symbol> definition must NOT gate\n{r.stderr}"
     out = json.loads(r.stdout)
     assert out["strokes_stuck"] == 0, out

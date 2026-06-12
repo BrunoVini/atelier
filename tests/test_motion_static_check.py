@@ -119,6 +119,29 @@ def test_partial_keyframes_not_flagged():
     assert "loop-keyframes-unclosed" not in _kinds(partial)
 
 
+def test_open_loop_with_bezier_in_shorthand_still_flagged():
+    # A cubic-bezier()/steps() easing in the `animation` shorthand carries commas;
+    # a naive comma-split tears the arg list apart and drops the keyframe name, so
+    # the open loop is missed. The split must be paren-aware. (Both inner-space and
+    # no-space bezier forms are common authoring styles.)
+    spaced = ("<style>.x{animation:pulse 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite}"
+              "@keyframes pulse{0%{opacity:0}100%{opacity:1}}</style>")
+    tight = ("<style>.x{animation:pulse 2s cubic-bezier(0.2,0.8,0.2,1) infinite}"
+             "@keyframes pulse{0%{opacity:0}100%{opacity:1}}</style>")
+    assert "loop-keyframes-unclosed" in _kinds(spaced)
+    assert "loop-keyframes-unclosed" in _kinds(tight)
+
+
+def test_finite_anim_in_multi_shorthand_not_flagged():
+    # `fade` is finite (forwards); only the infinite `pulse` may flag. The bezier
+    # commas must not bleed `infinite` onto the wrong animation.
+    css = ("<style>.x{animation:fade 1s ease forwards, pulse 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite}"
+           "@keyframes pulse{0%{opacity:0}100%{opacity:1}}"
+           "@keyframes fade{0%{opacity:0}100%{opacity:1}}</style>")
+    findings = [f for f in check_motion(css) if f["kind"] == "loop-keyframes-unclosed"]
+    assert len(findings) == 1 and "pulse" in findings[0]["detail"]
+
+
 def test_timing_function_in_keyframe_ignored():
     # animation-timing-function inside a stop doesn't change the rendered value — a loop
     # that's otherwise closed but sets a per-segment easing at 0% must NOT flag.

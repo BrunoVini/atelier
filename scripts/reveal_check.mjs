@@ -81,6 +81,11 @@ const SWEEP_PROBE = `(async () => {
   const undrawn = (el) => {
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') return null;       // intentionally gone
+    // Template geometry in <defs>/<symbol>/<mask>/<clipPath>/<pattern>/<marker>
+    // paints nothing directly (a <use> renders a shadow copy, not this node) — it
+    // has display:inline/visibility:visible yet produces no client rect. An undrawn
+    // dash on a definition is correct and invisible BY DESIGN, never a stuck reveal.
+    if (!el.getClientRects || el.getClientRects().length === 0) return null;    // not painted directly
     if (parseFloat(cs.opacity) <= 0.05) return null;                            // opacity path handles it
     if (!cs.stroke || cs.stroke === 'none') return null;                        // no stroke to draw
     if (parseFloat(cs.strokeWidth) <= 0) return null;

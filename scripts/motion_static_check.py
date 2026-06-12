@@ -151,8 +151,9 @@ def _infinite_keyframe_names(css):
     # shorthand
     for m in _ANIM_INFINITE_SHORTHAND.finditer(css):
         val = m.group(1).lower()
-        # split on comma — one element can declare multiple animations
-        for part in val.split(","):
+        # split on comma — one element can declare multiple animations (paren-aware
+        # so a cubic-bezier()/steps() arg list doesn't get torn apart)
+        for part in _split_top_commas(val):
             toks = part.split()
             if "infinite" not in toks:
                 continue
@@ -182,6 +183,28 @@ _TIMING_KEYWORDS = {
     "reverse", "both", "forwards", "backwards", "none", "running", "paused",
     "initial", "inherit", "unset",
 }
+
+
+def _split_top_commas(val):
+    """Split on commas that separate animations, NOT commas inside a function
+    like `cubic-bezier(0.2, 0.8, 0.2, 1)` or `steps(4, end)`. A plain
+    `val.split(',')` tears those args apart and the keyframe-name token lands in a
+    fragment without `infinite` — the loop is then missed entirely."""
+    parts = []
+    depth = 0
+    buf = []
+    for c in val:
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth = max(0, depth - 1)
+        if c == "," and depth == 0:
+            parts.append("".join(buf))
+            buf = []
+        else:
+            buf.append(c)
+    parts.append("".join(buf))
+    return parts
 
 
 def _looks_like_keyframe_name(tok):
