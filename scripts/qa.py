@@ -96,7 +96,7 @@ def _contrast(contract=None, colors=None):
 
 
 def format_evidence(target, contract, results):
-    mark = {"pass": "PASS", "fail": "FAIL", "unknown": "SKIP"}
+    mark = {"pass": "PASS", "fail": "FAIL", "unknown": "SKIP", "advisory": "INFO"}
     lines = ["=== atelier qa evidence ===",
              f"target: {target}",
              f"contract: {contract or '(none)'}",
@@ -141,7 +141,7 @@ def _rendered_plan(kind):
     are page semantics). Page: the full responsive/chart/reveal battery."""
     if kind == "animation":
         return ["scan_motion.mjs", "chart_legibility.mjs"]
-    return ["responsive_check.mjs", "chart_legibility.mjs", "reveal_check.mjs"]
+    return ["responsive_check.mjs", "chart_legibility.mjs", "reveal_check.mjs", "focus_order.mjs"]
 
 
 def _motion_present(path):
@@ -201,6 +201,33 @@ def _rendered(path, script, widths=None):
     return CheckResult(script, "unknown", True, {}, "(checker crashed; not trusted)")
 
 
+def _focus_order(path):
+    """Run the keyboard focus-order check as a NON-GATING advisory. focus_order.mjs is
+    advisory by design (exit 0 whenever the browser ran), so it can never FAIL the
+    verdict or the --hook; we parse its --json only to SURFACE the focus observations
+    (focusable-hidden, tab/visual mismatch, positive tabindex, possible focus-trap) in
+    the evidence block. No browser / crash -> `unknown` (also non-gating)."""
+    code, log = _run(["node", os.path.join(HERE, "focus_order.mjs"), path, "--json"])
+    if code == 3 or "no headless browser" in log:
+        return CheckResult("focus_order.mjs", "unknown", False, {},
+                           "no headless browser — not trusted, did not gate")
+    base = "focus_order"
+    crashed = f"{base} failed:" in log
+    if code != 0 or crashed:
+        return CheckResult("focus_order.mjs", "unknown", False, {}, "(checker crashed; not trusted)")
+    try:
+        data = json.loads(log[log.index("{"):log.rindex("}") + 1])
+    except Exception:
+        return CheckResult("focus_order.mjs", "unknown", False, {},
+                           "(focus_order returned no parseable json; not trusted)")
+    advisories = data.get("advisories") or []
+    counts = {"advisories": len(advisories), "stops": data.get("stops", 0)}
+    if not advisories:
+        return CheckResult("focus_order.mjs", "advisory", False, counts, "no advisory findings")
+    detail = "; ".join(a.get("note") or a.get("kind", "") for a in advisories)
+    return CheckResult("focus_order.mjs", "advisory", False, counts, detail)
+
+
 def _safe_static(repo, contract):
     """_static needs a resolvable contract; without one (or on any resolution
     failure) the static battery can't run — report `unknown` so it never gates
@@ -248,6 +275,8 @@ def _battery(target, contract, widths, hook, kind=None, register=None):
                 rendered.append(_motion_present(target))
             elif script == "responsive_check.mjs":
                 rendered.append(_rendered(target, script, widths))
+            elif script == "focus_order.mjs":
+                rendered.append(_focus_order(target))         # advisory only — never gates
             else:
                 rendered.append(_rendered(target, script))   # content must be visible without JS (page mode)
         results += rendered
@@ -261,8 +290,10 @@ def _battery(target, contract, widths, hook, kind=None, register=None):
         if not hook:                                  # full-mode-only layer (needs a contract)
             if contract:
                 results.append(_contrast(contract=contract))
-        elif all(r.status == "unknown" for r in rendered):
-            # hook + no browser — fall back to the static overlap lint on the file's dir
+        elif all(r.status == "unknown" for r in rendered if r.gating):
+            # hook + no browser — fall back to the static overlap lint on the file's dir.
+            # Only the GATING rendered checks decide this (focus_order is a non-gating
+            # advisory; whether it ran or not shouldn't suppress the static fallback).
             base = os.path.dirname(target) or "."
             results += [r for r in _safe_static(base, contract or base) if r.name == "overlap-risk"]
     else:                                             # repo dir
