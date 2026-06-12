@@ -307,6 +307,60 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   register, token source, framework, implied next step) in one JSON, replacing several
   separate file reads at the start of a repo task.
 
+#### Competitive upgrades — closing the field's gaps (Phases A–K, 2026-06-11)
+
+A wave benchmarked against the eight peer design skills and the impeccable issue
+backlog. Each phase shipped behind two reviews (spec + code quality) with the test
+battery green; security-sensitive phases were adversarially re-checked.
+
+- **Live-server hardening (P0).** The live proxy and preview server now reject any
+  non-loopback `Host` (anti-DNS-rebinding) on both the HTTP and WebSocket-upgrade
+  paths, gate every source-writing endpoint behind a per-session token (constant-time
+  compare, injected as `window.__atelierToken`, sent as `X-Atelier-Token`), emit no
+  CORS headers, and the element picker no longer steals focus from inputs /
+  contenteditable. atelier writes to the user's source, so this is load-bearing.
+- **SARIF 2.1.0 + reusable GitHub Action.** `atelier check --sarif <path>` (or `-` for
+  stdout) emits code-scanning SARIF — written regardless of pass/fail so CI always gets
+  the report — and `action.yml` runs the gate, uploads the SARIF on `always()`, and
+  still fails the job on findings.
+- **Check ergonomics.** A repo-root `.atelier.json` (thresholds + per-step on/off,
+  merged over `design/atelier.config.json`); inline `atelier-disable[-line|-next-line]`
+  suppression (line-accurate in lint, file-scoped-by-kind in slop, matched only inside
+  real comment syntax); `--quiet`; and `--url <url>` to run the static anti-slop battery
+  on a remote page.
+- **Detection rigor.** A `label-line-height` rule (loose leading on small UI/label text),
+  a `typography_preflight.py` pre-scan, and optional APCA perceptual contrast in
+  `audit_contrast.py` (reported via `--apca`, gated only when opted in via a DESIGN.md
+  `contrast`/`apca_target` field or `--apca-gate`) — WCAG stays the default gate.
+- **Richer DESIGN.md machine-block + Google Stitch import.** The `atelier-contract`
+  block gains optional per-role `typography` (with OpenType `features` like `ss01`/`tnum`)
+  and per-component `components` specs; `resolve_contract` reads a Google Stitch
+  DESIGN.md directly and `import_reference.py --stitch` converts one — validated against
+  a real 73-brand library (63/63 Stitch-format files parse).
+- **Reach-for taste vocabulary.** A `reach_for` column on every `reflex-reject.csv` row
+  (named, distinctive alternatives sourced from the product's job) plus a
+  `marketing-microtell` slop layer — turning "avoid-bad" into "achieve-great".
+- **Layering / elevation doctrine.** `references/capabilities/layering.md` (elevation
+  ladders, border-opacity progressions, control tokens, pick-one depth) plus the
+  `mixed-elevation` / `no-single-elevation-system` checks, tuned hard against false
+  positives on ordinary card layouts.
+- **KB breadth 42 → 90 categories.** 48 genuinely distinct verticals (healthcare
+  sub-verticals, local services, lifestyle, more) across products / reflex-reject /
+  palettes / reasoning, with products↔reflex-reject kept strictly 1:1.
+- **Per-app DESIGN.md inheritance for monorepos.** `resolve_contract_for_app` merges a
+  root base with per-child-app overrides (dict-merge colors/typography/components, list
+  replace, child-wins scalars), confined within the repo root; `context.py --app` and
+  live-mode scope to the active app.
+- **`--deep` reference capture + Core Asset Protocol.** Scroll-journey screenshots +
+  real hover/focus state diffs of a page (`capture_deep.mjs`, every step timeout-bounded),
+  and `core_assets.py` harvests real brand assets (logo, icons, product shots) into a
+  frozen manifest — flagging a fallback rather than ever fabricating a logo.
+- **Interop + distribution + transparency.** `3d-hero.md` cites and hands off to the
+  `webgpu-threejs-tsl` specialist (atelier owns the reduced-motion / no-WebGPU / a11y
+  fallbacks); `build_dist.py` adds five harnesses (Gemini, Copilot, Kiro, OpenCode, Pi)
+  with layouts mirrored from impeccable; and README/HARNESSES document exactly what runs
+  on install (nothing networked, no postinstall, the collision hook is Claude-only).
+
 ### Changed
 
 - Relicensed to Apache-2.0 and made atelier fully self-contained — the knowledge base
