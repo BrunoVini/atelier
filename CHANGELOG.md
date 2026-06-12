@@ -351,6 +351,27 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   a11y fallbacks; `build_dist.py` adds more target environments (Gemini, Copilot, Kiro,
   OpenCode, Pi); and the README/HARNESSES document exactly what runs on install — nothing
   networked, no postinstall, the collision hook is Claude-Code-only.
+- **The finish-line hook now runs the whole gate.** The Stop hook that blocks "done"
+  while generated HTML has a defect now runs the full `qa.py` battery (layout sweep +
+  reveal + chart legibility + important anti-slop + accessibility) instead of the layout
+  sweep alone — so the harness-enforced definition of done is the complete one. A checker
+  that merely errors never blocks, and the time budget stays under the hook's limit.
+- **Static accessibility audit (`a11y_check.py`).** Missing `alt`, unlabeled form
+  controls, and unnamed icon-only buttons/links gate the QA verdict and the finish-line
+  hook; missing landmarks, no/duplicate `<h1>`, and positive `tabindex` are advisory.
+  Tuned to not fire on valid patterns (decorative `alt=""`, `aria-hidden`, wrapped/`for`
+  labels, `aria-label`). Available as a config-toggleable `check` step too.
+- **Keyboard focus-order check (`focus_order.mjs`).** Walks the rendered tab sequence and
+  reports focusable-but-hidden elements, tab/visual order mismatches, positive tabindex,
+  and possible focus traps. Advisory by design — it never blocks, since the clearest
+  signal also matches fully-accessible idioms (a native control hidden behind a styled
+  label, a transform-hidden drawer).
+- **Rendered element-level contrast.** Beyond auditing the token palette, atelier now
+  measures the ACTUAL painted text/background pairs at their real size and grades each at
+  the correct WCAG level — catching low contrast the token-name pairing misses, while
+  only gating solid-on-solid pairs (text over a gradient/image is reported, never gated).
+  The QA gate and `check` now also enforce the contract's DARK-theme palette contrast,
+  not just the light one.
 
 ### Changed
 
