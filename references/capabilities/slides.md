@@ -33,21 +33,20 @@ These are not polish; each is a real, judge-visible defect:
   you use and inline them as `@font-face` so *no* slide ever degrades, online or
   off. (See "Fonts & true offline use" below; for a judged deck, treat inlining
   as the default, not the exception.)
-- **Compose to the full slide — no bottom-of-slide voids.** Every slide fills its
-  frame intentionally: balance the type, anchor the baseline grid, let content
-  reach the lower third. A statement slide breathes *by design* (one line, vast
-  *centered* space), never by abandonment — a half-used canvas with a dead lower
-  band reads as unfinished, not minimal. The specific recurring defect: a
-  chart/content block that ends mid-slide leaving a ~150–250px empty horizontal
-  band between it and the footer. It is judged repeatedly and it is the easiest
-  point to lose. Kill it on a DATA slide by sizing the chart to the available
-  height (a taller chart, a baseline-anchored axis), adding a one-line takeaway or
-  source/annotation in that lower band, or using a full-height two-column layout —
-  not by leaving the gap. **Self-check on every rendered slide:** look at the
-  bottom third — if it's an accidental empty strip above the footer (not a
-  deliberately centered, balanced field), the slide is unfinished; rebalance it.
-  Centered negative space is symmetric (top ≈ bottom); a void is one-sided (content
-  top, dead air bottom).
+- **Compose to the full slide — no one-sided voids ANYWHERE on the frame.** Every
+  slide fills its frame intentionally. A void is any sizable *one-sided* dead region
+  — not only a bottom band, but a hollow central stripe, an empty right (or left)
+  half, or an abandoned quadrant. The recurring defects, all judged: a chart that
+  ends mid-slide leaving dead air above the footer; a thesis line stranded at the
+  top with a vacant center; KPI chips clustered in one corner leaving the opposite
+  half empty. Fix by composing the WHOLE canvas: size content to the space (a taller
+  chart, a baseline-anchored axis), add a lower-band takeaway/source line, span a
+  full-height two-column layout, or distribute elements across the frame — not by
+  leaving the gap. A statement slide may breathe, but its negative space must be
+  **deliberately centered and symmetric** (top ≈ bottom AND left ≈ right), never a
+  one-sided field. **Self-check every rendered slide as a whole:** mentally quarter
+  it — if any quadrant or half is accidentally empty while the others carry weight,
+  it's unbalanced; rebalance before exporting.
 - **Number sections consistently and correctly.** If you run an eyebrow/section
   system, each section gets its own number and no number repeats across two
   different sections (don't ship two "03"s). Number all content sections or none
@@ -58,7 +57,16 @@ These are not polish; each is a real, judge-visible defect:
   recolor it in PowerPoint. A bar painted with a CSS gradient or rendered inside an
   `<svg>`/`<canvas>` bakes into the background image and can't be restyled. Same
   for KPI/accent blocks, rules, and solid panels: flat fills nativize, gradients
-  bake. Reserve gradients for genuinely un-translatable art.
+  bake. Reserve gradients for genuinely un-translatable art — and **keep that baked
+  layer minimal** (a small accent, not a full-slide raster): the more of the slide
+  that is native text + flat-fill shapes, the more of it the recipient can restyle,
+  which is what "editable PPTX" means. A deck whose every element nativizes (text +
+  flat charts + flat panels) is both pixel-faithful AND almost entirely editable.
+- **Match the type to the register.** A business/main-stage keynote wants a
+  confident, legible system (a strong grotesque, or a restrained transitional serif
+  paired with a clean sans) — *not* a high-contrast Didone/fashion display at large
+  sizes, which reads as a magazine cover, the wrong register. Pick the family for
+  the room, not for drama; let scale + weight contrast carry the impact.
 
 ## The narrative carries the deck — design serves the story
 
@@ -79,11 +87,19 @@ rules that decide whether a deck persuades:
   don't let a beautiful slide stall the argument. The closing slide states one clear
   ask. Keep any section-numbering/eyebrow system consistent and off-by-one-free
   (number all content sections or none — don't let the CTA read "07" of 8).
-- **Give the pivot its own beat; close once.** The turn the whole talk hinges on (the
-  reversal, the "but here's what changed", the surge→correction) earns a dedicated slide —
-  don't bury it in a chart caption, or the argument has no dramatic spine. And end on ONE
-  closing slide: two near-identical concluding slides (a "takeaways" then a near-duplicate
-  "summary") dilute the landing — fold them into a single decisive takeaway.
+- **Give the pivot its own beat — but a DISTINCT one, not a second copy of the chart.**
+  The turn the talk hinges on (the reversal, the surge→correction) earns emphasis, but the
+  pivot slide and the data slide must do *different* work: the pivot states the *interpretive
+  claim* ("It wasn't a collapse — it was a correction"), the chart supplies the *evidence*.
+  If a "turn" slide shows the same 28→19→22 numbers the very next chart slide plots, a judge
+  reads it as the same beat twice, not setup→payoff — collapse them or make the pivot a claim
+  the chart then proves. And close ONCE: two near-identical concluding slides dilute the
+  landing — one decisive takeaway.
+- **Plant a hook and pay it off.** A keynote that lands carries one figure or phrase from the
+  thesis through to the close (e.g. seed "the 22% that held" on the thesis beat, reference it
+  at the turn, and pay it off in the final takeaway "plan for 22%, not 4%"). A deck where every
+  slide is a fresh fact with no carried thread reads as a list, not an argument; the through-line
+  is what makes the ending feel earned.
 
 ## Export (optional, ask first)
 
