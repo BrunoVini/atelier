@@ -47,6 +47,16 @@ These are not polish; each is a real, judge-visible defect:
   one-sided field. **Self-check every rendered slide as a whole:** mentally quarter
   it — if any quadrant or half is accidentally empty while the others carry weight,
   it's unbalanced; rebalance before exporting.
+  **The #1 repeat offender is the top-loaded STATEMENT slide** (title, a pure-claim
+  "pivot", the closing takeaway): a big headline parked in the top third with a dead
+  bottom half. Two reliable fixes, pick one per slide: (a) **vertically center** the
+  headline block so the space above ≈ the space below (a one-line statement slide
+  sits at the optical middle, not the top); or (b) **anchor a bottom band** — a thin
+  rule + a one-line gloss + the page/section marker — so a top headline is balanced
+  by a bottom element. Operational test on the render: compare ink in the top half vs
+  the bottom half — if the top carries more than ~1.5× the bottom (or vice-versa) on a
+  slide that isn't deliberately diagonal, it's lopsided; recenter or add the bottom
+  band. Title and takeaway slides are judged as hard as data slides — don't top-load them.
 - **Number sections consistently and correctly.** If you run an eyebrow/section
   system, each section gets its own number and no number repeats across two
   different sections (don't ship two "03"s). Number all content sections or none
