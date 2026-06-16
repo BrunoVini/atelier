@@ -92,11 +92,15 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 A single-page data poster (→ PDF) is judged like a printed spread, on top of the integrity rules
 above. Where a dashboard is a screen, a poster is an object on a wall AND a close read:
 
-- **A commanding, print-editorial hero.** The poster's single biggest takeaway (the hero number /
-  headline) must read from across a room — set it large and confident in a print-magazine voice (a
-  strong editorial display serif, or a heavy grotesque used at real size), the loudest element on
-  the sheet by a wide margin. A timid hero that reads like a dashboard card is the most common way a
-  poster loses its type-craft dimension; the hero carries the room, the charts reward the approach.
+- **A commanding, print-editorial hero — loud in scale AND color.** The poster's single biggest
+  takeaway (the hero number / headline) must read from across a room — set it large and confident
+  in a print-magazine voice (a strong editorial display serif, or a heavy grotesque at real size),
+  the loudest element on the sheet by a wide margin. **Loudness is scale + chromatic punch, not size
+  alone:** a huge near-black hero gets out-punched by a smaller hero set in a bold signal/accent
+  colour, so carry the hero in the brand's accent (or maximal value contrast against the ground),
+  not quiet ink — it should be unmistakably the single most arresting element as a thumbnail. A
+  timid hero that reads like a dashboard card is the most common way a poster loses type-craft; the
+  hero carries the room, the charts reward the approach.
 - **Every panel earns its space — no sparse cards.** Poster density should be *uniform richness*:
   a single big stat or a lone circle marooned in a large empty card reads as unfinished next to
   dense neighbors. Give each panel enough — a supporting breakdown, an annotation, a caption, a
