@@ -114,6 +114,14 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Chart grid-scale truth (`data-viz-craft.md`, the §19d rule for charts): one `value→pixel`
   scale must drive the gridlines, the tick labels AND the data marks — a reference grid on a
   different scale is a fabricated reading even when the underlying numbers are correct.
+- Print-poster / infographic craft (`data-viz-craft.md` + `qa.py --kind print`): a single-page
+  data poster (→ PDF) is judged like a printed spread — a commanding hero loud in **scale AND
+  colour** (a near-black hero gets out-punched by a coloured one), **every panel earns its space**
+  (no sparse/marooned cards), a real **print-production** artifact (bleed + crop/trim marks +
+  embedded fonts), and **fully vector** (avoid the `box-shadow`/`filter`/`radial`/`conic`-gradient
+  decoration that Chromium rasterizes on print — verify 0 image XObjects, not vector type over
+  rasterized gradient bands). `qa.py --kind print` gates a fixed-size print artifact correctly
+  (skips the responsive-reflow + focus-order checks that don't apply to a poster).
 - Animations, explainers, and narrated video (MP4 · GIF) with motion best-practices,
   cinematic patterns, scene templates, and BGM; one-command 60fps export; scroll-driven
   motion (pin/scrub, horizontal hijack, scroll-reveal); and 3D / shader / WebGPU heroes

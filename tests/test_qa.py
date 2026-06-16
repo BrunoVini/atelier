@@ -125,6 +125,11 @@ def test_film_battery_skips_page_only_checks_and_requires_motion():
     page = _rendered_plan("page")
     assert {"responsive_check.mjs", "reveal_check.mjs", "chart_legibility.mjs"} <= set(page)
     assert "scan_motion.mjs" not in page
+    # a fixed-size print poster isn't responsive and has no focus order -> skip those,
+    # keep chart legibility + no-JS reveal (it's static)
+    pr = _rendered_plan("print")
+    assert "responsive_check.mjs" not in pr and "focus_order.mjs" not in pr
+    assert "chart_legibility.mjs" in pr and "reveal_check.mjs" in pr
 
 
 def test_motion_verdict_passes_css_and_canvas_films_fails_a_still():

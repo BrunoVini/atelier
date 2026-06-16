@@ -217,6 +217,11 @@ def _rendered_plan(kind):
     are page semantics). Page: the full responsive/chart/reveal battery."""
     if kind == "animation":
         return ["scan_motion.mjs", "chart_legibility.mjs"]
+    if kind == "print":
+        # A fixed-size print artifact (poster/infographic) is NOT a responsive page and
+        # has no interactive focus order — skip the reflow sweep + focus-order check; keep
+        # chart legibility + no-JS reveal (it's static). slop/contrast run outside this plan.
+        return ["chart_legibility.mjs", "reveal_check.mjs"]
     return ["responsive_check.mjs", "chart_legibility.mjs", "reveal_check.mjs", "focus_order.mjs"]
 
 

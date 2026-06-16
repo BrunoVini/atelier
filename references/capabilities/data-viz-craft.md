@@ -114,6 +114,14 @@ above. Where a dashboard is a screen, a poster is an object on a wall AND a clos
   font** (inline base64 woff2) so the PDF carries them. Keep charts as vector (HTML/CSS/inline-SVG,
   never a `<canvas>` bitmap) so the text stays selectable and the marks stay crisp. A poster a
   printer could run beats a screenshot-grade PDF on export fidelity.
+  **Keep the WHOLE artifact vector — not just the text/charts.** Headless Chromium *rasterizes*
+  certain decoration into image XObjects on print: `box-shadow`/`filter:`/`backdrop-filter` (soft
+  shadows, blurs), `radial-gradient`/`conic-gradient`, and gradients painted onto large full-bleed
+  bands. A poster that's vector type over rasterized gradient/shadow bands is NOT a fully-vector PDF
+  and loses to one that is. For a print poster prefer **flat fills or simple `linear-gradient`s**
+  (which Chromium keeps vector) for big bands, and drop soft shadows/blurs from the print artifact.
+  Verify: count image XObjects in the exported PDF — it should be **0** (or only genuine photos),
+  not a pile of rasterized gradient bands.
 
 ## Definition of done for a dashboard / data viz
 
