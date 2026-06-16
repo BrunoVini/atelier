@@ -87,6 +87,30 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 - `:focus-visible` on every control; `aria-label` text equivalents on each SVG chart
   ("rising from ~37k to 52.8k over 30 days"); `prefers-reduced-motion` honored.
 
+## Print posters & infographics (one-page, export-grade)
+
+A single-page data poster (→ PDF) is judged like a printed spread, on top of the integrity rules
+above. Where a dashboard is a screen, a poster is an object on a wall AND a close read:
+
+- **A commanding, print-editorial hero.** The poster's single biggest takeaway (the hero number /
+  headline) must read from across a room — set it large and confident in a print-magazine voice (a
+  strong editorial display serif, or a heavy grotesque used at real size), the loudest element on
+  the sheet by a wide margin. A timid hero that reads like a dashboard card is the most common way a
+  poster loses its type-craft dimension; the hero carries the room, the charts reward the approach.
+- **Every panel earns its space — no sparse cards.** Poster density should be *uniform richness*:
+  a single big stat or a lone circle marooned in a large empty card reads as unfinished next to
+  dense neighbors. Give each panel enough — a supporting breakdown, an annotation, a caption, a
+  derived figure, a small secondary chart — that it carries weight, or tighten its box. (This is the
+  deck no-void rule applied to a poster's grid: a one-sided void inside a panel is still a void.)
+  Keep a clear reading order (a numbered or visually-weighted path top→bottom) through the richness.
+- **Make it a real PRINT artifact, not a screen PDF at the trim size.** Export production-ready:
+  include a **bleed** (~3mm / ~12px past the trim on every edge, with full-bleed color reaching into
+  it) and **crop/trim marks** at the four corners (draw them in the HTML; size the page box to
+  trim+bleed via `export_pdf.mjs --width/--height` or the page's own `@page`), and **embed every
+  font** (inline base64 woff2) so the PDF carries them. Keep charts as vector (HTML/CSS/inline-SVG,
+  never a `<canvas>` bitmap) so the text stays selectable and the marks stay crisp. A poster a
+  printer could run beats a screenshot-grade PDF on export fidelity.
+
 ## Definition of done for a dashboard / data viz
 
 - [ ] Every funnel stage shows its drop (or none do); parts sum to the stated total

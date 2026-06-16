@@ -7,8 +7,12 @@ provide: the harness runs this, not the model, so a flagged failure can't be
 rationalized away and shipped.
 
 How it decides:
-  • finds *.html modified in the last RECENT_SECS under the session cwd and /tmp
-    (atelier scratch) — if none, this wasn't a visual task, so it no-ops;
+  • finds *.html modified SINCE THIS SESSION STARTED (and within RECENT_SECS) under
+    the session cwd and /tmp (atelier scratch) — if none, this wasn't a visual task,
+    so it no-ops. The session-start floor is the fix for cross-session /tmp leakage:
+    a SessionStart hook stamps a per-session marker (atelier-gate-start-<hash>), and
+    only HTML touched at or after that stamp is gated — so stale /tmp artifacts left
+    by a PRIOR session (which predate this session's start) are never picked up;
   • runs the FULL qa gate on each (python3 scripts/qa.py <file> --hook): the
     rendered sweep (responsive reflow + chart legibility + no-JS reveal, or real
     motion for a film) PLUS the anti-slop layer. qa.py owns its own no-browser
@@ -93,7 +97,7 @@ def is_own_scratch(p):
             or os.path.basename(p).startswith("atelier-nojs"))
 
 
-def recent_html(root, now):
+def recent_html(root, floor):
     out = []
     if not root or not os.path.isdir(root):
         return out
@@ -106,7 +110,7 @@ def recent_html(root, now):
             if is_own_scratch(p):
                 continue
             try:
-                if now - os.path.getmtime(p) <= RECENT_SECS:
+                if os.path.getmtime(p) >= floor:
                     out.append(p)
             except OSError:
                 pass
@@ -135,6 +139,59 @@ def counter_path(session):
     cdir = os.environ.get("ATELIER_GATE_COUNTER_DIR", "/tmp")
     h = hashlib.sha1(str(session).encode()).hexdigest()[:12]
     return os.path.join(cdir, f"atelier-gate-{h}")
+
+
+def session_start_path(session):
+    # Per-session "started at" marker, written by the SessionStart hook (see
+    # mark_session_start). Shares the counter dir + hashing so a test can isolate
+    # both with one env var. This is the anchor that stops the gate from picking
+    # up stale /tmp HTML left by an EARLIER session: only files touched at/after
+    # this stamp belong to the current session and are eligible to be gated.
+    cdir = os.environ.get("ATELIER_GATE_COUNTER_DIR", "/tmp")
+    h = hashlib.sha1(str(session).encode()).hexdigest()[:12]
+    return os.path.join(cdir, f"atelier-gate-start-{h}")
+
+
+def mark_session_start():
+    """SessionStart-hook entrypoint: stamp this session's start time, once.
+
+    Invoked as `atelier-collision-gate.py --mark-session-start`. We DON'T overwrite
+    an existing marker so resume/compact (which re-fire SessionStart with the SAME
+    session_id) keep the original anchor instead of advancing it and dropping HTML
+    generated earlier in the session.
+    """
+    data = read_stdin()
+    p = session_start_path(data.get("session_id", "nosession"))
+    if not os.path.exists(p):
+        try:
+            with open(p, "w") as f:
+                f.write(str(time.time()))
+        except OSError:
+            pass
+    sys.exit(0)
+
+
+def session_floor(session, now):
+    """Earliest mtime a file may have to count as 'this session's work'.
+
+    = max(session start, now - RECENT_SECS): a file must be both newer than the
+    session start (excludes prior-session /tmp leftovers) AND recently touched
+    (preserves the original 'this wasn't a visual task → no-op' intent). If no
+    marker exists (gate installed mid-session, or SessionStart didn't fire), we
+    anchor at `now` and persist it, so we never gate artifacts that predate this
+    stop — failing safe toward the no-leak behaviour.
+    """
+    sp = session_start_path(session)
+    try:
+        start = float(open(sp).read().strip())
+    except Exception:
+        start = now
+        try:
+            with open(sp, "w") as f:
+                f.write(str(start))
+        except OSError:
+            pass
+    return max(start, now - RECENT_SECS)
 
 
 def get_attempts(path):
@@ -172,7 +229,11 @@ def main():
         sys.exit(0)
 
     now = time.time()
-    targets = recent_html(cwd, now)
+    # Only gate files touched at/after the session start (and recently) — this is
+    # what keeps a PRIOR session's stale /tmp HTML (poster_probe.html, c.html, …)
+    # from leaking in and blocking an unrelated current session.
+    floor = session_floor(session, now)
+    targets = recent_html(cwd, floor)
     # atelier writes scratch/deliverables to /tmp — scan the conventional spots only
     # (top-level + atelier* dirs), never all of /tmp, and skip our own contact sheets.
     tmp_globs = (glob.glob(os.path.join(TMP_ROOT, "*.html"))
@@ -181,7 +242,7 @@ def main():
         if is_own_scratch(p):
             continue
         try:
-            if now - os.path.getmtime(p) <= RECENT_SECS:
+            if os.path.getmtime(p) >= floor:
                 targets.append(p)
         except OSError:
             pass
@@ -246,4 +307,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if "--mark-session-start" in sys.argv:
+        mark_session_start()
     main()
