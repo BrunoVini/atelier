@@ -80,6 +80,25 @@ def _a11y(html):
     )
 
 
+def _offline(html):
+    """Offline-safety gate for a self-contained deliverable (prototype/app). A runtime
+    network reference (a Google-Fonts <link>, a CDN <script src>, a remote @font-face /
+    image, a fetch/import to http) means the artifact reaches out on load: offline it fails
+    that request, logs a console error, and renders with the wrong type / a blank image —
+    a real violation of "boots offline by double-click", the prototype's #1 hard
+    requirement. Any external ref is `important` and GATES. Stdlib, never raises."""
+    try:
+        from check_offline import external_refs
+        refs = external_refs(html)
+    except Exception as e:
+        return CheckResult("offline-safe", "unknown", True, {}, f"(check_offline unavailable: {e})")
+    detail = "; ".join(f"{r['kind']}:{r['url']}" for r in refs) or "0 runtime network refs"
+    return CheckResult(
+        "offline-safe", "fail" if refs else "pass", True,
+        {"network_refs": len(refs)}, detail,
+    )
+
+
 def _motion_static(html):
     """Static motion-craft layer for an HTML artifact (stdlib, no browser). An
     `important` finding (SVG <text> pinned with textLength/lengthAdjust — kerning
@@ -196,18 +215,31 @@ def _run(cmd):
 
 
 def detect_kind_text(html):
-    """Classify an HTML artifact as a fixed-aspect timeline 'animation'/film or a
-    responsive 'page'. A film exposes atelier's recording handshake (__seek/__ready/
-    __recording) or declares it via <meta name="atelier:kind" content="animation|film">.
-    The page-oriented checks (responsive reflow, no-JS reveal) don't apply to a film —
-    the MP4 is the artifact and the timeline IS the behavior."""
+    """Classify an HTML artifact as a fixed-aspect timeline 'animation'/film, a clickable
+    device 'prototype' (app/iOS mockup), or a responsive 'page'. A film exposes atelier's
+    recording handshake (__seek/__ready/__recording) or declares it via
+    <meta name="atelier:kind" content="animation|film">; a prototype declares
+    content="prototype|app" or carries strong device-frame signals (a status bar / notch /
+    Dynamic Island AND a home indicator). The page-oriented checks (responsive reflow across
+    breakpoints, no-JS reveal) don't apply to either — a prototype is pinned to one device
+    width and is legitimately JS-driven, and a prototype must ALSO boot offline."""
     low = html.lower()
     if 'name="atelier:kind"' in low or "name='atelier:kind'" in low:
         if any(k in low for k in ('content="film"', "content='film'",
                                   'content="animation"', "content='animation'")):
             return "animation"
+        if any(k in low for k in ('content="prototype"', "content='prototype'",
+                                  'content="app"', "content='app'")):
+            return "prototype"
     if any(sig in html for sig in ("__seek", "__ready", "__recording")):
         return "animation"
+    # device-frame heuristic: a real app prototype shows a phone chrome. Require >=2 distinct
+    # device tells so an ordinary page (which may incidentally say "notch" once) isn't misread.
+    device_tells = ("dynamic-island", "dynamic island", "home-indicator", "home indicator",
+                    "status-bar", "status bar", "device-frame", "ios-frame", "iphone-frame",
+                    "the-notch", "home-bar", "home bar", ">notch<", "notch ")
+    if sum(1 for t in device_tells if t in low) >= 2:
+        return "prototype"
     return "page"
 
 
@@ -222,6 +254,13 @@ def _rendered_plan(kind):
         # has no interactive focus order — skip the reflow sweep + focus-order check; keep
         # chart legibility + no-JS reveal (it's static). slop/contrast run outside this plan.
         return ["chart_legibility.mjs", "reveal_check.mjs"]
+    if kind == "prototype":
+        # A clickable device prototype is pinned to one device width (skip the responsive
+        # reflow sweep) and is legitimately JS-driven (skip no-JS reveal — content rendered
+        # by the app's own state machine is correct, not a "hidden" failure). Keep
+        # decorative-aware chart legibility + the focus-order advisory; the offline-safety
+        # gate is added in _battery (it's the prototype's #1 hard requirement).
+        return ["chart_legibility.mjs", "focus_order.mjs"]
     return ["responsive_check.mjs", "chart_legibility.mjs", "reveal_check.mjs", "focus_order.mjs"]
 
 
@@ -368,6 +407,12 @@ def _battery(target, contract, widths, hook, kind=None, register=None):
         # with no alt, an unnamed icon control, an unlabeled input) gate the verdict
         # and the bound Stop hook — a page nobody can use should never read "done".
         results.append(_a11y(html))
+        # Offline-safety: a self-contained deliverable (clickable prototype / app mockup)
+        # must boot offline. Any runtime network reference gates here — it would white-screen
+        # or mis-render the artifact offline, the bar a prototype most easily fails. Scoped to
+        # the prototype kind so a hosted page may still legitimately use a CDN font.
+        if k == "prototype":
+            results.append(_offline(html))
         # Static motion-craft: an SVG <text> pinned to a pre-computed width with
         # textLength/lengthAdjust (kerning killed on display type) gates; a
         # loop whose keyframes don't close (snap on restart) is advisory. Runs in
@@ -434,7 +479,7 @@ if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if a]
     if not args:
         print("usage: qa.py <artifact.html|repo-dir> [--contract <repo|tokens.json>] "
-              "[--widths a,b,c] [--kind page|animation] [--register brand|product] [--hook] [--json]")
+              "[--widths a,b,c] [--kind page|animation|print|prototype] [--register brand|product] [--hook] [--json]")
         sys.exit(2)
     target = args[0]
     # All value-taking flags route through check.py's shared _flag_value so a flag
@@ -443,7 +488,7 @@ if __name__ == "__main__":
     from check import _flag_value, _MISSING
     contract = _flag_value(args, "--contract", None)
     widths = _flag_value(args, "--widths", DEFAULT_WIDTHS)
-    kind = _flag_value(args, "--kind", None)        # page|animation (else auto)
+    kind = _flag_value(args, "--kind", None)        # page|animation|print|prototype (else auto)
     register = _flag_value(args, "--register", None)  # overrides the contract's
     if _MISSING in (contract, widths, kind, register):
         sys.exit(2)

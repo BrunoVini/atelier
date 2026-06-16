@@ -42,13 +42,70 @@ indicator — you only manage the content region.
   - The `assets/frames/*.jsx` device frames are **authoring references** — translate
     them into the deliverable's actual runtime (vanilla JS or inlined), don't drag a
     CDN Babel along to run raw JSX.
-  - A Google-Fonts `<link>` is acceptable (the page still boots and degrades to a
-    fallback face offline); a runtime/framework dependency is not. Inline local
-    images as base64 data URLs.
+  - **Type must be self-contained too — NO runtime `<link>` to Google Fonts (or any
+    web-font host).** It is tempting to think a font link is harmless because the page
+    "still boots and degrades." It is not harmless for an OFFLINE deliverable: offline the
+    request fails, the browser logs a **console error**, and the screen renders in the
+    *wrong* typeface — the exact display face you art-directed is gone, so the finish you
+    shipped is not the finish that's seen. A blind judge that measures network attempts on
+    an offline load will count that failed fetch against the brief's #1 requirement (it did,
+    and it cost a head-to-head). So: either **inline the font** (`@font-face` with a base64
+    `woff2` `src`) for a true display face, OR use a **native system-font stack**
+    (`-apple-system, system-ui, "SF Pro", …`) — which on iOS *is* the real platform face and
+    reads perfectly native. Never a `<link rel=preconnect>`/`<link rel=stylesheet>` to a font
+    CDN. Inline local images as base64 data URLs.
+  - **Verify it mechanically, don't eyeball it:** run `python3 scripts/qa.py --kind prototype
+    <file>` — the `offline-safe` gate fails on ANY runtime network reference (font link, CDN
+    script, remote `@font-face`/image, `fetch`/`import` to http). Zero is the only passing
+    number. (A self-report of "fully offline" is not evidence — the t-battery proved generators
+    miss their own font link; the gate doesn't.)
+- **The frame must read as a held physical device, not a screen with rounded corners.**
+  Give the iPhone a real **black bezel with depth** (a thin outer band, a hint of edge
+  highlight, accurate ~44–52px corner radius, side/volume button nibs) sitting on a calm
+  **neutral studio backdrop** (a soft warm-grey/sand or a gentle vignette) — NOT the app's
+  own background colour bled out to the window edges. A frame floating on a flat colour void
+  reads as a mockup canvas; a bezel with depth on a neutral ground reads as a device you could
+  pick up, and a blind judge calls the difference explicitly. The status bar, Dynamic Island,
+  and home indicator must be present and correctly proportioned (use `assets/frames/ios.jsx`
+  geometry; don't hand-eyeball the island).
 - **Make it interactive** — wrap an app prototype in a small state manager (an
   `app` object / `render()` switch, or an `AppPhone` component) so taps actually
   navigate between screens, instead of a dead screenshot. Verify every tab/button
   does something — no dead controls.
+- **Surface the core action on the top-level screen, not only behind a drill-in.** A real
+  app lets you *do the main thing* from the home/list — a per-row quick-action button (Water,
+  Mark done, Add) right where the item lives — and reserves the detail screen for depth. A
+  prototype where the home is read-only and every action hides one tap deep reads thinner and
+  less real than one with inline actions, AND it leaves the home with fewer (and less generous)
+  tap targets. Inline the primary verb; it raises functional density, realism, and the count of
+  comfortable hit areas all at once.
+- **When state changes, propagate it richly and honestly — every field it truly touches.**
+  A one-badge flip ("Needs water" → "Watered") is the floor, not the finish. Tapping the primary
+  action should update *every* field that genuinely changed — next-due ("Today" → "in 7 days"),
+  last-done ("7 days ago" → "Just now"), a streak/count (+1), the action button's own label/state
+  ("Water now" → "Watered · log again") — and surface a brief confirmation. The richer the
+  truthful propagation, the more the prototype feels like a working app rather than a slideshow;
+  a blind judge that diffs the before/after screen rewards multi-field feedback over a single
+  badge. (Never fabricate a change that didn't happen — honesty still governs; see review.md.)
+- **Motion & delight are first-class — a prototype is felt in motion, not as stills.** The
+  difference between a prototype that feels *pleasant* (agradável) and one that feels flat is
+  almost entirely motion and micro-feedback, and it is the easiest quality to under-build because
+  a screenshot can't show it. Build it deliberately:
+  - **Fluid screen transitions.** Pushing to a detail should *animate* (a slide-in / shared-element
+    or a soft fade-scale), tab switches should cross-fade or slide — not hard-cut. Use real
+    **eased/spring curves** (`cubic-bezier(...)`, a spring), centralised as easing tokens, never the
+    browser's default linear/ease on everything.
+  - **Tactile press feedback.** Every tappable control responds on touch (`:active` scale-down ~0.96
+    + opacity, a ripple, or a highlight) so taps feel registered.
+  - **Toasts and state changes ease in and out** (rise + fade on a spring, auto-dismiss), they
+    don't pop. A well-built toast is a signature delight beat — make it land.
+  - **Considered colour & depth.** A cohesive palette with intentional accent, soft shadows/blur for
+    elevation, gentle gradients — warmth over flat grey. This is a real differentiator a judge sees
+    instantly.
+  - **Honor `prefers-reduced-motion`** — collapse transitions to instant/opacity-only. Considered
+    motion includes its off-switch.
+  These are not garnish; on the *finish* dimension they are most of the score. Build the motion
+  system as carefully as the layout.
 - **iOS tap targets ≥ 44×44px** (Apple HIG); Android ≥ 48dp. A 30px check button
   is a real ergonomics miss on a device prototype — size the hit area up even if the
   visual glyph is smaller. **And mind the fit-to-viewport scale:** if you shrink the
@@ -70,11 +127,30 @@ indicator — you only manage the content region.
 
 ## Verify before delivery
 
-Run a quick Playwright check (click the primary flows; screenshot):
+1. **Offline gate (mechanical, non-negotiable):**
+   ```bash
+   python3 scripts/qa.py --kind prototype file.html
+   ```
+   `offline-safe` must read `network_refs=0`. Any runtime network reference fails the gate —
+   inline it (base64 woff2 / data: image) or drop to a system-font stack.
 
-```bash
-npx playwright screenshot file:///abs/path.html out.png --viewport-size=1200,900
-```
+2. **Click-through (flows actually work):**
+   ```bash
+   npx playwright screenshot file:///abs/path.html out.png --viewport-size=1200,900
+   ```
+   Click the primary flows; confirm `pageerror`/`console.error` are 0, and re-load with the
+   network OFF (block all non-`file:`/`data:` requests) to confirm it boots — not just that it
+   *should*.
+
+3. **Capture the motion, not just the screens.** A still cannot show the thing a prototype is
+   judged on most — how it *feels* in motion. Record the signature beats so the craft is visible
+   to a reviewer (and to anyone judging from afar): grab a **rapid frame sequence across a tab
+   switch and a list→detail push** (e.g. screenshot every ~60ms for ~0.5s through the transition),
+   and a **toast rising and settling**. A flat hard-cut prototype and a fluidly-eased one look
+   identical in a single screenshot and completely different across a 6-frame strip — that strip is
+   the evidence. (Pair it with the structural motion facts: keyframes / eased-or-spring transitions
+   / reduced-motion honored — a prototype with `@keyframes`, spring easing, and tactile `:active`
+   states is doing real motion work that a rival of flat default-eased transitions is not.)
 
 To let the user **see and click** the prototype live, hand it to the preview
 server — see `capabilities/preview.md`.

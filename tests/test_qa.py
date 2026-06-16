@@ -132,6 +132,49 @@ def test_film_battery_skips_page_only_checks_and_requires_motion():
     assert "chart_legibility.mjs" in pr and "reveal_check.mjs" in pr
 
 
+def test_detect_kind_recognizes_a_device_prototype():
+    # t08 lesson: a clickable iPhone app prototype is pinned to a device width and is
+    # JS-driven + must boot offline — qa must treat it as a 'prototype', not a page.
+    from qa import detect_kind_text
+    meta = '<html><head><meta name="atelier:kind" content="prototype"></head></html>'
+    assert detect_kind_text(meta) == "prototype"
+    # device-frame heuristic: >=2 distinct device tells (status bar + home indicator + island)
+    framed = ('<div class="device-frame"><div class="status-bar">9:41</div>'
+              '<div class="dynamic-island"></div><div class="home-indicator"></div></div>')
+    assert detect_kind_text(framed) == "prototype"
+    # one incidental device word in an ordinary page must NOT trip it
+    page = "<html><body><main><h1>About the notch generation</h1><p>copy</p></main></body></html>"
+    assert detect_kind_text(page) == "page"
+
+
+def test_prototype_battery_skips_responsive_reveal_and_gates_offline():
+    # A prototype is fixed-width + JS-driven: skip the responsive sweep + no-JS reveal;
+    # keep chart legibility + the focus advisory. The offline-safety gate is the new lever.
+    from qa import _rendered_plan, _offline
+    proto = _rendered_plan("prototype")
+    assert "responsive_check.mjs" not in proto and "reveal_check.mjs" not in proto
+    assert "chart_legibility.mjs" in proto and "focus_order.mjs" in proto
+    # offline gate: a runtime font/CDN ref fails (gating); a self-contained file passes
+    bad = _offline('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=X">')
+    assert bad.status == "fail" and bad.gating is True and bad.counts["network_refs"] >= 1
+    good = _offline('<style>body{font-family:-apple-system,system-ui}</style>'
+                    '<svg xmlns="http://www.w3.org/2000/svg"></svg><script>const a=1;</script>')
+    assert good.status == "pass" and good.counts["network_refs"] == 0
+
+
+def test_prototype_with_runtime_fetch_makes_hook_fail(tmp_path):
+    # End-to-end: a prototype that reaches the network on load must BLOCK the Stop hook.
+    from qa import _battery, hook_exit_code
+    f = tmp_path / "proto.html"
+    f.write_text('<meta name="atelier:kind" content="prototype">'
+                 '<div class="status-bar">9:41</div><div class="home-indicator"></div>'
+                 '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">'
+                 '<main><h1>App</h1><button>Tap</button></main>', encoding="utf-8")
+    results = _battery(str(f), None, "390,768", hook=True)
+    assert any(r.name == "offline-safe" and r.status == "fail" for r in results)
+    assert hook_exit_code(results) == 1
+
+
 def test_motion_verdict_passes_css_and_canvas_films_fails_a_still():
     from qa import _motion_verdict
     # CSS/DOM motion present
