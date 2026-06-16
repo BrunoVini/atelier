@@ -97,6 +97,23 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Slides / decks / presentations on a real slide engine with speaker notes, exporting
   to vector PDF and editable PPTX (stdlib OOXML); inlined-font option for fully-offline
   decks.
+- **Native-element PPTX export** (`extract_deck.mjs` + `export_pptx.py`): a deck's flat
+  solid-fill rectangles — chart bars/segments/gridlines, KPI panels, rules — now export as
+  **native, restylable PowerPoint shapes** (`<p:sp>` rect/roundRect + solidFill, hidden from
+  the baked background), not flattened into the slide image. The recipient can recolour the
+  charts in PowerPoint; only genuinely un-translatable art (a gradient glow) bakes, so the
+  deck stays pixel-faithful AND nearly fully editable. (Drove by the t06 keynote head-to-head,
+  where a baked-chart export lost "editable PPTX" to a native-element exporter.)
+- Deck-craft gates (`slides.md`): inline every font (a system-serif fallback on a slide is a
+  defect); **match the type to the register** (a business keynote wants a confident grotesque /
+  restrained serif, not a fashion-Didone display); the pivot beat states the interpretive claim
+  and does distinct work from the evidence chart (not a re-plot); plant a hook on the thesis and
+  pay it off at a single close; consistent section numbering; and **whole-frame composition** —
+  a void is any one-sided dead region (central stripe, empty half, a top-loaded statement slide),
+  caught by a top-half-vs-bottom-half balance self-check.
+- Chart grid-scale truth (`data-viz-craft.md`, the §19d rule for charts): one `value→pixel`
+  scale must drive the gridlines, the tick labels AND the data marks — a reference grid on a
+  different scale is a fabricated reading even when the underlying numbers are correct.
 - Animations, explainers, and narrated video (MP4 · GIF) with motion best-practices,
   cinematic patterns, scene templates, and BGM; one-command 60fps export; scroll-driven
   motion (pin/scrub, horizontal hijack, scroll-reveal); and 3D / shader / WebGPU heroes
