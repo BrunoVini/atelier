@@ -325,6 +325,16 @@ A geometrically-incoherent diagram is a fabricated statistic in visual form: sco
 Functionality (dim 4) as a correctness P0 that caps the verdict (§4), not a style nit. (Builder
 side: `animation-pitfalls.md` §19d.)
 
+**Same discipline for UI motion — a screen transition can be present, eased, and still broken.**
+On a clickable prototype, do not score transitions from the easing curve or a still; watch the
+*rendered mid-transition frames*. Two failures cap the Functionality score the same way (and a
+single screenshot will never show them): a **cross-fade that double-exposes** (you see screen A
+through screen B at the midpoint because both opaque full-screens are ~50% opacity at once), and a
+**previous screen left painted behind a pushed detail** (the detail slid in but didn't occlude /
+the under-screen never went to a hidden terminal state). A transition that double-exposes reads as
+a bug to any user; flag it P0, not polish. (Builder side: `prototypes.md` → "A transition must be
+CONTAINED".)
+
 ## 3d. Verify the web fonts actually LOADED (not just linked)
 
 A `<link>` to a font is not proof the font rendered. A single typo in a Google Fonts

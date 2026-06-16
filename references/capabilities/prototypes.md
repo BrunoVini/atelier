@@ -95,6 +95,24 @@ indicator — you only manage the content region.
     or a soft fade-scale), tab switches should cross-fade or slide — not hard-cut. Use real
     **eased/spring curves** (`cubic-bezier(...)`, a spring), centralised as easing tokens, never the
     browser's default linear/ease on everything.
+  - **A transition must be CONTAINED — never double-expose two screens.** This is the single most
+    common way an animated router looks broken, and it is a *correctness* bug, not a taste one (a
+    transition can have perfect easing and still be visually wrong). Two failures to design out:
+    (1) **Ghosting on a cross-fade:** fading screen A's opacity 1→0 while B's goes 0→1 means at the
+    midpoint BOTH opaque full-screens are ~50% visible and you see one *through* the other. Don't
+    cross-fade two opaque full-screen views by opacity. Instead animate **one** view (the incoming
+    one slides/fades IN on top, fully opaque, at a higher `z-index`) while the other stays put
+    beneath, then hide the covered one. (2) **The previous screen lingering behind a pushed detail:**
+    when you push a detail in, give the detail an **opaque background that fully covers**, and drive
+    the underlying screen to a **terminal hidden state** (`visibility:hidden`/`display:none`) once
+    the push settles — don't leave it painted behind. Because exit animations need the leaving view
+    to stay rendered *while* it animates out, set its hidden end-state with `animation-fill-mode:both`
+    (so it holds the final `opacity:0`/off-screen frame) AND flip it to `display:none`/`hidden` on
+    `animationend` — base `.view{visibility:hidden;opacity:0}` competing with a running exit animation
+    is exactly what produces the flicker/overlap. **Verify on the rendered mid-transition frames**
+    (capture frames *during* the animation — see the verify step): at no instant should two different
+    screens both be visible. (This is §19d "construct it truthfully and verify on the render" applied
+    to UI motion: present is not the same as coherent.)
   - **Tactile press feedback.** Every tappable control responds on touch (`:active` scale-down ~0.96
     + opacity, a ripple, or a highlight) so taps feel registered.
   - **Toasts and state changes ease in and out** (rise + fade on a spring, auto-dismiss), they
