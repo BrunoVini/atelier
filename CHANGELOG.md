@@ -122,6 +122,28 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   decoration that Chromium rasterizes on print — verify 0 image XObjects, not vector type over
   rasterized gradient bands). `qa.py --kind print` gates a fixed-size print artifact correctly
   (skips the responsive-reflow + focus-order checks that don't apply to a poster).
+- Prototype craft + a binding offline gate (`prototypes.md`, `check_offline.py`, `qa.py --kind
+  prototype`): a clickable app prototype is judged first on **booting offline by double-click**, so
+  type must be **self-contained** (inline `woff2` or a native system-font stack) — a runtime
+  Google-Fonts `<link>` errors offline and drops your display face. The new `offline-safe` check
+  statically catches *any* runtime network reference (font link, CDN script, remote
+  `@font-face`/image, `fetch`/`import` to http — ignoring `data:` URIs, SVG namespaces, and plain
+  hyperlinks) and **blocks "done"** on a prototype; `qa.py --kind prototype` also skips the
+  responsive-reflow + no-JS-reveal checks that don't fit a fixed-width, JS-driven device app.
+- Prototype quality bars (`prototypes.md`): the device frame must read as a **held physical device**
+  on a neutral ground (not the app background bled to the window edge); **surface the core action
+  inline** on the home/list rather than burying it a tap deep; propagate a state change across
+  **every field it truly touches** (next-due, last-done, streak, the control's own state, plus a
+  confirmation), not one badge; and **motion & delight are first-class** — fluid eased/spring screen
+  transitions, tactile press feedback, a toast that eases in/out, considered colour, and
+  `prefers-reduced-motion` honored. A flat, un-animated prototype is unfinished, not minimal.
+- **A screen transition must be CONTAINED — never double-expose two screens** (`prototypes.md` +
+  reviewer check in `review.md`): a transition can have perfect easing and still be visually broken.
+  Don't opacity-crossfade two opaque full-screens (you see one *through* the other at the midpoint);
+  animate one opaque view in on top, and drive the outgoing / under screen to a hidden terminal state
+  so it never lingers painted behind a pushed detail. Verify on captured **mid-transition frames** (no
+  two screens visible at once) — motion *presence* is not motion *correctness*. This is the §19d
+  "construct truthfully, verify on the render" discipline applied to UI motion.
 - Animations, explainers, and narrated video (MP4 · GIF) with motion best-practices,
   cinematic patterns, scene templates, and BGM; one-command 60fps export; scroll-driven
   motion (pin/scrub, horizontal hijack, scroll-reveal); and 3D / shader / WebGPU heroes
