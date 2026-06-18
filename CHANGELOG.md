@@ -150,7 +150,12 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   fed by the project's tokens.
 - SVG craft — icons, decorative shapes, diagrams, and animated SVG, plus illustration
   craft (atmospheric perspective, value discipline, mass balance, lead-line to the
-  focal point).
+  focal point). Hardened for hero illustrations: the near-field foreground anchor must
+  carry its own internal value range (lit plane / core shadow / bounce light / specular
+  edge) rather than read as one flat dark silhouette (a "value hole" that flattens depth);
+  defeat gradient banding (grain/dither, enough stops or a hue shift, uneven atmospheric
+  value steps); and commit to one specific, non-default concept before drawing — the
+  textbook centered arrangement reads as a generic trope.
 - `forms-craft` for settings / form / app-utility surfaces — restraint and ergonomics,
   one explicit-save mechanism per surface, honest save bars, country-aware validation,
   and mobile stepper labels.
