@@ -582,11 +582,18 @@ axis is a fabricated explanation, exactly like a mislabeled stat.
   axis points into the screen so a planar rotation is honest, or (b) use REAL 3D —
   `perspective: …` on the parent + `transform: rotateX/rotateY/rotateZ`, `transform-style:
   preserve-3d` — to turn about the in-plane axis truthfully.
-- **A side cutaway and a turn want different cameras.** Pick the view per beat: a side cutaway is
-  best for a *linear/vertical* relationship (pins rising to meet a shear line); switch to a
-  face-on or 3-D plug for the *rotation about the depth axis*. Forcing one flat view to do both is
-  what produces the seesaw. Cutting to an inset (e.g. a small face-on plug that turns like a dial)
-  is a clean, honest way to show the turn while the cutaway holds the mechanism.
+- **A side cutaway and a turn want different cameras — so SEQUENCE them, don't split-screen them.**
+  Pick the view per beat: a side cutaway is best for a *linear/vertical* relationship (pins rising
+  to meet a shear line); switch to a face-on or 3-D plug for the *rotation about the depth axis*.
+  Forcing one flat view to do both is what produces the seesaw. But the fix is to give each camera
+  its OWN beat and CUT between them — hold the cutaway while you teach the pins, then transition to
+  a face-on plug for the turn beat, then resolve. Do NOT run both views as a persistent
+  split-screen for the whole piece: two panels competing the entire time forces the viewer to track
+  two things at once, doubles the on-screen ink, and tanks restraint / legibility / motion-clarity
+  even when each panel is individually fine (a single calm correct view beats a busy correct one).
+  One dominant focus per beat (§19) is the rule; correctness is not a license to break it. If you
+  must show a second view simultaneously, make it a small, clearly-subordinate inset that only
+  appears during the turn beat — never a co-equal half-and-half.
 - **atelier ships complex motion — reach for 3D when the concept is 3D.** Don't flatten an
   inherently three-dimensional motion (a turning key, a rotating shaft, a flipping card, an opening
   hinge, an orbit seen edge-on) into a 2D approximation because 2D is easier. Build it with CSS 3D
