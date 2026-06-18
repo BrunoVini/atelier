@@ -642,3 +642,36 @@ than a smooth glide). Continuous motion must advance in small, even, eased incre
   sees a jump. Fix by adding interpolation density / easing, not by speeding the move up.
 - [ ] Continuous motion glides (per-frame eased interpolation, no `steps()` on a glide, no big
   position jumps between consecutive frames) — checked on a dense mid-motion frame strip?
+
+### §19g — mechanism fidelity: coupled parts move together, driving profiles must drive, engagement must seat
+§19d/§19e applied to how the parts of a MECHANISM relate while it moves. A diagram can have a
+correct camera and a correct rotation axis and still teach a false machine, because the parts don't
+interact the way the real thing does. Caught on the lock explainer: the plug rotated about the right
+axis, but (a) the inserted key did NOT turn with it, (b) the key's tooth heights didn't correspond
+to the pin lifts, and (c) the key entered below/beside the keyway instead of seating in it — so the
+entrance read as confusing and the "right key sets every pin" claim was visually unsupported.
+
+- **Coupled parts share one transform — they move TOGETHER.** Once two parts are mechanically
+  engaged (a key seated in a plug, a bolt threaded in a nut, a hand gripping a crank, a gear meshed
+  with another), they form one rigid body and must animate as a single group: the key turns WITH
+  the plug, not while the plug rotates and the key sits still (or vice versa). A part left behind by
+  the thing it's locked to is as wrong as a wrong rotation axis. Group engaged parts and transform
+  the group.
+- **A driving profile must actually produce the output it drives.** When an input acts through a
+  shaped profile — a key's bitting, a cam lobe, gear teeth, a screw thread — the profile's geometry
+  must map to the effect shown: each key cut lifts ITS pin stack to exactly the shear line (a deeper
+  cut → a taller key pin needed, etc.), a cam's rise/dwell matches the follower's motion, meshed
+  teeth advance in step. Decorative or random teeth that don't correspond to the alignment they
+  cause contradict the very concept (§19d, geometric truth applied to the actuator). If the picture
+  shows "this shape causes that result," the shape must be drawn so it really would.
+- **Engagement must SEAT in the right place, visibly.** The moving part must enter the actual
+  feature it rides in (the key into the plug's KEYWAY, at the correct height/position), and the
+  viewer must clearly see where that is — not the part floating below the pins or entering an
+  ambiguous "somewhere." An unclear or wrong entry point makes the whole mechanism read as confused
+  even when everything downstream is right. Label/seat the entry so "where it goes" is unmistakable.
+- **Verify the interaction on the rendered MOTION.** Watch: does the key turn with the plug? Does
+  each cut lift its own pin to the line? Does the key seat in the keyway? A still won't show a part
+  that fails to follow its partner — only the motion does.
+- [ ] Mechanism explainer: are engaged parts grouped so they move together (key turns with plug),
+  does the driving profile (bitting/cam/teeth) map to the effect it causes, and does the moving part
+  seat in the correct feature at a clear entry point — all verified on the rendered motion?
