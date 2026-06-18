@@ -217,6 +217,18 @@ A marquee interaction that's broken or faked undercuts the whole page on close r
 
 The hero's focal element depends on what's being sold, and "restrained" never means "sparse".
 
+- **Reserve the accent color — spreading it is the most common restraint leak.** Having ONE
+  accent hue is not enough; *where you spend it* is what reads as restraint. The strongest, most
+  institutional move is to reserve the accent for the single most important thing — the primary
+  CTA, and at most the one hero figure it's selling (the APY, the price) — and carry everything
+  else in tinted neutrals (ink, paper, hairlines). When the same accent also tints the
+  checkmarks, the section eyebrows, the icons, a stats band, the footer links, *and* the CTA, the
+  page reads busier and — worse — the CTA loses its pull, because the eye no longer has one place
+  the color sends it. A reviewer comparing two otherwise-equal pages will score the one that
+  spends its accent on one or two deliberate places as more restrained and more confident than the
+  one that sprinkles it everywhere. Spend color like money: on the decision you want the visitor
+  to make. (Trust/finance especially: a single reserved accent on the rate + the CTA out-reads a
+  page where the brand hue is everywhere.)
 - **When the product IS the hero (e-commerce, hardware, a watch/device), the product render
   is the focal moment — invest in detail.** A hero watch needs a dense minute track, real
   indices, subdials, a date aperture — gravitas. A near-empty dial reads cheap, not minimal.
