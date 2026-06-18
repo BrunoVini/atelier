@@ -229,6 +229,19 @@ The hero's focal element depends on what's being sold, and "restrained" never me
   one that sprinkles it everywhere. Spend color like money: on the decision you want the visitor
   to make. (Trust/finance especially: a single reserved accent on the rate + the CTA out-reads a
   page where the brand hue is everywhere.)
+- **Finish: don't let the hero headline crowd the hero card/figure.** When the hero pairs a
+  headline column with a figure/product card, leave a real gutter between them — at the primary
+  desktop width the last words of the headline rag must not run up against (or visually collide
+  with) the card edge. Check the rendered 1440 frame: if the rag and the card are kissing, widen
+  the gutter, shorten the measure, or rebalance the columns. A cramped hero is the first thing a
+  finish-focused reviewer docks even when everything else is clean.
+- **Trust/reassurance signals are a feature, not fine print — set them at CONFIDENT contrast.** A
+  security/insurance/compliance strip (FDIC-insured, encryption, SOC 2) is load-bearing on a
+  finance or security page; setting it small and in low-contrast grey undercuts the very
+  reassurance it exists to give (and reads as unfinished even when it technically passes AA). Give
+  trust cues legible size and near-body contrast, and make their icons crisp. Reserve the faint,
+  low-contrast treatment for genuinely incidental fine print (legal disclaimers), not for the
+  signals you want the visitor to believe.
 - **When the product IS the hero (e-commerce, hardware, a watch/device), the product render
   is the focal moment — invest in detail.** A hero watch needs a dense minute track, real
   indices, subdials, a date aperture — gravitas. A near-empty dial reads cheap, not minimal.
