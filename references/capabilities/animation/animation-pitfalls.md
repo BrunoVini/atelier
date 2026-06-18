@@ -669,9 +669,27 @@ entrance read as confusing and the "right key sets every pin" claim was visually
   viewer must clearly see where that is — not the part floating below the pins or entering an
   ambiguous "somewhere." An unclear or wrong entry point makes the whole mechanism read as confused
   even when everything downstream is right. Label/seat the entry so "where it goes" is unmistakable.
+- **Cause and effect are CONCURRENT — synchronize them, don't sequence them.** If an action drives
+  a change, the change must happen DURING the action, not after it finishes. The pins must rise
+  progressively AS the key slides in — each tooth lifting its pin the instant it passes beneath it —
+  not stay flat while the key enters and then pop up afterward. Animating "cause completes → effect
+  starts" when the two are physically simultaneous breaks scene coherence and the causal story the
+  explainer exists to tell. Drive the effect's progress from the cause's progress (tie pin heights
+  to the key's x-position / one shared timeline), so the viewer sees the key MAKING the pins move.
+- **Parts of one object must visually CONNECT — no floating gap.** Elements that are one body (a
+  key's bow + shaft + blade) or are mechanically attached must actually touch/overlap on screen,
+  with no sliver of background between them. A key head separated from its blade by a few pixels
+  reads as two floating objects, not one key; a keyway slot that stops short of the plug rim instead
+  of reaching the edge it opens onto reads as incoherent. Where two parts of one thing join, they
+  must share an edge (overlap slightly) — check the seams at render scale and close any hairline of
+  background showing through. (General craft, not only motion: anything that should be one connected
+  thing must LOOK connected; this is the spatial twin of "coupled parts move together".)
 - **Verify the interaction on the rendered MOTION.** Watch: does the key turn with the plug? Does
-  each cut lift its own pin to the line? Does the key seat in the keyway? A still won't show a part
-  that fails to follow its partner — only the motion does.
+  each cut lift its own pin to the line? Does the key seat in the keyway? Do the pins rise WHILE the
+  key slides (not after)? Are the key's parts visibly joined? A still won't show a part that fails
+  to follow its partner or a lift that lags its cause — only the motion does.
 - [ ] Mechanism explainer: are engaged parts grouped so they move together (key turns with plug),
-  does the driving profile (bitting/cam/teeth) map to the effect it causes, and does the moving part
-  seat in the correct feature at a clear entry point — all verified on the rendered motion?
+  does the driving profile (bitting/cam/teeth) map to the effect it causes, does the moving part
+  seat in the correct feature at a clear entry point, does each effect happen CONCURRENTLY with its
+  cause (pins rise as the key slides, not after), and are the parts of one object visually connected
+  with no floating gap — all verified on the rendered motion?
