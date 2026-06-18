@@ -252,6 +252,17 @@ The hero's focal element depends on what's being sold, and "restrained" never me
   trust cues legible size and near-body contrast, and make their icons crisp. Reserve the faint,
   low-contrast treatment for genuinely incidental fine print (legal disclaimers), not for the
   signals you want the visitor to believe.
+- **Spatial restraint: a dense page must BREATHE, or a sparse one out-restraints it.** Reserving
+  the accent and collapsing the palette is *chromatic* restraint; it is only half the job. A
+  data-dense page (an observability/analytics/devtool landing with charts, diagrams, code) competes
+  on "restraint" against sparser pages that win it almost for free through generous whitespace — so
+  density must be paid for with AIR. Give each dense panel real margin and internal padding; put ONE
+  clear focus per band (don't stack a chart + a readout + a sparkline + a diagram into one crowded
+  hero); widen section gutters; let the page have quiet zones between the instrument-heavy ones.
+  The goal is "calm instrument," not "cockpit at full alert": a reviewer should read the density as
+  *confident and organized*, never as *busy*. If a section has three competing focal elements,
+  demote two. Density earns industry-fit and finish; breathing room is what keeps it from costing
+  restraint — you can hold all three at once.
 - **Finish is a LEVEL above "clean" — earn the win, don't just avoid errors.** Two pages can both
   be error-free (consistent spacing, aligned, no banding) and a sharp reviewer will still rank one
   higher on finish. The gap is *considered detail* the merely-clean page lacks: surface depth on
