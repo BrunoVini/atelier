@@ -335,6 +335,16 @@ the under-screen never went to a hidden terminal state). A transition that doubl
 a bug to any user; flag it P0, not polish. (Builder side: `prototypes.md` → "A transition must be
 CONTAINED".)
 
+**Rotational / 3D motion must turn about the TRUE axis — and glide.** §3a4 applied to moving parts:
+when something rotates, flips, or turns (a key in a lock, a shaft, a hinge, a card flip), watch the
+*motion*, not a still, and confirm it pivots about its real physical axis. The tell: a part that
+should rotate about an axis pointing *into* the screen (a cylinder you turn end-on) animated with a
+flat 2D `rotate()` so it instead *tilts/seesaws* in a side view — physically false, and invisible
+in any single frame. Score a wrong-axis rotation as a correctness P0 under Functionality (dim 4),
+same as a fabricated stat. Separately, continuous motion that *strobes* between distant positions
+(coarse hops instead of a smooth eased glide) is a craft defect — call it out. (Builder side:
+`animation-pitfalls.md` §19e axis-truth-in-motion and §19f smooth interpolation.)
+
 ## 3d. Verify the web fonts actually LOADED (not just linked)
 
 A `<link>` to a font is not proof the font rendered. A single typo in a Google Fonts

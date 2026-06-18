@@ -23,7 +23,14 @@ animated SVG — bound to the `DESIGN.md` contract.
   contract colors (pairs with the data/charts standards in DESIGN.md §8).
 - **Animated SVG** — drive paths/strokes via the animation engines
   (`assets/engines/sprites.jsx`) — `stroke-dasharray` draw-on, transforms, morphs.
-  Honor `prefers-reduced-motion`.
+  Honor `prefers-reduced-motion`. For anything that ROTATES, FLIPS, or moves in 3D (a turning
+  key, a rotating shaft, an opening hinge, an orbit), rotate about the part's TRUE physical axis
+  and pick a view that shows it honestly — a flat 2D `rotate()` is correct only when that axis
+  points into the screen; otherwise use a face-on / three-quarter view or real CSS 3D
+  (`perspective` + `rotateX/rotateY` + `transform-style: preserve-3d`). And make continuous motion
+  GLIDE — per-frame eased interpolation, never a few discrete position jumps that strobe. See
+  animation-pitfalls §19e (axis truth in motion) and §19f (smooth interpolation); verify on the
+  rendered MOTION, not the source.
 
 ## Hard rule (refined) — photoreal NO, stylized vector illustration YES
 **Never attempt PHOTOREALISTIC people, faces, or product hero shots as SVG** — the

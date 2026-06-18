@@ -564,3 +564,52 @@ intersection point instead of the anchors.
   centered on its source, vector at its true origin, orbit on its body, angle at its vertex), and
   does the answer element satisfy every claimed constraint — verified on the rendered frame, not
   from the computed coordinates?
+
+### §19e — rotational & 3D motion must turn about the TRUE axis (geometric truth, in motion)
+§19d applied to *movement*: when a part rotates, it must rotate about its real physical axis, in a
+view where that rotation reads correctly. The classic failure — caught on a pin-tumbler-lock
+explainer where the plug (a cylinder you turn the key inside of) was animated with a flat 2D
+`rotate()`, so instead of turning about the key-insertion axis it *tilted/seesawed vertically* in
+the side cutaway. The pins-meet-the-shear-line part was right; the turn was physically false, and a
+still frame hides it — only the motion reveals the wrong axis. A mechanism turned about the wrong
+axis is a fabricated explanation, exactly like a mislabeled stat.
+
+- **Identify the real axis first, then pick the camera to serve it.** A 2D `rotate()` (rotation in
+  the screen plane, clock-like) is correct ONLY when the true rotation axis points *into the
+  screen*. If the real axis lies *in* the screen plane (left↔right or up↔down — e.g. a cylinder you
+  look at side-on but turn end-on), a 2D `rotate()` is WRONG: it produces a tilt/seesaw that
+  misrepresents the part. Either (a) move the camera to a face-on / three-quarter view where the
+  axis points into the screen so a planar rotation is honest, or (b) use REAL 3D —
+  `perspective: …` on the parent + `transform: rotateX/rotateY/rotateZ`, `transform-style:
+  preserve-3d` — to turn about the in-plane axis truthfully.
+- **A side cutaway and a turn want different cameras.** Pick the view per beat: a side cutaway is
+  best for a *linear/vertical* relationship (pins rising to meet a shear line); switch to a
+  face-on or 3-D plug for the *rotation about the depth axis*. Forcing one flat view to do both is
+  what produces the seesaw. Cutting to an inset (e.g. a small face-on plug that turns like a dial)
+  is a clean, honest way to show the turn while the cutaway holds the mechanism.
+- **atelier ships complex motion — reach for 3D when the concept is 3D.** Don't flatten an
+  inherently three-dimensional motion (a turning key, a rotating shaft, a flipping card, an opening
+  hinge, an orbit seen edge-on) into a 2D approximation because 2D is easier. Build it with CSS 3D
+  transforms (or true SVG perspective construction) and verify it reads correctly *in motion*.
+- **Verify on the rendered MOTION, not the source.** Watch the actual turn (or a mid-rotation frame
+  strip): does the part pivot about the axis the concept requires, or does it tilt the wrong way?
+- [ ] Any rotation/flip/turn: does it rotate about the TRUE physical axis (2D `rotate()` only when
+  that axis points into the screen; otherwise a face-on/3-4 view or real 3D `rotateX/Y` +
+  `preserve-3d`) — verified by watching the motion, not just an end still?
+
+### §19f — motion must interpolate SMOOTHLY; no visible stepping
+Movement that jumps between distant positions reads as broken craft even when every individual
+frame looks fine (caught on the same lock explainer: the pins rose in coarse, strobing hops rather
+than a smooth glide). Continuous motion must advance in small, even, eased increments.
+
+- **Drive continuous properties continuously.** Per-frame `requestAnimationFrame` interpolation, or
+  CSS transitions / keyframe animations with eased timing — not a handful of discrete position
+  jumps and not `steps()` timing on something meant to glide. If you tween in JS, interpolate every
+  frame (and ease), don't snap between a few waypoints.
+- **Stagger ≠ stutter.** Staggering parts (each pin starting slightly later) is good; but each
+  part's *own* travel must still be a smooth continuous glide, not 3–4 visible hops.
+- **Verify by scrubbing adjacent frames.** Sample a dense frame strip across the move: positions
+  should change by small, roughly-even steps. A large gap between consecutive frames = the eye
+  sees a jump. Fix by adding interpolation density / easing, not by speeding the move up.
+- [ ] Continuous motion glides (per-frame eased interpolation, no `steps()` on a glide, no big
+  position jumps between consecutive frames) — checked on a dense mid-motion frame strip?
