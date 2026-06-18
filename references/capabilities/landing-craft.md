@@ -252,6 +252,15 @@ The hero's focal element depends on what's being sold, and "restrained" never me
   trust cues legible size and near-body contrast, and make their icons crisp. Reserve the faint,
   low-contrast treatment for genuinely incidental fine print (legal disclaimers), not for the
   signals you want the visitor to believe.
+- **Finish is a LEVEL above "clean" — earn the win, don't just avoid errors.** Two pages can both
+  be error-free (consistent spacing, aligned, no banding) and a sharp reviewer will still rank one
+  higher on finish. The gap is *considered detail* the merely-clean page lacks: surface depth on
+  dark cards/bands (a whisper of gradient, an inner top hairline catching light, a 1px edge — a
+  flat dark block reads less finished than a modelled surface), optical corrections (true optical
+  centering, hung punctuation/bullets, figure baselines aligned), crisp custom iconography on a
+  shared grid, and visible interaction states (hover/active/focus that feel built, not default).
+  Pick two or three such moves and execute them precisely — that is what turns an 8 into a 9 when
+  you're already clean. "No mistakes" ties; a considered detail wins.
 - **When the product IS the hero (e-commerce, hardware, a watch/device), the product render
   is the focal moment — invest in detail.** A hero watch needs a dense minute track, real
   indices, subdials, a date aperture — gravitas. A near-empty dial reads cheap, not minimal.
