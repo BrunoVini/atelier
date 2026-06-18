@@ -50,6 +50,16 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   Expose the value in every cell and ship a scale legend.
 - **Never encode by color alone.** Deltas carry a sign + arrow glyph (colorblind-safe), not
   just red/green. Series get labels/patterns, not only hue.
+- **Chromatic restraint = engineered calm — a dense instrument UI should hold FEW hues.** On a
+  data-dense surface (a dashboard, a trace waterfall, an observability landing) the fastest way to
+  look *busy* — and to lose "restraint" against a sparser competitor — is to encode with a rainbow
+  of distinct hues. Prefer **tints/shades of one or two hues** (a mono or duotone ramp: e.g. one
+  cool series hue stepped light→dark, plus ink/neutral) for bars, spans, and chart series, and keep
+  the page's ONE reserved accent (the CTA / the alert-hot state) out of the routine data. A trace
+  waterfall in five different colors reads as decoration; the same waterfall in stepped tints of a
+  single hue reads as a precision instrument. Density is fine — *chromatic* density is what reads as
+  noise. When you've made everything legible and still feel busy, the fix is almost always "collapse
+  the palette," not "remove data."
 
 ## 3. Numbers & density
 
