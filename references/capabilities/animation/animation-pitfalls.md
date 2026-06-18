@@ -607,6 +607,15 @@ axis is a fabricated explanation, exactly like a mislabeled stat.
   and on-screen through the change. A continuous, anchored single picture is what makes a calm
   single-view explainer feel effortless — match that, then add correctness on top of it; do not
   trade continuity for correctness or correctness for continuity. You can have both.
+- **To COMMUNICATE an axial turn unambiguously, show the part END-ON (a dial), not in 3/4.** Being
+  transform-correct is not enough — the rotation must READ as axial to a viewer. A 3/4 / perspective
+  view of an axial rotation can be misread as a sideways tilt/seesaw (the whole tilted assembly
+  appears to rock) even when the underlying `rotateX/rotateY` is geometrically right — so it fails
+  to communicate the very thing it got correct. The unambiguous reading is an **end-on circular
+  face spinning like a dial** (the keyway slot sweeping around the plug center). Prefer that for the
+  turn beat. Converse trap for REVIEW: a flat 2-D plug that merely *tilts* in a side view can
+  superficially "look like turning" and fool a glance into scoring it correct — verify the axis from
+  the motion, don't trust the still.
 - **atelier ships complex motion — reach for 3D when the concept is 3D.** Don't flatten an
   inherently three-dimensional motion (a turning key, a rotating shaft, a flipping card, an opening
   hinge, an orbit seen edge-on) into a 2D approximation because 2D is easier. Build it with CSS 3D
