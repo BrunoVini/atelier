@@ -183,7 +183,16 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   for a product with no real customers — use verifiable facts); "subvert the genre default"
   (commit to an owned aesthetic over the first-reach cliché); a headline-length / no-dead-
   space hierarchy pass; and data-viz that renders its true values without JS (no chart left
-  blank by a reveal-class that never fires).
+  blank by a reveal-class that never fires). Restraint, hierarchy & finish discipline:
+  **reserve the accent color** for the few things that matter (the primary CTA, at most the one
+  hero figure) rather than spreading it across icons/eyebrows/bands — spreading it dilutes
+  restraint and weakens the CTA's pull; the **hero value-prop headline must command the fold**
+  (a refined serif still earns primacy through scale — don't let a hero figure-card out-shout it,
+  and don't let the headline rag crowd the card); **trust/reassurance signals** (insurance,
+  encryption, compliance) are load-bearing and set at confident contrast, not faint fine print;
+  and **finish is a level above "clean"** — two error-free pages still rank differently, so earn
+  the win with considered detail (surface depth/modelling on dark cards & bands, optical
+  corrections, coherent custom iconography, built interaction states).
 - Living style guide page (swatches, type scale, spacing, component inventory).
 - Realistic content with empty / loading / error states so mockups aren't lorem-ipsum.
 - Motion / interaction specs.
