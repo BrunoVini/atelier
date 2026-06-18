@@ -55,9 +55,23 @@ illustration" from "a few flat shapes":
   the value steps and *destroys* the recession. Keep the mid-ground quiet and value-distinct;
   let each plane be one clear tone lighter/hazier than the one in front. 3–4 crisply-stepped
   planes beat 6 muddy ones. Don't fight your own focal sun with a second heavy attractor.
-- **Give the foreground a near-field hero anchor.** The closest row of repeated elements (the
-  front solar panels, the nearest tree) should jump in size and carry the strongest detail +
-  a real specular highlight — a clear near-field entry point for the eye, then recession behind.
+- **Give the foreground a near-field hero anchor — and MODEL it, don't silhouette it.** The
+  closest row of repeated elements (the front solar panels, the nearest tree, the near rocks)
+  should jump in size and carry the strongest detail + a real specular highlight — a clear
+  near-field entry point for the eye, then recession behind. Critically, the foreground must
+  carry its OWN internal value range: a lit plane, a core shadow, a touch of reflected/bounce
+  light, and a crisp specular edge. A foreground rendered as ONE flat dark shape is not "depth"
+  — it's a *value hole* that reads as a hard cut-out pasted on the scene, and a blind judge will
+  dock depth for it every time. The nearest mass should be the richest-modeled region on the
+  canvas, not the emptiest.
+- **Kill gradient banding — it reads as cheap.** Big smooth sky/sea gradients band into visible
+  stripes on most displays, and banding torpedoes both depth and craft. Defeat it: overlay a
+  faint film-grain / dither (a low-opacity `feTurbulence` or a tiled noise), use enough stops
+  (or a subtle hue shift across the ramp, not just lightness), and avoid a single 2-stop ramp
+  spanning the whole sky. Render and ZOOM: if you can see stair-steps in the gradient, fix it
+  before shipping. Evenly-stepped, perfectly-parallel bands also flatten depth — break the
+  horizon with atmospheric haze and let the value steps be *unequal* (the air compresses tones
+  toward the distance), not a tidy equal-interval ladder.
 - **Balance mass around the off-center focal.** If the headline + the dense element field both
   sit left, the right goes empty and the frame tips. Earn the off-center focal by placing one
   mid-distance counterweight (a substation, a turbine cluster, a built element) on the lighter
@@ -87,6 +101,18 @@ illustration" from "a few flat shapes":
   the near→mid→far chain. They're not in tension — you can satisfy all at once. Before
   shipping a revision, re-run the WHOLE illustration checklist against the render, not just
   the thing you just changed; a fix that breaks two other dimensions is a net loss.
+- **Originality — commit to ONE specific, non-default concept.** The single biggest separator
+  between "polished brand illustration" and "competent stock" is a memorable, *specific* idea —
+  and it's the dimension a generic best-effort always ties on. Decide the one thing a viewer
+  remembers BEFORE you draw: an unexpected vantage (worm's-eye, from-the-water, behind a
+  near-field object), a committed time-of-day/weather moment (the green flash, fog burning off,
+  storm light), or a signature compositional spine (a single bold diagonal, a strong silhouette
+  read, a deliberate asymmetry). Then make that idea the loudest thing on the canvas. The
+  textbook arrangement — subject centered-ish, "layered dusk sky," symmetric calm — is exactly
+  the default a generic generator also lands on, so it reads as a trope and scores a tie, not a
+  win. If your concept could describe a hundred other images of the same subject, it isn't
+  specific enough yet. (This does NOT mean clutter or gimmick — one strong idea, cleanly
+  executed, beats five competing ones.)
 - **Self-QA an illustration by LOOKING.** Screenshot it (`scripts/screenshot.mjs`), open the
   PNG, and critique your own composition, depth, focal clarity, flat/empty areas, gradient
   banding, and whether each element reads. Iterate on the render — code-reading isn't enough.
