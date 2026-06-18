@@ -66,6 +66,20 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   constraint, verified on the RENDERED frame; computed coordinates are necessary but not
   sufficient. Reviews now check this explicitly and treat a geometrically-incoherent diagram as
   a correctness P0, not a style nit.
+- Motion truth & mechanism fidelity for explainer animation (`animation-pitfalls.md` §19e–§19g +
+  `review.md`): geometric truth extended to MOVEMENT. A rotation must turn about the true physical
+  axis — a flat 2-D `rotate()` is honest only when that axis points into the screen; otherwise use a
+  face-on/3-4 view or real CSS 3-D (`perspective` + `rotateX/rotateY` + `preserve-3d`) — and an
+  axial turn should be shown end-on (a spinning dial) so it *reads* as axial rather than a seesaw.
+  When a correct explanation needs two viewpoints, sequence them as beats and move the camera
+  continuously (keep the explanatory anchor on screen) — never a persistent split-screen and never a
+  hard cut that drops the anchor at the climax. Mechanism fidelity: mechanically-engaged parts share
+  one transform and move together; a driving profile (a key's bitting, a cam, gear teeth) must
+  actually produce the effect it's shown causing; engagement must seat in the real feature at a clear
+  entry point; an effect must animate concurrently with its cause (not after); and the parts of one
+  object must visually connect with no floating gap. Continuous motion must glide (per-frame eased
+  interpolation, no stepping). Reviewers verify these on the rendered motion and score a wrong-axis
+  or broken-coupling depiction as a correctness P0.
 - Render-grounded measurement (`scan_rendered.mjs`): measures the colors users actually
   *see*, weighted by on-screen painted area, and reconciles against the static scan —
   surfacing "declared but not painted" (dead palette) and "painted but not declared"
