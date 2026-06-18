@@ -594,6 +594,19 @@ axis is a fabricated explanation, exactly like a mislabeled stat.
   One dominant focus per beat (§19) is the rule; correctness is not a license to break it. If you
   must show a second view simultaneously, make it a small, clearly-subordinate inset that only
   appears during the turn beat — never a co-equal half-and-half.
+- **When you change camera, change it CONTINUOUSLY and keep the explanatory anchor on screen.** The
+  opposite failure to the split-screen: a HARD CUT from the teaching view to a detached new view at
+  the climax abandons the very reference the payoff depends on (cutting from the side cutaway to a
+  bare face-on circle drops the shear line exactly when "the gap is clear so it turns" needs the
+  shear line visible). The viewer loses the thread at the most important moment. Fixes, best first:
+  (a) **one continuous view that shows both the relationship and the rotation** — a 3/4 / slightly-
+  perspective cutaway where the pin stacks AND the plug's rotating end are both visible, so nothing
+  is ever cut away; (b) a **continuous camera MOVE** (a smooth 3-D orbit from side toward face) that
+  carries the same object — and the shear-line label — across the transition so the eye never loses
+  it; (c) only if neither is feasible, a soft transition that keeps the anchor (shear line) labelled
+  and on-screen through the change. A continuous, anchored single picture is what makes a calm
+  single-view explainer feel effortless — match that, then add correctness on top of it; do not
+  trade continuity for correctness or correctness for continuity. You can have both.
 - **atelier ships complex motion — reach for 3D when the concept is 3D.** Don't flatten an
   inherently three-dimensional motion (a turning key, a rotating shaft, a flipping card, an opening
   hinge, an orbit seen edge-on) into a 2D approximation because 2D is easier. Build it with CSS 3D
