@@ -192,7 +192,13 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   encryption, compliance) are load-bearing and set at confident contrast, not faint fine print;
   and **finish is a level above "clean"** — two error-free pages still rank differently, so earn
   the win with considered detail (surface depth/modelling on dark cards & bands, optical
-  corrections, coherent custom iconography, built interaction states).
+  corrections, coherent custom iconography, built interaction states). And restraint on a
+  data-dense page has two halves: **chromatic** (a dense instrument UI — dashboard, trace
+  waterfall, observability landing — should hold FEW hues; encode with tints/shades of one or two
+  hues, mono/duotone ramps, and keep the one reserved accent out of routine data) and **spatial**
+  (a dense page must BREATHE or a sparse one out-restraints it — real panel margins, ONE clear
+  focus per band, wide gutters, quiet zones). Density earns industry-fit and finish; collapsing the
+  palette and letting it breathe keep that density from costing restraint.
 - Living style guide page (swatches, type scale, spacing, component inventory).
 - Realistic content with empty / loading / error states so mockups aren't lorem-ipsum.
 - Motion / interaction specs.
