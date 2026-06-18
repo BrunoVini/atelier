@@ -229,6 +229,16 @@ The hero's focal element depends on what's being sold, and "restrained" never me
   one that sprinkles it everywhere. Spend color like money: on the decision you want the visitor
   to make. (Trust/finance especially: a single reserved accent on the rate + the CTA out-reads a
   page where the brand hue is everywhere.)
+- **The hero value-prop headline must COMMAND the fold — a refined face still has to earn
+  primacy through scale.** The headline is the single most dominant element above the fold; the
+  eye must land on it first, before any hero card/figure, CTA, or trust strip. A characterful
+  serif or a quiet palette is not an excuse for a timid headline — elegance and dominance are not
+  in tension. If a hero figure-card (a price, an APY, a product shot) competes with or out-shouts
+  the headline, the value prop loses primacy and the page reads less confident, even though the
+  card is "prettier." Earn dominance with real scale, a tight rag, and deference from everything
+  around it (the card sits clearly secondary). A heavy sans wins "hierarchy" by brute size; a
+  serif wins it by being set large and surrounded by enough air that nothing else competes — match
+  that command, don't cede it.
 - **Finish: don't let the hero headline crowd the hero card/figure.** When the hero pairs a
   headline column with a figure/product card, leave a real gutter between them — at the primary
   desktop width the last words of the headline rag must not run up against (or visually collide
