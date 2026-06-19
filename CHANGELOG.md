@@ -379,6 +379,31 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   it for dark-mode projects.
 - `contract.py --validate`: reports what parsed (roles, fonts, spacing) and fails loudly
   when a contract is too thin to enforce, instead of silently degrading lint to noise.
+- **Contract closure — components can't reference tokens the contract never defines.**
+  Validation now walks every component's `{token}` reference and fails the contract if any
+  doesn't resolve against a scale defined in the machine block (colors, typography, named
+  radii, shadows). A button styled by `{rounded.md}` while no `rounded` map exists is now a
+  caught error, not a contract that *looks* complete but dangles — so a second engineer or
+  agent can always resolve what a component points at.
+- **Published, recomputable contrast table.** `audit_contrast.py … --table` prints a measured
+  per-pair WCAG ratio table (Foreground · Background · Ratio · Required · pass/fail), per theme,
+  ready to paste into the palette/accessibility sections — so a `DESIGN.md` can *prove* its AA
+  claim with numbers a reader can recheck, instead of merely asserting it passes.
+- **A more rigorous default token vocabulary.** The DESIGN.md guidance now steers every
+  generated palette toward full role triads (a fill, its `on-` color, and a `-soft` tint, plus
+  a separate `-text` tone where a hue is used as colored text), named interaction-state tokens
+  (`primary-hover` / `-pressed` / `-disabled`), and the WCAG-driven semantic split for hard hues
+  — e.g. amber, which can't be both vivid *and* 4.5:1 as text, splits into a `warning-fill` for
+  fills and a darkened `warning-text` for labels, documented as a deliberate decision. Decorative
+  exemptions (hairlines, disabled text) are stated so the contrast table reads honestly.
+- **A fuller, more buildable component catalog.** Guidance + template now cover the full standard
+  control set — including form controls (checkbox / radio / select / toggle) — with each
+  interaction state as its own keyed, token-bound entry a linter can read, narrated in prose too.
+- **Turnkey portability in the contract.** The template ships a ready-to-paste dual-theme CSS
+  variable scaffold (`:root` + `[data-theme="dark"]`, every literal value plus type / shape /
+  shadow / motion vars and a `body` baseline), a responsive collapsing-strategy and touch-target
+  spec, and a "verify before you ship" self-audit checklist — so any coding agent can paste the
+  token system and build on-contract with no transcription step.
 - Drift ratchet (`check.py --ratchet` / `--update-baseline`): adopt the gate on a legacy
   repo by baselining current drift; the baseline auto-tightens as drift drops, so it can
   only shrink. (Count-based for now — a git-line-aware "only new lines must comply" version
