@@ -48,11 +48,27 @@ dark tokens are documentation, not contract. Omit the `dark` key for a light-onl
   `contract.py` normalizes each role to `{family, size, weight, line_height, tracking,
   features}` (only present keys are emitted; `features` is always a list, possibly empty).
   Surfaced as `contract["typography"]` only when a valid map is present.
+- `"rounded"` (alias `"radii"`): a NAMED radii map `{name: "Npx"}` (e.g.
+  `{"sm":"6px","md":"10px","lg":"14px"}`). Distinct from the legacy `spacing`/`radius`
+  LISTS (which the range engine slides): `rounded` is the named scale that component
+  `{rounded.md}` references resolve against. Surfaced as `contract["rounded"]`.
+- `"shadows"`: a NAMED elevation map `{name: "<box-shadow>"}`. Surfaced as
+  `contract["shadows"]`; the first value still seeds the single `elevation` token.
 - `"components"`: `{component: {...}}` — per-component minimum specs (e.g.
   `backgroundColor`, `textColor`, `typography`, `rounded`, `padding`, `height`,
-  `minHeight`, `gap`). Surfaced VERBATIM as `contract["components"]`; `{colors.x}` /
-  `{typography.x}` / `{rounded.x}` references are kept as strings — `contract.py` does
-  NOT resolve them (that's the consumer's job). Surfaced only when present.
+  `minHeight`, `gap`). Surfaced VERBATIM as `contract["components"]`; the `{group.name}`
+  reference strings are kept as-is (the consumer substitutes the literal value).
+
+  **Contract closure (validated).** When you declare `components`, every `{group.name}`
+  token they reference MUST resolve against a scale defined IN the block — `colors` (or
+  `dark`), `typography`, `rounded`/`radii`, `shadows`. `contract.py --validate` walks the
+  component specs and reports any unresolved ref in `component_ref_issues`; a non-empty
+  list FAILS the contract. So if a button is styled by `{rounded.md}`, define a `rounded`
+  map in the block (don't leave radii prose-only). For an enforceable state machine, give
+  each interaction state its own component entry (`button-primary-hover`,
+  `text-input-error`, `tide-chart-loading`) so a linter reads the whole catalog, not just
+  rest. This closes the loophole where a contract LOOKS complete (components present) but
+  references token groups it never defines — a real internal-consistency gap.
 
 ```json atelier-contract
 {
@@ -61,8 +77,11 @@ dark tokens are documentation, not contract. Omit the `dark` key for a light-onl
   "typography": {
     "display-xl": { "fontFamily": "Copernicus, serif", "fontSize": "64px",
                     "fontWeight": 400, "lineHeight": 1.05, "letterSpacing": "-1.5px",
-                    "features": ["ss01", "tnum"] }
+                    "features": ["ss01", "tnum"] },
+    "button":     { "fontFamily": "StyreneB, sans-serif", "fontSize": "14px", "fontWeight": 600 }
   },
+  "rounded": { "sm": "6px", "md": "10px", "lg": "14px" },
+  "shadows": { "sm": "0 1px 2px rgba(0,0,0,.06)", "overlay": "0 8px 24px rgba(0,0,0,.18)" },
   "components": {
     "button-primary": { "backgroundColor": "{colors.primary}", "textColor": "{colors.on-primary}",
                         "typography": "{typography.button}", "rounded": "{rounded.md}",
@@ -71,8 +90,9 @@ dark tokens are documentation, not contract. Omit the `dark` key for a light-onl
 }
 ```
 
-Both keys are absent by default; a block without them yields a contract with no
-`typography`/`components` keys (fully backward-compatible).
+All these keys are absent by default; a block without them yields a contract with no
+such keys (fully backward-compatible). If you declare `components` but no scale maps,
+validation flags the dangling refs.
 
 ## Importing a Google Stitch DESIGN.md
 

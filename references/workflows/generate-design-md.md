@@ -122,6 +122,19 @@ thin (e.g. the block was malformed and silently fell back to prose) — and
 `python3 scripts/audit_contrast.py <repo>` to confirm every enforced pair clears AA in
 **both** themes.
 
+**Close the contract — define every scale your components reference.** If you fill the
+optional `components` map, also define the named scales they point at IN the block:
+`rounded`/`radii` (a named radii map `{sm,md,lg,…}`), `shadows` (named elevation), plus
+the `typography` roles and color roles. `contract.py --validate` reports
+`component_ref_issues` for any `{rounded.md}` / `{colors.surface}` / `{typography.x}` a
+component references but the block never defines — and a non-empty list FAILS validation.
+A contract that declares components styled by `{rounded.md}` while defining no `rounded`
+map LOOKS complete but is internally inconsistent: the refs dangle and a second agent
+can't resolve them. Keep iterating until `component_ref_issues` is empty. For an
+enforceable state machine, give each interaction state its own component entry
+(`button-primary-hover`, `text-input-error`, `tide-chart-loading`) so the whole catalog —
+not just rest — is machine-readable.
+
 First check `scan_repo`'s `token_source`. **If it is set** (the repo already owns
 its tokens in a TS/JS theme module, a CSS custom-property theme, or a Tailwind
 config — `kind` + `path`), write a **thin, pointer contract**, not a second copy of
