@@ -143,6 +143,27 @@ def accept_variant(file, old, new, qa_target, journal_dir, session,
             # Tell the truth loudly instead of claiming a clean revert.
             reason = (f"{gate} AND REVERT FAILED ({rev.get('reason')}) — file {file} is "
                       f"STILL MODIFIED; restore manually from backup")
+
+        # Write journal entry on failure so the session is recoverable.
+        if _HAS_JOURNAL:
+            try:
+                # Extract the qa failure message from qa_results
+                qa_failure_msg = ""
+                if qa_results and isinstance(qa_results, list):
+                    for r in qa_results:
+                        if isinstance(r, dict) and r.get("status") == "fail":
+                            qa_failure_msg = r.get("detail", "qa check failed")
+                            break
+                _lj.write_entry(journal_dir, session, "accept", {
+                    "file": file, "journal_id": journal_id,
+                    "qa": qa_verdict, "ok": False,
+                    "old": (old or "")[:120],
+                    "new": (new or "")[:120],
+                    "reason": qa_failure_msg or reason,
+                })
+            except Exception:
+                pass   # journal write failure never blocks the accept
+
         return {"ok": False, "reverted": reverted, "qa": qa_verdict,
                 "qa_results": qa_results, "journal_id": journal_id,
                 "revert": rev, "reason": reason}
@@ -159,6 +180,9 @@ def accept_variant(file, old, new, qa_target, journal_dir, session,
             _lj.write_entry(journal_dir, session, "accept", {
                 "file": file, "journal_id": journal_id,
                 "qa": qa_verdict, "knob_values": knob_values,
+                "ok": True,
+                "old": (old or "")[:120],
+                "new": (new or "")[:120],
             })
         except Exception:
             pass   # journal write failure never blocks the accept
