@@ -306,6 +306,18 @@ The hero's focal element depends on what's being sold, and "restrained" never me
   the rendered light, a colour swap that re-renders the product) can be the originality lever a static
   page can't match — but it must be real and wired, never a dead control (see §4/no-dead-controls),
   and never decoration noise. Reserve it for the product's defining behavior, then build it.
+- **Express the concept in the BRAND's own material language — don't graft product-UI/dashboard
+  chrome onto a craft/brand surface.** A strong owned concept is the originality lever, but WHERE you
+  draw it has to match the register. On a craft/maker/brand page (a small roastery, a workshop, a
+  single beautiful object — explicitly "not a venture-backed app"), the reflex to manufacture
+  concept by bolting on app-UI furniture — a floating telemetry/"data" card, a dashboard graph
+  widget, a stat tile, a fake live readout — backfires: it reads as **SaaS-chrome**, betrays the
+  artisanal voice, and a critic dings it on restraint as "one decorative idea more than the page
+  needs." The honest concept lives in the brand's OWN material vocabulary: the bag, the bean, the
+  roast colour, the origin, the grain of the material, the maker's mark — not in a product-UI panel
+  imported from a different register. If the idea is "roast-to-order freshness," show it as a
+  date on the bag's own label or the bean's real roast colour, not as a line-chart card hovering in
+  the hero. Match the artefact to the register: brand concepts wear brand clothes.
 - **The hero artifact must match what's purchasable.** Showing a hero product (color/case/
   finish) that matches none of the items in the collection below is a credibility-killer —
   a real maison shows a flagship you can actually buy. Keep hero and catalog consistent.

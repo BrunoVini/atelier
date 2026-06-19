@@ -90,6 +90,19 @@ illustration" from "a few flat shapes":
   - This is the stylized-but-coherent counterpart to design-philosophy §3 (no photoreal faces): the
     bar isn't realism, it's unmistakable recognition. A clearly-stylized, clearly-a-fox mascot beats
     a "realistic" attempt AND beats an ambiguous cute blob.
+  - **A small REPEATED glyph must pass the naming test at its RENDERED size — and must not collide
+    with a universal symbol.** The coherence bar applies hardest to the little marks you stamp on
+    every card/feature (a per-item bean, leaf, drop, node), because they're small and you draw them
+    once and trust them. Two specific failures cost real finish points: (1) **a thin OUTLINE mark at
+    small size loses its defining detail and collapses to its bounding shape** — a stroked bean
+    outline at ~20px reads as a coin or a ring, not a bean; draw small marks as a SOLID filled
+    silhouette plus the ONE defining interior detail (the bean's centre crease, the leaf's midrib),
+    not as a hollow outline. (2) **a thin closed curve crossed by a line reads as the prohibition
+    sign ∅ ("no" / "forbidden")**, a slanted ellipse reads as a "no entry" disc — so a rotated
+    outline bean with a centre stroke can read as a *no* symbol, the exact opposite of an
+    appetising product. Before stamping a mark N times, render it ALONE at its real card size and
+    apply the naming test there: if it could be mistaken for ∅, ⊘, a coin, a clock, or any common
+    UI symbol, it fails — make it solid, give it its species detail, and re-check at size.
 
 - **Full-bleed presence — do NOT mat it.** A hero illustration fills its canvas edge-to-edge.
   Wrapping the art in a card/border/dark frame shrinks it and kills impact. Let it bleed.
