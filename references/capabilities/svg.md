@@ -59,6 +59,27 @@ illustration" from "a few flat shapes":
   dead-flat-front) pose so two planes are visible at once. Render and ZOOM: if it reads as a flat
   charcoal blob, add the cavity, the metal, and the light — that's the difference between winning
   and losing the "finish" of a product page.
+- **A stylized creature/character (or any real-world subject) must be COHERENT — instantly
+  recognizable as the specific thing it depicts.** Stylization (flat, geometric, cute, mascot) is
+  in scope and expected — but "stylized" is not a licence for "ambiguous." The failure mode: a
+  mascot that's a round blob head + two generic ears reads as "some animal?" — you have to *guess*
+  fox vs cat vs bear from one feature. That ambiguity is the illustration twin of the uncanny
+  valley, and it quietly cheapens the whole page. To be coherent:
+  - **Nail the SPECIES-DEFINING markers and proportions — the 2–3 cues a child uses to name it.**
+    A fox = a narrow *pointed* snout, large upright triangular ears, a russet coat with a white
+    cheek/chest blaze and dark socks, and a big bushy white-tipped tail. A cat = a rounder head,
+    smaller ears, whiskers, a short muzzle, a long thin tail. A round head with small ears and no
+    snout is neither. Draw the markers, not just a face on a circle.
+  - **Proportions are the #1 tell.** Head-to-body ratio, snout length, ear size/placement, limb
+    thickness — get these wrong and the creature reads "off" even when every part is present. Pull
+    real-world reference proportions to mind before drawing; exaggerate deliberately for charm
+    (bigger head/eyes for cuteness) but keep the *relationships* plausible.
+  - **The one-second naming test.** Screenshot it and ask, with NO surrounding context: "what
+    animal/object is this?" If you hesitate, or guess, or need the page's words to know — it isn't
+    coherent yet; fix the silhouette and the defining markers until it names itself instantly.
+  - This is the stylized-but-coherent counterpart to design-philosophy §3 (no photoreal faces): the
+    bar isn't realism, it's unmistakable recognition. A clearly-stylized, clearly-a-fox mascot beats
+    a "realistic" attempt AND beats an ambiguous cute blob.
 
 - **Full-bleed presence — do NOT mat it.** A hero illustration fills its canvas edge-to-edge.
   Wrapping the art in a card/border/dark frame shrinks it and kills impact. Let it bleed.
