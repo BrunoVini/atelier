@@ -128,6 +128,20 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Chart grid-scale truth (`data-viz-craft.md`, the §19d rule for charts): one `value→pixel`
   scale must drive the gridlines, the tick labels AND the data marks — a reference grid on a
   different scale is a fabricated reading even when the underlying numbers are correct.
+- Heatmap value-encoding truth (`data-viz-craft.md`): a cohort/heatmap cell's shade is a function
+  of its **value**, never its row or column position. Equal values get equal shades and a strictly
+  higher value is strictly darker (verified on the render) — mapped through one continuous ramp so
+  distinct values don't collapse into one band, with the light end kept at a legible tint. Banding
+  by position lets a higher number read lighter than a lower one — a silent lie the cell text hides.
+- Dashboard density & document skeleton (`data-viz-craft.md`): a true-zero axis is not licence for a
+  dead upper void — size the plot so the data fills it, or pair a commanding chart beside a secondary
+  panel so each screen reads as a packed instrument (no voids above/beside a panel, no cramming). And
+  a data dashboard is keyboard/screen-reader operated, so its structure reads as hierarchy: a real
+  `<main>` landmark, a visible `<h1>`, correctly-nested panel headings, and a skip-to-content link.
+- Derived-figure honesty (`data-viz-craft.md`): a computed roll-up (a YoY %, a peak, a CAGR) dropped
+  onto a chart as a bare badge reads as a new asserted number a reader can't tie back to the data —
+  show its derivation in the label, or leave it off; never give a derived figure the weight of a
+  measured one.
 - Print-poster / infographic craft (`data-viz-craft.md` + `qa.py --kind print`): a single-page
   data poster (→ PDF) is judged like a printed spread — a commanding hero loud in **scale AND
   colour** (a near-black hero gets out-punched by a coloured one), **every panel earns its space**
