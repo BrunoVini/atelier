@@ -120,7 +120,11 @@ enforce the dark tokens too — otherwise dark mode is prose-only and unchecked;
 `python3 scripts/contract.py --validate <repo>` — it fails loudly if the contract parsed too
 thin (e.g. the block was malformed and silently fell back to prose) — and
 `python3 scripts/audit_contrast.py <repo>` to confirm every enforced pair clears AA in
-**both** themes.
+**both** themes. Then **publish the numbers**: `python3 scripts/audit_contrast.py <repo>
+--table` prints a measured per-pair markdown ratio table (per theme) — paste it into §2 so
+the contract proves its AA claim instead of asserting it. For a hard hue that can't be both
+on-brand AND AA as text, split the role (`warning-fill` vs `warning-text`) and document the
+split (see design-md-spec → "Role taxonomy").
 
 **Close the contract — define every scale your components reference.** If you fill the
 optional `components` map, also define the named scales they point at IN the block:
