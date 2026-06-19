@@ -24,6 +24,18 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Color provenance: each measured color now carries the files it lives in and the
   dominant file's share, so the contract can state evidence ("primary `#2563eb` — 412
   uses across 9 files") instead of an opaque blob count.
+- Per-token source pointers in the machine contract: a measured `DESIGN.md` records a
+  `sources` map — every color role pinned to the exact `file:line` it lives at (light and
+  dark) — so the contract itself, not just the prose, is traceable and re-verifiable;
+  `contract.py --validate` reports how many roles carry a pointer. When a repo already owns
+  its tokens (a CSS-variable theme, a Tailwind config, a theme module), atelier writes a
+  thin **pointer** contract aimed at that source instead of a second copy that drifts.
+- Faithful measurement of the real values: when a palette is stored in a non-hex format
+  (HSL channels, `oklch`, …), the palette table shows the authoritative source value beside
+  the derived hex, so the read is provably re-derivable; computed scales (e.g. a radius
+  derived by `calc()` from a base token) are re-derived from the real base rather than
+  guessed; and framework-default scales (Tailwind's defaults, etc.) are named as defaults
+  rather than transcribed as if they were the project's own measured tokens.
 - Algorithmic token synthesis (`synthesize_tokens.py`): given one or more brand seed
   colors, derives a full WCAG-correct token set for greenfield work — on-colors picked by
   luminance so text always reads (AA-large on fills, AA-normal for body), muted/card by
