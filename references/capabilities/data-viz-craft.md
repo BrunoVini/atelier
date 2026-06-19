@@ -176,6 +176,88 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   A page that renders perfectly but has no `<main>`, no skip link, and a flat/hidden heading tree
   loses the hierarchy dimension to one that's structured — same pixels, weaker instrument.
 
+## 5. Dense data tables (inventories, ledgers, admin lists) — the craft layer
+
+A data table (a list of records: instances/orders/users/invoices, mixed column types) is judged on
+**density · legibility · sort/filter affordances · subtle layering · scannability** — and it is won
+or lost on the SAME "depth felt not seen" discipline a dashboard is, applied to a grid of rows. The
+integrity + density + tabular-numeral rules above all hold; these are the table-specific moves.
+
+- **Density is comfortable rows, not breathy ones AND not crammed ones — and it counts the WHOLE
+  cell.** The trap on a table is the opposite of a dashboard's: instead of sub-12px cramming, an
+  over-careful table goes *breathy* — 48–56px rows, oversized chips/bars, generous cell padding — and
+  loses "density" (info per screen) to a competitor that fits more legible rows in the same height.
+  Hold a tight-but-comfortable row rhythm (≈ 40–46px for a single-line row; a two-line cell — a
+  primary name over a smaller mono id — lets you carry more identity per row WITHOUT a taller row by
+  using the vertical space you already have). Size inline metrics (a CPU/usage bar, a chip) to the
+  *cell*, not larger than the text beside them. The win is "more legible rows per screen," so prefer a
+  two-line identity cell + slim inline gauges over fat single-line rows with big graphics.
+- **The selection / bulk-action bar is PART OF the table's calm surface — never a loud inverted
+  slab.** The single most common way a clean light table loses "subtle layering": when rows are
+  selected, the bulk-action bar is dropped in as a **saturated dark/inverted chrome bar** (a navy or
+  near-black slab on a light table, or vice-versa) — it becomes the loudest seam on the page and
+  breaks "depth felt not seen" on the exact dim the register cares about. Build the bulk bar from the
+  SAME tonal system as the rest of the chrome: a quiet surface lift (one elevation step, or a soft
+  tint of the page's ONE accent — `accent-soft`, not full-saturation), hairline separation, the
+  selection count + actions in normal ink. It should read as "the toolbar, now in selection mode,"
+  not as a foreign black ribbon. (Same rule, inverted, on a dark table: don't drop a glaring light
+  bar.) Reserve the saturated accent for the ONE primary action, the active-filter, and the selection
+  marker — not for the whole bar's background.
+- **Selected & hovered rows separate by a TONAL step + a structural marker, not by hue saturation.**
+  A selected row = a quiet tonal fill (a few % toward the accent or a neutral lift) PLUS a structural
+  cue (a 2–3px accent rule on the leading edge, the checkbox checked) — readable in grayscale, never a
+  loud saturated band. A hovered row = an even quieter tonal lift, distinct from selected. Header,
+  body, hover, selected, and (if used) a sticky header must form a legible elevation *order* by tone
+  alone — squint and the structure holds with no harsh lines. Zebra striping is OPTIONAL and, if used,
+  must be the quietest possible alternation (a 1–2% tint) — heavy zebra or full gridlines read as
+  chrome and lose layering; prefer hairline row separators or generous-enough rhythm that no rule is
+  needed. A sticky `<thead>` gets a one-step tonal distinction (slightly different ground + a bottom
+  hairline) so it reads as fixed without a heavy shadow.
+- **An active-filter chip must be HONEST against the rows actually drawn.** If you render a "pre-filter
+  snapshot" (all rows visible while showing a chip to demonstrate the affordance), the chip must not
+  *contradict* what's on screen: a `Status: Running ✕` chip sitting above a table that visibly
+  contains Stopped/Error/Provisioning rows reads as a lie (the filter plainly isn't applied) and costs
+  honesty AND the affordance's credibility. Pick ONE: **(a)** actually filter the rows so the visible
+  set matches the chip (best — the affordance is real); **(b)** choose a chip that's *true* of the
+  shown snapshot (e.g. a region/owner facet that all visible rows share, or a search term); or **(c)**
+  if you must show an unapplied filter, label it as staged ("Pending · Apply") so it doesn't claim to
+  be active. A chip that claims a filter is on while the data says it's off is the table version of a
+  dead control.
+- **Demonstrate the affordances LIVE in the static render — a still screenshot is the evidence.** A
+  table judged on sort/filter affordances is scored from a screenshot; closed dropdowns and idle rows
+  hide your best craft. In the delivered/captured state, show the machinery working: render with **one
+  custom filter dropdown OPEN** (its popover/listbox visible, the selected option ticked), the **sorted
+  column's caret + `aria-sort` visible**, **≥2 rows selected with the (calm) bulk bar showing**, and
+  **one row in its hover state** (force an `.is-hover`/`:hover`-equivalent class on a single row so the
+  hover treatment is provable in the still). A competitor who renders an open popover + a visible hover
+  row will out-score an identically-built table whose controls are all closed/idle — same code, weaker
+  evidence. (Don't fake it: the open menu must be the real component, the hover class must mirror the
+  real `:hover` rule.)
+- **Status reads by SHAPE + label, not hue alone — and the status column is a stable scan target.**
+  Status is the column an operator scans first. Encode it so it reads before color: a tinted-glyph
+  chip whose **glyph shape differs by state** (e.g. a filled dot = running, a square = stopped, a
+  triangle = error/alert, a ring/spinner = provisioning) + a text label, all left-aligned in a
+  fixed-width chip column so the eye tracks straight down. Same-shape dots distinguished only by hue
+  are slower to scan and fail colorblind-safety. Keep status hues low-chroma tints (not full pills) so
+  the column stays calm while still legible at a glance — the `layering` and `scannability` dims both
+  reward this.
+- **Right-align + tabular-nums every numeric column; left-align text; one alignment grid.** Currency,
+  counts, percentages, vCPU/mem all right-align with `font-variant-numeric: tabular-nums` so the ones,
+  tens, hundreds stack into a hard vertical edge the eye reads instantly; text identifiers left-align.
+  An inline delta (▲4.2% / ▼1.1% / —) carries a sign glyph (not color alone) and right-aligns with its
+  figure. A mixed-alignment numeric column (centered costs, ragged decimals) is the fastest way to lose
+  scannability even when every value is correct.
+
+### Definition of done for a dense data table
+- [ ] Real semantic `<table>` (`<thead>`/`<tbody>`/`<th scope="col">`) or a correct ARIA grid; sorted column exposes `aria-sort`; every control (search, filter triggers, sort buttons, checkboxes, pagination) has an accessible name; `:focus-visible` throughout
+- [ ] Comfortable-but-tight rows (≈40–46px; two-line identity cell to carry more per row, not taller rows); inline metrics sized to the cell, not oversized — more legible rows per screen than a breathy build
+- [ ] Bulk-action bar built from the table's own tonal system (quiet lift / accent-soft tint + hairline), NOT a saturated inverted slab; accent reserved for the one primary action + active-filter + selection marker
+- [ ] Selected row = tonal step + a structural edge marker (grayscale-readable), not a loud hue band; hover row a quieter distinct lift; header/body/hover/selected/sticky-head form a legible elevation order by tone (squint test passes, no harsh gridlines/heavy zebra)
+- [ ] Active-filter chip is honest against the drawn rows (rows actually filtered, OR a chip true of the snapshot, OR labeled staged) — never a chip claiming a filter the data contradicts
+- [ ] The static render demonstrates the affordances: one filter dropdown OPEN, sorted caret + aria-sort visible, ≥2 rows selected + calm bulk bar, one row in hover state
+- [ ] Status by glyph-SHAPE + label (not hue alone) in a stable fixed-width column; low-chroma tints
+- [ ] Numeric columns right-aligned with tabular-nums into a hard edge; text left-aligned; deltas carry sign glyphs; one alignment grid
+
 ## Print posters & infographics (one-page, export-grade)
 
 A single-page data poster (→ PDF) is judged like a printed spread, on top of the integrity rules
