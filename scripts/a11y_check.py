@@ -132,6 +132,23 @@ class _A11yWalk(HTMLParser):
             except ValueError:
                 pass
 
+        # aria-labelledby-self-reference (important) — an element whose
+        # aria-labelledby resolves ONLY to its own id has no real name (a
+        # recursive/empty reference). Common on custom controls built from
+        # <button role=switch>/<div role=checkbox>. Only flag when EVERY token
+        # is the element's own id (if any other token is present, that token
+        # may resolve to a real label, so it's not unambiguously broken).
+        lb = (am.get("aria-labelledby") or "").strip()
+        own_id = (am.get("id") or "").strip()
+        if lb and own_id:
+            tokens = [t for t in lb.split() if t]
+            if tokens and all(t == own_id for t in tokens):
+                self._add("important", "aria-labelledby-self-reference",
+                          f"<{tag} id=\"{own_id}\"> has aria-labelledby pointing only "
+                          "at its own id — a self-reference yields an empty accessible "
+                          "name; point aria-labelledby at the LABEL element's id (or use "
+                          "aria-label / a real <label for>) (WCAG 4.1.2)", line)
+
         # document-shape signals
         if tag == "body":
             self.has_body = True

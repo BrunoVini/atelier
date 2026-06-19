@@ -189,6 +189,20 @@ on whether each control reads as a tactile, intentional object. The repeatable m
   keep source order logical.
 - **Honest ARIA only.** A `role="switch"` needs `aria-checked` kept in sync; a tablist needs
   `aria-selected`; don't sprinkle roles that the JS doesn't maintain.
+- **A custom control built on `<button>`/`<div>` gets its accessible name from `aria-label` or
+  `aria-labelledby` → the LABEL's id — NOT from `<label for>` and NOT from its own id.** This is the
+  single most-missed control-a11y bug. `<label for="x">` only associates with native form controls
+  (`input`/`select`/`textarea`/`button`-as-form-submit); pointing `for` at a `<button role="switch">`
+  or a `<div role="checkbox">` binds **nothing** — the control has no name. And
+  `aria-labelledby="x"` on the element whose *own* id is `x` is a self-reference that yields an
+  empty/recursive name. Correct pattern: give the visible label its own id and point the control at
+  it — `<span id="sw-invite-label">Allow members to invite others</span>` +
+  `<button role="switch" aria-labelledby="sw-invite-label" aria-checked="true">`. (Or put the text
+  inside the button, or use `aria-label`.) The robust alternative is to build the switch/checkbox on
+  a **real `<input type="checkbox">`** (optionally `role="switch"`) bound by a genuine `<label for>` —
+  then the name, the checked state, and keyboard toggling all come for free. Either way, **verify the
+  computed accessible name is non-empty** (devtools Accessibility pane, or assert every control's name
+  in review) — a switch reading just "switch, on" to a screen reader is a failed control.
 - **A switch's on/off state must read by more than knob-position + hue.** A toggle whose only
   difference between on and off is "knob left, track gray" vs "knob right, track accent" fails the
   *state-not-by-color-alone* bar (color-blind/low-vision users, and a grayscale screenshot, can't
