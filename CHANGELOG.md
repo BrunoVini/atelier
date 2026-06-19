@@ -232,7 +232,17 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   re-check before repeating it.
 - `forms-craft` for settings / form / app-utility surfaces — restraint and ergonomics,
   one explicit-save mechanism per surface, honest save bars, country-aware validation,
-  and mobile stepper labels.
+  and mobile stepper labels. Plus **control-craft tactility**: form fields are *inset*
+  (a fill one tonal step recessed from their surface — the "type/choose here" affordance,
+  not a flat field flush with its card); controls are sized to content, not stretched
+  full-bleed; the selected member of a group reads by a step of *presence* (a lift, a fill,
+  a shape), not hue alone; one consistent control metric scale (height / radius / border /
+  padding) across every control. A switch's on/off — and every checked/selected state —
+  must read by more than color (an On/Off label, a knob glyph, a filled shape) so it
+  survives grayscale. Group a section's field groups into **one calm surface divided by
+  hairlines + spacing**, not a stack of separate floating cards (which fragments the
+  section and loses the sense of quiet structure). When you demonstrate states statically,
+  cover more than one control kind with real CSS state classes that mirror the live rules.
 - `data-viz-craft` — data integrity and encoding discipline (e.g. a categorical hue
   must not also signal delta direction; a date range must actually re-slice the data).
 - `landing-craft` — genre-matched focal moments, characterful type, and honestly
@@ -333,6 +343,13 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   anti-slop meta-commentary is its own tell).
 - WCAG contrast audit for every text/surface pairing in the locked palette, with
   nearest-passing shade suggestions and on-pair contrast scoring.
+- **Custom-control accessibility checks** in the static a11y audit — catches two subtle,
+  common ways a hand-built control (a styled toggle, checkbox, radio, or select) silently
+  ships with no usable state for assistive tech: an `aria-labelledby` that points only at
+  the control's own id (a self-reference that resolves to an *empty* accessible name), and a
+  checkable ARIA role (`switch` / `checkbox` / `radio`) with no `aria-checked` (the explicit
+  role overrides the native `:checked`, so a screen reader announces no on/off state). Both
+  flag as blocking findings in the `qa.py --hook` loop.
 - Overlap / collision hunting across screen sizes, on by default in any scan or review:
   rendered text-on-text and decoration-over-text detection, plus a static no-render
   risk lint for absolutely-positioned decorations and negative margins.
