@@ -303,6 +303,26 @@ The hero's focal element depends on what's being sold, and "restrained" never me
 - **Copy matches the register.** Luxury/editorial copy is *evocative*, not merely clear;
   developer copy is terse and concrete; fintech is precise and trustworthy. Write to the
   genre's voice, not a generic "benefit + adjective" line.
+- **An editorial portfolio / personal showcase is carried by ONE signature device — own it, then
+  let the work fill the rest.** A portfolio for a creative person (designer, photographer, type/motion
+  studio, illustrator, architect) is a *brand* surface where the bar is a memorable point of view, not
+  a tidy template. Originality and memorability there don't come from the genre skin (dark-grotesk
+  cover, warm-paper serif, three-up project grid are all first-reach looks a blind reviewer has seen a
+  hundred times) — they come from committing to a single **signature device that becomes the page's
+  identity** and that you couldn't paste onto anyone else's portfolio: a device sourced from *what this
+  person actually makes*. A type designer's page can BE a living type specimen (a colossal breathing
+  glyph, a weight ladder, an in-page foundry booklet); a photographer's can be one full-bleed image
+  doing all the work; a motion studio's, one looped kinetic mark. Pick the device the subject's own
+  craft hands you, execute it precisely, and reserve everything else (palette to a couple of inks,
+  motion to that one move) so the device reads as *the* idea, not one of five. Then — this is the half
+  that loses portfolios — **the WORK itself must be present, complete, and the most finished thing on
+  the page.** A signature hero with a blank/half-revealed project index below it is a portfolio with no
+  portfolio: it tanks finish AND memorability (the lasting impression becomes "the one with the empty
+  hole where the work should be"), and no concept survives it. Gate the reveal so every project is
+  visible by default (see §2 — never `opacity:0` on the bare selector; `reveal_check.mjs` must be
+  clean), and set the work index with the same care as the hero (numbered, aligned, tabular years,
+  real descriptions). A committed device + the work fully delivered beats a louder concept that doesn't
+  paint, every time.
 - **No dead markup or dead controls.** Remove abandoned/empty element groups (a commented
   "generated ticks" block with nothing in it), and never ship a control that does nothing
   (a "Menu" button with no handler). It reads as unfinished on close inspection.
