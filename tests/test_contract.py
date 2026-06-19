@@ -285,6 +285,18 @@ def test_template_has_agent_prompt_guide():
     assert "Agent Prompt Guide" in text and "Paste-ready prompts" in text
 
 
+def test_template_has_portability_scaffold_and_checklist():
+    # The durable portability gains: a ready-to-paste CSS-variable scaffold, a
+    # verify-before-ship checklist, a published contrast table slot, and touch targets.
+    import os
+    tmpl = os.path.join(os.path.dirname(__file__), "..", "templates", "DESIGN.md.template")
+    text = open(tmpl, encoding="utf-8").read()
+    assert "{{CSS_SCAFFOLD}}" in text and "[data-theme=\"dark\"]" in text
+    assert "Verify before you ship" in text
+    assert "{{CONTRAST_TABLE}}" in text and "audit_contrast.py" in text
+    assert "{{TOUCH_TARGETS}}" in text and "{{COLLAPSE_STRATEGY}}" in text
+
+
 def test_agent_prompt_guide_fills_with_no_dangling_placeholders():
     # The §13 cheat-sheet is copy-pasted by external agents — every {{placeholder}} it
     # uses must be a real one the generator fills (would have caught {{RADIUS}}).
@@ -297,6 +309,8 @@ def test_agent_prompt_guide_fills_with_no_dangling_placeholders():
         "{{COLOR_PRIMARY}}": "#2563eb", "{{COLOR_FG}}": "#111111", "{{COLOR_BG}}": "#ffffff",
         "{{PALETTE_REST}}": "accent #ea580c", "{{FONT_DISPLAY}}": "Sora", "{{FONT_BODY}}": "Inter",
         "{{SPACING_SCALE}}": "4 8 16 24px", "{{RADIUS_SCALE}}": "8px", "{{DEPTH_STRATEGY}}": "borders-only",
+        "{{ON_PRIMARY}}": "#ffffff", "{{DARK_BG}}": "#0b0e12", "{{DARK_FG}}": "#f7f7f8",
+        "{{CSS_SCAFFOLD}}": ":root { --color-bg: #ffffff; }",
     }
     for k, v in fills.items():
         guide = guide.replace(k, v)
