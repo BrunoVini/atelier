@@ -387,6 +387,18 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   risk lint for absolutely-positioned decorations and negative margins.
 - Design lint ("design ESLint") flagging off-contract colors/fonts with
   file · line · severity · fix (perceptual, so near-duplicates don't false-positive).
+  Now also catches **off-scale spacing and non-token border-radius** — when the contract
+  declares a spacing or radius scale, a hardcoded `padding`/`margin`/`gap` length or
+  `border-radius` that falls off the scale is flagged with the nearest scale step as the
+  fix (unit-normalized rem↔px; skipped entirely on repos that declare no scale, and
+  border-width hairlines are never mistaken for spacing) — so a drift audit covers
+  geometry, not just color and type.
+- Reporting a drift audit to a human: guidance to turn the deterministic findings into a
+  report a developer can act on immediately — a verdict + gate summary up top, findings
+  grouped by severity (off-brand identity drift first), every finding with verbatim
+  file:line + the exact value + the exact token fix, and a **"Verified clean — not drift"**
+  section that lists the values which look suspicious but are within tolerance of a token
+  (so no one "fixes" a false positive) — the precision a real checker has over eyeballing.
 - House-rule enforcement ("use a modal, never a flyout") — the repo's own rules are law
   and override atelier's defaults.
 - Critique / layout scoring with severity tiers, visual-regression diffing, and
