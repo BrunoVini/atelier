@@ -203,7 +203,11 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   not a flat silhouette/icon: directional light + speculars (a uniform flat fill is the #1 icon
   tell), a material-defining detail (machined metal ring / brushed yoke / stitch / mesh / glass),
   visible internal structure (the cavity, not just the outline), and a real contact shadow + a
-  three-quarter pose.
+  three-quarter pose. Crucially, the render must **draw the defining mechanism the copy is selling,
+  posed mid-claim** — a task lamp pitched on "holds any angle" shows its articulated jointed arm, a
+  watch its complication, a chair its recline — not the generic category silhouette every example
+  shares (a rigid pole reads as "a spotlight on a stick": coherent as a light, but swappable, and it
+  forfeits finish and originality to a render that draws the joint).
 - `forms-craft` for settings / form / app-utility surfaces — restraint and ergonomics,
   one explicit-save mechanism per surface, honest save bars, country-aware validation,
   and mobile stepper labels.
@@ -236,7 +240,14 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   luxury product hero specifically, **restraint IS the register**: less around the product is more
   — one beautiful render with room to breathe, the accent reserved to the single primary action,
   and only the sections the brief asks for out-premium a feature-packed page (extra bands, stat
-  strips, and a sprayed accent make an expensive product look cheap). And an **editorial portfolio /
+  strips, and a sprayed accent make an expensive product look cheap). But **quiet ≠ bare**: a premium
+  single-product page must **author its key feature/story surfaces, not leave them type-only** — each
+  named feature deserves a small on-concept authored render in the hero's own palette and light
+  language (a type-only feature block reads as *thin*, not restrained — restraint is removing noise,
+  not removing the craft that proves the product), and **one honest, wired interaction** that
+  demonstrates the core behavior (a dimmer that actually dims the rendered light, a colour swap that
+  re-renders the product) is an originality lever a static page can't match — provided it is real and
+  wired, never a dead control. And an **editorial portfolio /
   personal showcase** (designer, photographer, type/motion studio) is carried by **ONE owned signature
   device sourced from what the subject actually makes** — a living type specimen, one full-bleed image,
   a looped kinetic mark — not the genre skin (dark-grotesk cover, warm-paper serif, three-up grid are
