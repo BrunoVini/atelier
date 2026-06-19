@@ -8,18 +8,27 @@ import argparse, json, os, sys, uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import live_journal as lj
+
+try:
+    import live_journal as _lj
+except ImportError:
+    _lj = None
 
 
 def record_steer(journal_dir, session_id, message, page_url):
     if not message or not message.strip():
         return {"ok": False, "reason": "message must not be empty"}
     steer_id = str(uuid.uuid4())[:8]
-    entry = lj.write_entry(journal_dir, session_id, "steer", {
-        "id": steer_id,
-        "message": message.strip(),
-        "page_url": page_url or None,
-    })
+    entry = None
+    if _lj:
+        try:
+            entry = _lj.write_entry(journal_dir, session_id, "steer", {
+                "id": steer_id,
+                "message": message.strip(),
+                "page_url": page_url or None,
+            })
+        except Exception:
+            pass
     return {"ok": True, "id": steer_id, "entry": entry}
 
 
