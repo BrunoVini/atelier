@@ -220,7 +220,13 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Animations, explainers, and narrated video (MP4 · GIF) with motion best-practices,
   cinematic patterns, scene templates, and BGM; one-command 60fps export; scroll-driven
   motion (pin/scrub, horizontal hijack, scroll-reveal); and 3D / shader / WebGPU heroes
-  fed by the project's tokens.
+  fed by the project's tokens. A token-driven hero now honors the palette's **dominance
+  hierarchy** on the rendered field, not just the hex list: the dominant brand hue must
+  visually lead (own the larger painted area and luminance mass) while the secondary reads
+  as the energy/flow accent and any tertiary stays a literal spark — a field that lets the
+  accent go co-dominant reads off-brand even when every color is on-token, so the rule is
+  verified on the rendered frame (weight the dominant hue as the ground, mix the accent in
+  as a minority, never a 50/50 blend).
 - SVG craft — icons, decorative shapes, diagrams, and animated SVG, plus illustration
   craft (atmospheric perspective, value discipline, mass balance, lead-line to the
   focal point). Hardened for hero illustrations: the near-field foreground anchor must
