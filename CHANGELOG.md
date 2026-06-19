@@ -5,6 +5,22 @@ All notable changes to **atelier** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [next] — 2026-06-18
+
+### Live mode — full parity with impeccable + QA-gate advantage
+
+**New:**
+- **Interactive knobs** — `range`, `steps`, `toggle` controls in the picker bar drive CSS custom props / data attrs on the picked element. Knob values travel with the accept payload; `live_carbonize.py` bakes them into permanent CSS post-accept.
+- **Insert mode** — `atelier.insert({ file, anchor, position })` returns the source line for net-new content. Preview ephemerally; accept via the same QA-gated flow.
+- **Session journaling & recovery** — append-only JSONL journal per proxy run. `live_status.py` + `GET /__atelier/status` let the agent recover after proxy restart without user re-action.
+- **Steer** — floating text input + Web Speech API mic for page-level direction without picking an element. Instructions journaled + logged to proxy stdout.
+- **Drift-heal** — `live_config.py` scans `project_dir` for HTML files not covered by the inject; warns agent at boot.
+- **Prefetch** — client fires `/__atelier/prefetch` on first element selection per page so the agent can speculatively read source.
+- **Framework detection expanded** — SvelteKit, Astro, Nuxt, and plain HTML now set `can_inject: true` alongside Vite and Next.
+
+**Atelier advantage over impeccable retained:**
+- QA-gated accept with mandatory auto-revert — a QA-failing variant NEVER sticks in source, regardless of which new feature accepted it. No equivalent in impeccable.
+
 ## [Unreleased]
 
 First, not-yet-released build of atelier — a repo-aware design studio that **measures**
