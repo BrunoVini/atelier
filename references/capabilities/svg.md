@@ -44,6 +44,22 @@ and don't half-it — make it genuinely good (see "Illustration craft" below).
 A stylized scene is judged as *art*, not as a UI. The craft that separates "polished brand
 illustration" from "a few flat shapes":
 
+- **Authored PRODUCT renders (a headphone, a watch, a bottle, a sneaker) must read as a dimensional,
+  materially-specific OBJECT — not a flat silhouette/icon.** When the SVG is the product hero of a
+  store page, "believable and desirable" is the whole game, and a uniform-fill shape reads as an
+  icon, not a $329 thing. Four moves separate a product render from an icon: (1) **directional
+  light + speculars** — pick a light direction and give every rounded surface a gradient from lit
+  to shadowed plus a crisp specular hot-spot/edge (a uniform flat fill is the #1 "icon" tell); (2)
+  **a material-defining detail** — the one cue that says what it's MADE of: a machined metal ring /
+  brushed-aluminium yoke / leatherette stitch / mesh grille / glass. Brands sell on materials;
+  draw the material, don't just the shape; (3) **visible internal structure** — show the cavity,
+  not just the outline: an over-ear cup needs a recessed ear-well + a padded cushion with its own
+  depth; a watch needs indices/subdials; a bottle needs the cap thread. Hollows and layers read as
+  real; (4) **a real contact shadow / grounding** so it sits in space, plus a three-quarter (not
+  dead-flat-front) pose so two planes are visible at once. Render and ZOOM: if it reads as a flat
+  charcoal blob, add the cavity, the metal, and the light — that's the difference between winning
+  and losing the "finish" of a product page.
+
 - **Full-bleed presence — do NOT mat it.** A hero illustration fills its canvas edge-to-edge.
   Wrapping the art in a card/border/dark frame shrinks it and kills impact. Let it bleed.
 - **One off-center focal point + a lead-line.** Place the focal element on a rule-of-thirds
