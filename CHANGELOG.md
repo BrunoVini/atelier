@@ -169,7 +169,12 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   edge) rather than read as one flat dark silhouette (a "value hole" that flattens depth);
   defeat gradient banding (grain/dither, enough stops or a hue shift, uneven atmospheric
   value steps); and commit to one specific, non-default concept before drawing — the
-  textbook centered arrangement reads as a generic trope.
+  textbook centered arrangement reads as a generic trope. Authored PRODUCT renders (a store
+  page's headphone/watch/bottle hero) must read as a dimensional, materially-specific OBJECT,
+  not a flat silhouette/icon: directional light + speculars (a uniform flat fill is the #1 icon
+  tell), a material-defining detail (machined metal ring / brushed yoke / stitch / mesh / glass),
+  visible internal structure (the cavity, not just the outline), and a real contact shadow + a
+  three-quarter pose.
 - `forms-craft` for settings / form / app-utility surfaces — restraint and ergonomics,
   one explicit-save mechanism per surface, honest save bars, country-aware validation,
   and mobile stepper labels.
@@ -198,7 +203,11 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   hues, mono/duotone ramps, and keep the one reserved accent out of routine data) and **spatial**
   (a dense page must BREATHE or a sparse one out-restraints it — real panel margins, ONE clear
   focus per band, wide gutters, quiet zones). Density earns industry-fit and finish; collapsing the
-  palette and letting it breathe keep that density from costing restraint.
+  palette and letting it breathe keep that density from costing restraint. And for a premium /
+  luxury product hero specifically, **restraint IS the register**: less around the product is more
+  — one beautiful render with room to breathe, the accent reserved to the single primary action,
+  and only the sections the brief asks for out-premium a feature-packed page (extra bands, stat
+  strips, and a sprayed accent make an expensive product look cheap).
 - Living style guide page (swatches, type scale, spacing, component inventory).
 - Realistic content with empty / loading / error states so mockups aren't lorem-ipsum.
 - Motion / interaction specs.
