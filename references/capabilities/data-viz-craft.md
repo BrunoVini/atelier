@@ -48,6 +48,18 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   system. Use the neutral/series palette for categories; keep semantic colors for status.
 - **Cohort/heatmap = single-hue sequential scale** (light→dark = low→high), not a rainbow.
   Expose the value in every cell and ship a scale legend.
+  **A heatmap cell's shade is a function of its VALUE — never its row/column position.** The single
+  most common heatmap lie that still "looks like a heatmap": you band by column (M0 darkest, M1
+  lighter, M2 lighter, M3 lightest) or by row, so cells with the *same* value get *different* shades
+  and a higher value can read lighter than a lower one. That's a fabricated reading — the color no
+  longer encodes the number. Map shade from the value through the SAME scale for every cell: pick a
+  domain (e.g. the legend's 80→100% range), and `shade = ramp((value − min) / (max − min))` applied
+  identically across the whole grid. Then **equal values MUST get equal shades, and a strictly higher
+  value MUST be strictly darker** — verify this ON THE RENDER (two 100% cells look identical; an 83%
+  cell is visibly lighter than a 92% cell *regardless of which column they sit in*). If your domain is
+  narrow (e.g. 83–100), stretch the ramp across that domain so the steps are perceptible rather than
+  collapsing 90/91/92 into one shade — but the mapping stays value-driven, not positional. Not-yet-
+  elapsed / missing cells get a distinct non-color treatment (hatch / "—"), never a zero-value shade.
 - **Never encode by color alone.** Deltas carry a sign + arrow glyph (colorblind-safe), not
   just red/green. Series get labels/patterns, not only hue.
 - **Chromatic restraint = engineered calm — a dense instrument UI should hold FEW hues.** On a
@@ -96,6 +108,16 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   a polite `aria-live` region (a changing `aria-valuetext` alone isn't reliably read).
 - `:focus-visible` on every control; `aria-label` text equivalents on each SVG chart
   ("rising from ~37k to 52.8k over 30 days"); `prefers-reduced-motion` honored.
+- **Give the dashboard a real document skeleton — it's part of hierarchy, not just a11y polish.** An
+  analytics surface is keyboard-and-screen-reader operated by analysts; in this register a judge reads
+  the structure as hierarchy. Wrap the primary content in a `<main>` landmark (header/nav/footer
+  outside it), open with a real visible `<h1>` (the page/product title — not a hidden one), and nest
+  each panel's heading correctly (`<h2>` per region, `<h3>` per panel) so the heading outline mirrors
+  the visual reading order KPIs → trend → breakdowns. Ship a **skip-to-content link** as the first
+  focusable element. Don't hide the page's only structural heading: a `visually-hidden` `<h2>` over the
+  KPI row is fine as a label, but the document must still expose a coherent, *visible* heading spine.
+  A page that renders perfectly but has no `<main>`, no skip link, and a flat/hidden heading tree
+  loses the hierarchy dimension to one that's structured — same pixels, weaker instrument.
 
 ## Print posters & infographics (one-page, export-grade)
 
@@ -138,10 +160,11 @@ above. Where a dashboard is a screen, a poster is an object on a wall AND a clos
 - [ ] Every funnel stage shows its drop (or none do); parts sum to the stated total
 - [ ] Deltas are arithmetically correct and carry sign+arrow, not color alone
 - [ ] Each color has ONE consistent meaning; status colors aren't reused as categories
-- [ ] Cohort/heatmap is a single-hue sequential scale with values + legend
+- [ ] Cohort/heatmap is a single-hue sequential scale with values + legend; shade is a function of the cell VALUE (not its row/column) — equal values → equal shades, higher value → strictly darker (verified on the render)
 - [ ] Tabular numerals everywhere; no triplicated magnitudes
 - [ ] Categorical charts cap to a legible mark count (top-N + aggregated remainder / re-typed / scrollable); no sub-pixel unlabeled smear; rendered marks match the "top N" caption; each row shows its label + value (not tooltip-only)
 - [ ] Chart type fits each data question (`knowledge/charts.csv`)
 - [ ] Controls work; tooltip sits on the point with a crosshair + keyboard path
 - [ ] `:focus-visible` everywhere; SVG charts have aria text equivalents; AA contrast
+- [ ] Real document skeleton: `<main>` landmark, a visible `<h1>`, correct `<h2>`/`<h3>` panel nesting mirroring the reading order, and a skip-to-content link as the first focusable element
 - [ ] `slop_check.py` clean of `important`
