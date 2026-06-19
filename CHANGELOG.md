@@ -207,7 +207,13 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   posed mid-claim** — a task lamp pitched on "holds any angle" shows its articulated jointed arm, a
   watch its complication, a chair its recline — not the generic category silhouette every example
   shares (a rigid pole reads as "a spotlight on a stick": coherent as a light, but swappable, and it
-  forfeits finish and originality to a render that draws the joint).
+  forfeits finish and originality to a render that draws the joint). And a **small repeated glyph
+  must pass the one-second naming test at its rendered size — and must not collide with a universal
+  symbol**: a thin outline mark at ~20px collapses to its bounding shape (a stroked bean reads as a
+  coin/ring), and a thin closed curve crossed by a line reads as the prohibition sign ∅ ("no") — the
+  opposite of an appetising product. Draw the little marks you stamp on every card as a solid filled
+  silhouette plus the one defining interior detail, and render the mark alone at card size to
+  re-check before repeating it.
 - `forms-craft` for settings / form / app-utility surfaces — restraint and ergonomics,
   one explicit-save mechanism per surface, honest save bars, country-aware validation,
   and mobile stepper labels.
@@ -247,7 +253,12 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   not removing the craft that proves the product), and **one honest, wired interaction** that
   demonstrates the core behavior (a dimmer that actually dims the rendered light, a colour swap that
   re-renders the product) is an originality lever a static page can't match — provided it is real and
-  wired, never a dead control. And an **editorial portfolio /
+  wired, never a dead control. On a **craft / maker / brand** surface (a small roastery, a workshop,
+  a single object — not a venture-backed app), express the owned concept in the **brand's own
+  material language**, not grafted product-UI chrome: bolting on a floating telemetry/"data" card or
+  a dashboard graph widget to manufacture a concept reads as SaaS-chrome and costs restraint — show
+  roast-to-order freshness as a date on the bag's own label, the idea in the bag/bean/origin/maker's
+  mark, not an app-UI panel from another register. And an **editorial portfolio /
   personal showcase** (designer, photographer, type/motion studio) is carried by **ONE owned signature
   device sourced from what the subject actually makes** — a living type specimen, one full-bleed image,
   a looped kinetic mark — not the genre skin (dark-grotesk cover, warm-paper serif, three-up grid are
