@@ -156,6 +156,15 @@ on whether each control reads as a tactile, intentional object. The repeatable m
   (the workspace name) for account/data deletion; state exactly what will be lost.
 - **Design the empty, loading, disabled, and error states,** not just the happy filled form.
   A disabled Save needs a reason; a loading region needs a placeholder, not a layout jump.
+- **When you demonstrate states statically (a "states" reference strip), cover MORE THAN ONE
+  control kind, with REAL CSS state classes.** A static screenshot can't hover or focus, so a
+  states-judged surface earns its score by *showing* the interaction states — but a strip that
+  demos only an input (rest/hover/focus/active/disabled) is thinner than one that demos an input
+  AND a button (and ideally a toggle/checkbox), because states render differently per control. Show
+  at least two control kinds across the same state columns, and drive each demo with a real
+  `.is-hover` / `.is-focus` / `.is-active` / `.is-disabled` class that mirrors the live
+  `:hover`/`:focus-visible`/`:active`/`[disabled]` rules (not an inline-style painted fake) — so the
+  strip *proves* the live behavior. Keep it restrained; it's a reference, not a showcase.
 
 ## 4b. Checkout, address & multi-step wizards
 
@@ -189,6 +198,26 @@ on whether each control reads as a tactile, intentional object. The repeatable m
   keep source order logical.
 - **Honest ARIA only.** A `role="switch"` needs `aria-checked` kept in sync; a tablist needs
   `aria-selected`; don't sprinkle roles that the JS doesn't maintain.
+- **A checkable ARIA widget role OVERRIDES the native `:checked` — so it MUST carry
+  `aria-checked` (and keep it in sync).** This is a subtle, common bug: putting
+  `role="switch"` (or `role="checkbox"`/`role="radio"`) on a real `<input type="checkbox">` does
+  *not* let the native `:checked` satisfy the ARIA contract — the explicit role makes assistive
+  tech read the **ARIA** state, and with no `aria-checked` it announces the switch with no/incorrect
+  on-off state. If you put a checkable role on an element, you OWN its `aria-checked`: set it in the
+  markup AND update it in the same handler that flips the control (the same place you swap the
+  visible On/Off text). atelier flags a checkable-role element with no `aria-checked` mechanically
+  (`aria-checked-missing`, important). The clean alternative: if you want the native `:checked` to do
+  the work, DON'T add `role="switch"` — style a plain `<input type="checkbox">` (its native role
+  already carries checked state); add `role="switch"` only when you then also drive `aria-checked`.
+- **The keyboard model of a custom select/listbox must be REAL focus, not synthetic.** A judged and
+  real-world difference: a custom select that "works" by re-dispatching a synthesized
+  `KeyboardEvent` from the trigger to a menu — where the options have no `tabindex`, never receive
+  DOM focus, and there's no `aria-activedescendant` — does not wire the listbox/active-option model
+  that a screen reader follows. Build it the supported way: either move **real DOM focus** to the
+  active `role="option"` (`option.focus()`, options `tabindex="-1"`) on Arrow/Home/End, or keep
+  focus on the `role="combobox"` trigger and set **`aria-activedescendant`** to the active option's
+  id. Arrow/Home/End/Enter/Esc operate it; Esc returns focus to the trigger. Synthetic re-dispatch
+  is the weaker model and it shows.
 - **A custom control built on `<button>`/`<div>` gets its accessible name from `aria-label` or
   `aria-labelledby` → the LABEL's id — NOT from `<label for>` and NOT from its own id.** This is the
   single most-missed control-a11y bug. `<label for="x">` only associates with native form controls
