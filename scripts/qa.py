@@ -487,6 +487,12 @@ if __name__ == "__main__":
     # of an IndexError traceback (mirrors check.py's CLI; one helper, not two).
     from check import _flag_value, _MISSING
     contract = _flag_value(args, "--contract", None)
+    # Auto-discover contract: if no contract is passed and the target is an HTML file,
+    # look for a .tokens.json file with the same basename to unblock color declarations.
+    if not contract and target.endswith(".html") and os.path.isfile(target):
+        auto_contract = os.path.splitext(target)[0] + ".tokens.json"
+        if os.path.isfile(auto_contract):
+            contract = auto_contract
     widths = _flag_value(args, "--widths", DEFAULT_WIDTHS)
     kind = _flag_value(args, "--kind", None)        # page|animation|print|prototype (else auto)
     register = _flag_value(args, "--register", None)  # overrides the contract's

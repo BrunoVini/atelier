@@ -258,7 +258,14 @@ def main():
         # qa.py --hook IS the full deterministic definition of done: it renders the
         # responsive sweep + chart legibility + no-JS reveal (or motion for a film) AND
         # runs the anti-slop layer, with its OWN no-browser -> static overlap fallback.
-        code, log = run(["python3", qa, p, "--widths", WIDTHS, "--hook"])
+        cmd = ["python3", qa, p, "--widths", WIDTHS, "--hook"]
+        # Auto-discover contract: if a .tokens.json file exists with the same basename,
+        # pass it as the contract to unblock warm/owned color checks.
+        base = os.path.splitext(p)[0]
+        contract = f"{base}.tokens.json"
+        if os.path.isfile(contract):
+            cmd.extend(["--contract", contract])
+        code, log = run(cmd)
         if code == 1:
             # a real, gating failure — surface qa's evidence block as the reason.
             # Cap defensively: the normal path is bounded (qa caps its evidence), but
