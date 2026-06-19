@@ -290,6 +290,22 @@ The hero's focal element depends on what's being sold, and "restrained" never me
   data widgets around a $329 object, you've made it look like a $79 one. (This is the luxury-
   register sharpening of "reserve the accent" and "a dense page must breathe": here restraint is
   not a tax on the register — it IS the register.)
+- **Quiet ≠ bare: a premium product page must AUTHOR its key feature/story surfaces, not leave
+  them type-only.** "Premium reads as quiet" means *remove clutter and reserve the accent* — it does
+  NOT mean a feature/story block is just a heading and a paragraph on an empty field. On a
+  single-product page the story blocks ("a single billet," "the friction joint," "the optic") are
+  where the brand earns belief, and a competitor that authors a small, on-concept render for each —
+  the milled billet, a top-down view of the joint, the light pool — will out-finish AND out-originate
+  a page that argues the same points in prose alone, because the authored art is what reads as
+  *considered* and as *this brand*. Budget the artwork: the hero render is the headline act, but each
+  named feature deserves a small authored visual that shows the thing the copy claims (drawn in the
+  same palette/light language as the hero, so the page reads as one art-directed system). A
+  type-only feature section is the single most common way a quiet page reads as *thin* rather than
+  *restrained* — restraint is removing noise, not removing the craft that proves the product.
+  Relatedly, ONE honest interaction that demonstrates the core behavior (a dimmer that actually dims
+  the rendered light, a colour swap that re-renders the product) can be the originality lever a static
+  page can't match — but it must be real and wired, never a dead control (see §4/no-dead-controls),
+  and never decoration noise. Reserve it for the product's defining behavior, then build it.
 - **The hero artifact must match what's purchasable.** Showing a hero product (color/case/
   finish) that matches none of the items in the collection below is a credibility-killer —
   a real maison shows a flagship you can actually buy. Keep hero and catalog consistent.
