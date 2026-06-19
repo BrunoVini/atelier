@@ -277,6 +277,19 @@ The hero's focal element depends on what's being sold, and "restrained" never me
   indices, subdials, a date aperture — gravitas. A near-empty dial reads cheap, not minimal.
   A clean dev console still needs real rows and a live value. Don't ship a thin centerpiece
   and call it restraint; restraint is *removing clutter around* a richly-made focal object.
+- **Premium reads as QUIET — for a luxury/premium product hero, less around the product is MORE.**
+  The single most common way to make an expensive product look cheap is to surround it with stuff:
+  a second showcase band, a stat strip, a spec table, feature glyphs, and the accent color sprayed
+  across the price AND both CTAs AND the eyebrows AND the section bands. Density and a loud accent
+  read as *mass-market/conversion-grind*, not *premium*. The quiet page — one beautiful product
+  render with room to breathe, the accent reserved to the SINGLE primary action (Add to cart),
+  generous whitespace, a characterful editorial display voice, and only the few sections the brief
+  asks for — out-premiums the feature-packed one every time. A blind reviewer scores the hushed
+  page higher on both restraint AND "does this feel expensive." So: invest everything in the
+  product render and the type; then *remove*, don't add. If you've built two dark bands and three
+  data widgets around a $329 object, you've made it look like a $79 one. (This is the luxury-
+  register sharpening of "reserve the accent" and "a dense page must breathe": here restraint is
+  not a tax on the register — it IS the register.)
 - **The hero artifact must match what's purchasable.** Showing a hero product (color/case/
   finish) that matches none of the items in the collection below is a credibility-killer —
   a real maison shows a flagship you can actually buy. Keep hero and catalog consistent.
