@@ -19,6 +19,12 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   Compute them so they actually reconcile — don't eyeball widths.
 - **Deltas match arithmetic.** "vs prev 44.5k" with a "+18%" badge must be true against the
   shown current value. Wrong-direction or wrong-magnitude deltas destroy trust instantly.
+- **A DERIVED figure must read as derived — or stay off the chart.** A computed roll-up (a YoY %,
+  a peak, an average, a CAGR) is correct arithmetic but, dropped onto a chart as a bare badge, it
+  reads as a *new asserted number* a reviewer can't tie back to the data — borderline scope-creep on
+  a fixed-dataset brief. If you surface a derived figure, *show its derivation* in the label
+  ("+53.7% vs Jul" / "12-mo growth") so it's transparently a function of shown values, or leave it
+  off and let the trend speak. Never present a derived number with the same weight as a given KPI.
 - **Chart geometry matches the data.** Bar widths / line endpoints / arc angles must
   reflect the real values, and the text/aria summary must match what's drawn.
 - **One scale maps value→position — gridlines, axis labels, AND data marks all use it.**
