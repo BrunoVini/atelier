@@ -142,6 +142,22 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   onto a chart as a bare badge reads as a new asserted number a reader can't tie back to the data —
   show its derivation in the label, or leave it off; never give a derived figure the weight of a
   measured one.
+- Small-magnitude honesty + dense-but-readable (`data-viz-craft.md`): a small series riding on a
+  large shared scale (an error band against total traffic, a tiny composition slice) must never be
+  floored to a constant pixel height — a `max(value×scale, 1px)` clamp is both a lie (two different
+  values render at the same height) and illegible (a 1px hairline can't be read as data); draw it
+  strictly proportional, or move it to a linked secondary view on its own faithful scale and surface
+  a spike with an annotation. And "dense" is the amount of information per screen, not small type:
+  hold a comfortable floor (a hero metric that commands its card, readable data/table sizes, calm row
+  rhythm) and get density from more well-sized panels, not from miniaturizing the type.
+- The quietest sufficient cue wins subtle layering (`layering.md`): two interfaces can both be
+  one-depth-strategy-per-surface yet read very differently — one a calm instrument, one a grid of
+  outlined boxes. Depth should be *felt*, not *seen*: prefer a tonal surface step + spacing to a
+  hairline drawn around every panel (reserve the outline for where the tint alone won't separate),
+  and don't let a heavy graphic element — a saturated multi-colour donut, filled high-chroma status
+  pills, a boldly bordered widget — undo the calm; quiet a composition to a tonal stacked bar or
+  ranked list, status to a tinted glyph chip, and keep the one reserved accent for the single thing
+  that must shout. When a surface still reads busy after picking one strategy, remove a cue, not add.
 - Print-poster / infographic craft (`data-viz-craft.md` + `qa.py --kind print`): a single-page
   data poster (→ PDF) is judged like a printed spread — a commanding hero loud in **scale AND
   colour** (a near-black hero gets out-punched by a coloured one), **every panel earns its space**
