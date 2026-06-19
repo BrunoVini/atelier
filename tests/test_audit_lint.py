@@ -55,6 +55,70 @@ def test_audit_enforces_on_token_against_its_base():
     assert row["informational"] is False  # on-primary on primary IS enforced
 
 
+def _contract_with_scale(tmp_path):
+    (tmp_path / "DESIGN.md").write_text(
+        "```json atelier-contract\n"
+        '{"colors":{"background":"#0f1419","primary":"#3d8bfd"},'
+        '"fonts":["Inter"],'
+        '"spacing":["4px","8px","12px","16px","24px","32px","48px"],'
+        '"radius":["4px","8px","12px","999px"],"depth":"borders-only"}\n```\n')
+    return str(tmp_path)
+
+
+def test_lint_flags_off_scale_spacing(tmp_path):
+    # An off-scale padding (18px is not in the 4/8/12/16/24/32/48 scale) is drift;
+    # an on-scale padding (16px) is compliant and must NOT be flagged.
+    repo = _contract_with_scale(tmp_path)
+    (tmp_path / "a.css").write_text(
+        ".ok{padding:16px 24px}\n"          # both on-scale -> clean
+        ".bad{padding:18px var(--space-4)}\n"  # 18px off-scale -> drift
+        ".gap{gap:8px}\n")                   # on-scale -> clean
+    findings = [f for f in lint_repo(repo, repo) if f["kind"] == "spacing"]
+    vals = {(f["line"], f["value"]) for f in findings}
+    assert (2, "18px") in vals, findings
+    # exactly one off-scale spacing finding — 16px/24px/8px are all on-scale
+    assert len(findings) == 1, findings
+    f = findings[0]
+    assert f["severity"] == "important" and f["file"] == "a.css"
+    # the fix points at the nearest scale step (16px), actionable
+    assert "16px" in f["fix"]
+
+
+def test_lint_flags_off_scale_radius(tmp_path):
+    repo = _contract_with_scale(tmp_path)
+    (tmp_path / "b.css").write_text(
+        ".card{border-radius:12px}\n"   # on-scale -> clean
+        ".chip{border-radius:6px}\n"    # off-scale -> drift (nearest 8px)
+        ".pill{border-radius:999px}\n") # on-scale -> clean
+    findings = [f for f in lint_repo(repo, repo) if f["kind"] == "radius"]
+    assert len(findings) == 1, findings
+    f = findings[0]
+    assert f["line"] == 2 and f["value"] == "6px" and f["severity"] == "important"
+    assert f["file"] == "b.css"
+    assert "8px" in f["fix"]  # nearest contract radius
+
+
+def test_lint_scale_checks_skip_when_contract_has_no_scale(tmp_path):
+    # A contract with NO spacing/radius scale must not flag every length as drift
+    # (avoids false positives on repos that don't define a scale).
+    (tmp_path / "DESIGN.md").write_text(
+        "```json atelier-contract\n"
+        '{"colors":{"background":"#0f1419"},"fonts":["Inter"]}\n```\n')
+    (tmp_path / "c.css").write_text(".x{padding:18px;border-radius:6px}\n")
+    findings = lint_repo(str(tmp_path), str(tmp_path))
+    assert not [f for f in findings if f["kind"] in ("spacing", "radius")]
+
+
+def test_lint_scale_ignores_rem_when_scale_is_px(tmp_path):
+    # Unit-normalized: 1rem == 16px is on a px scale; 1.1rem (17.6px) is off.
+    repo = _contract_with_scale(tmp_path)
+    (tmp_path / "d.css").write_text(
+        ".a{padding:1rem}\n"      # 16px -> on-scale
+        ".b{padding:1.1rem}\n")   # 17.6px -> off-scale
+    findings = [f for f in lint_repo(repo, repo) if f["kind"] == "spacing"]
+    assert len(findings) == 1 and findings[0]["line"] == 2, findings
+
+
 def test_export_native_codegen():
     from export_native import swiftui, flutter, react_native
     cols, fonts = {"primary": "#2563eb"}, ["Sora", "Inter"]

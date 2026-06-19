@@ -18,10 +18,26 @@ from scan_repo import (
     _HEX, _RGB, _HSL, _hex_to_rgb, _hsl_to_rgb, _rgb_to_hex, _delta_e,
     _STYLE_EXT, _CODE_EXT, _SKIP_DIRS, _LEN, _FONT_FAMILY, _GENERIC_FONTS,
     _TW_COLOR_CLASS, _TW_COLORS, _SHADOW, _SHADOW_NULL, _TW_SHADOW,
+    _RADIUS,
     _OKLCH, _OKLAB, _LAB, _LCH, _oklch_to_rgb, _oklab_css_to_rgb, _lab_to_rgb, _lch_to_rgb,
 )
 
 DELTA_E = 8.0
+# A length within this many px of a scale step counts as on-scale (covers rounding
+# and rem<->px conversion noise); only a clearly off-grid value is flagged as drift.
+SCALE_TOL_PX = 0.5
+
+# Spacing properties for DRIFT detection. Unlike scan_repo._SPACING_PROP (built for
+# scale *extraction*, where over-matching is harmless), this must NOT fire on
+# `border-bottom`/`border-top`/etc. (those carry a 1px hairline WIDTH, not a spacing
+# step) — so the property is anchored at a `;`/`{`/start boundary and `border-*` is
+# excluded. We also drop bare `top/right/bottom/left/inset` here: as standalone
+# offsets on absolutely-positioned elements they're frequently intentional one-offs,
+# not spacing-scale steps, and flagging them is noisy. Spacing drift = the rhythm
+# props: padding / margin / gap.
+_SPACING_DRIFT_PROP = re.compile(
+    r"(?:^|[;{]|\s)((?:padding|margin|gap|row-gap|column-gap|grid-gap)"
+    r"(?:-(?:top|right|bottom|left|inline|block|start|end))?)\s*:\s*([^;{}]+)", re.I)
 
 
 def _load_contract(target):
@@ -68,6 +84,67 @@ def _iter_colors(line):
                 pass
 
 
+def _to_px(num, unit):
+    """Normalize a CSS length to px (rem == 16px). Returns None for units we
+    can't compare against a px/rem scale (%, vw, ch, …) so they're never flagged."""
+    try:
+        n = float(num)
+    except (TypeError, ValueError):
+        return None
+    if unit == "px":
+        return n
+    if unit == "rem":
+        return n * 16.0
+    return None
+
+
+def _scale_px(scale):
+    """The contract scale ({'4px','8px',...} or numbers) as a sorted list of px
+    floats. An empty/missing scale yields [] so the caller SKIPS scale checks
+    entirely (a repo with no declared scale must not have every length flagged)."""
+    out = []
+    for s in scale:
+        s = str(s).strip()
+        m = _LEN.match(s)
+        if m:
+            px = _to_px(m.group(1), m.group(2))
+        else:
+            try:
+                px = float(s)               # bare number -> treat as px
+            except ValueError:
+                px = None
+        if px is not None and px > 0:
+            out.append(px)
+    return sorted(set(out))
+
+
+def _off_scale_findings(line, i, rel, prop_rx, scale, kind):
+    """Yield drift findings for px/rem lengths in *prop_rx* declarations on *line*
+    that are not within SCALE_TOL_PX of any step in *scale* (px floats). Skips
+    `var(...)` (already a token) and 0. The fix names the nearest scale step."""
+    if not scale:
+        return []
+    out = []
+    for m in prop_rx.finditer(line):
+        decl = m.groups()[-1]   # the value group (last) for both 1- and 2-group regexes
+        for num, unit in _LEN.findall(decl):
+            px = _to_px(num, unit)
+            if px is None or px == 0:
+                continue
+            # nearest step; on an exact tie prefer the LARGER step (designers round up)
+            nearest = min(scale, key=lambda s: (abs(s - px), -s))
+            if abs(nearest - px) <= SCALE_TOL_PX:
+                continue
+            # render the nearest step back in the value's own unit for an actionable fix
+            near_disp = f"{nearest:g}px" if unit == "px" else f"{nearest/16:g}rem ({nearest:g}px)"
+            out.append({
+                "file": rel, "line": i, "kind": kind, "value": f"{num}{unit}",
+                "severity": "important",
+                "fix": f"off-scale {kind} — use the nearest contract step ({near_disp}) via its token",
+            })
+    return out
+
+
 def _depth_findings(file_shadows, tw_shadows, rel, depth):
     """Rule 1: any shadow in a borders-only system is drift. Rule 2: 3+ distinct
     shadow elevations in a single-shadow system is drift (consolidate to one)."""
@@ -96,9 +173,13 @@ def lint_repo(root, contract_path):
     colors, fonts, spacing = _load_contract(contract_path)
     from contract import resolve_contract
     try:
-        depth = resolve_contract(contract_path).get("depth")
+        resolved = resolve_contract(contract_path)
+        depth = resolved.get("depth")
+        spacing_px = _scale_px(resolved.get("spacing", []))
+        radius_px = _scale_px(resolved.get("radius", []))
     except Exception:
         depth = None
+        spacing_px = radius_px = []
     findings = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
@@ -159,6 +240,9 @@ def lint_repo(root, contract_path):
                             "severity": "important",
                             "fix": f"use a contract font: {', '.join(sorted(fonts))}",
                         })
+                # off-scale spacing / radius (only when the contract declares a scale)
+                file_findings.extend(_off_scale_findings(line, i, rel, _RADIUS, radius_px, "radius"))
+                file_findings.extend(_off_scale_findings(line, i, rel, _SPACING_DRIFT_PROP, spacing_px, "spacing"))
             file_findings.extend(_depth_findings(file_shadows, sorted(tw_shadows), rel, depth))
             # Drop findings suppressed by an inline directive in THIS file. With
             # no directives present, suppr.suppressed(...) is always False, so the
