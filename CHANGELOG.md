@@ -236,7 +236,14 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   luxury product hero specifically, **restraint IS the register**: less around the product is more
   — one beautiful render with room to breathe, the accent reserved to the single primary action,
   and only the sections the brief asks for out-premium a feature-packed page (extra bands, stat
-  strips, and a sprayed accent make an expensive product look cheap).
+  strips, and a sprayed accent make an expensive product look cheap). And an **editorial portfolio /
+  personal showcase** (designer, photographer, type/motion studio) is carried by **ONE owned signature
+  device sourced from what the subject actually makes** — a living type specimen, one full-bleed image,
+  a looped kinetic mark — not the genre skin (dark-grotesk cover, warm-paper serif, three-up grid are
+  first-reach looks); commit to that device, reserve everything else (few inks, one move) so it reads
+  as *the* idea, and then **deliver the work fully** — a signature hero over a blank or half-revealed
+  project index is a portfolio with no portfolio, so the projects must be present, finished, and
+  visible by default (never hidden behind a reveal that may not fire).
 - Living style guide page (swatches, type scale, spacing, component inventory).
 - Realistic content with empty / loading / error states so mockups aren't lorem-ipsum.
 - Motion / interaction specs.
