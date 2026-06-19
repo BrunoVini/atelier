@@ -333,6 +333,17 @@ function handleControl(req, res, opts) {
     return true;
   }
 
+  if (req.url === '/__atelier/prefetch' && req.method === 'POST') {
+    readBody(req, function(p) {
+      var pageUrl = (p && p.page_url) ? String(p.page_url) : '(unknown)';
+      // Log for agent awareness — no computation needed server-side.
+      console.log('[atelier-prefetch] hint for page: ' + pageUrl);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, hint: 'prefetch logged for: ' + pageUrl }));
+    });
+    return true;
+  }
+
   return false;
 }
 

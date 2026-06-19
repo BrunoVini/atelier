@@ -16,6 +16,7 @@
   var CONTROL = '/__atelier';                   // control endpoints the proxy serves
   var selected = null;                          // currently picked element
   var savedInline = null;                       // its inline style to restore on reject
+  var _prefetchedPages = {};                    // track which page URLs have been prefetched
 
   function log(m) { try { console.debug('[atelier-live] ' + m); } catch (_) {} }
 
@@ -283,6 +284,16 @@
       // If the user was editing, make sure focus is still where it was.
       if (keepFocus && active && active !== document.activeElement) {
         try { active.focus({ preventScroll: true }); } catch (_) {}
+      }
+      // Fire a prefetch hint the FIRST time the user selects any element on this page.
+      // This lets the agent speculatively read the source file while the user decides.
+      var pageKey = location.pathname;
+      if (!_prefetchedPages[pageKey]) {
+        _prefetchedPages[pageKey] = true;
+        try {
+          post('/prefetch', { page_url: location.href })
+            .catch(function() {});   // best-effort, never surface errors
+        } catch (_) {}
       }
     } catch (_) {}
   }

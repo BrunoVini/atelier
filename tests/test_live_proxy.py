@@ -482,3 +482,73 @@ def test_insert_endpoint_file_outside_project_returns_403(tmp_path):
     out = json.loads(r.stdout)
     assert out["code"] == 403
     assert "project dir" in out["body"] or "outside" in out["body"]
+
+
+# ── Prefetch endpoint ─────────────────────────────────────────────────────────
+
+def test_prefetch_endpoint_returns_ok():
+    # POST /__atelier/prefetch with a valid page_url returns {ok:true} and the hint.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN'});"
+        "let code=0, body='';"
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/prefetch', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));"
+        "    process.exit(0);}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({page_url:'http://localhost:5173/about'}));"
+        "req.emit('end');"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    # console.log writes to stdout before the JSON; extract just the JSON
+    lines = r.stdout.strip().split('\n')
+    json_str = lines[-1]  # last line is the JSON
+    out = json.loads(json_str)
+    assert out["code"] == 200
+    resp = json.loads(out["body"])
+    assert resp.get("ok") is True
+    assert "prefetch" in resp.get("hint", "").lower()
+
+
+def test_prefetch_endpoint_missing_url_returns_ok_with_unknown():
+    # POST /__atelier/prefetch without page_url still returns ok (best-effort hint).
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN'});"
+        "let code=0, body='';"
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/prefetch', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));"
+        "    process.exit(0);}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({}));"
+        "req.emit('end');"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    # console.log writes to stdout before the JSON; extract just the JSON
+    lines = r.stdout.strip().split('\n')
+    json_str = lines[-1]  # last line is the JSON
+    out = json.loads(json_str)
+    assert out["code"] == 200
+    resp = json.loads(out["body"])
+    assert resp.get("ok") is True
+    assert "(unknown)" in resp.get("hint", "")
