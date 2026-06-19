@@ -22,6 +22,17 @@ asserted in prose: the **pairing**, the **scale**, **language coverage**, **fall
   the three already share upm, x-height, cap-height, and terminal cuts — they *cannot* clash, and
   the contrast lives where it should: in **role** (display has presence, body recedes, mono is true
   fixed-pitch), not in mismatched DNA. State the shared metrics as the coherence argument.
+- **An all-one-family trio must still MANUFACTURE display presence — don't let the display read as
+  just bigger body.** A superfamily's great strength (coherence) is also its risk: if display, body,
+  and mono are all the same upright sans at the same weight, the only contrast is size, and a judge
+  reads the display as "a larger paragraph," not a voice. Engineer real separation between roles
+  using the axes the one family gives you: a **distinct optical/condensed/expanded cut** for display
+  (e.g. a condensed or display-optical face vs the text cut), a **decisive weight jump** (e.g. body
+  400 → display 700/800, never 600), **tracking contrast** (tight display vs neutral body), and a
+  **large size jump** at the top of the scale. The display should command the specimen on its own
+  line; if it doesn't, the pairing reads safe even when the family choice is right. (A cross-family
+  contrast serif gets this presence for free — match it from within your family rather than concede
+  it.)
 - **A deliberate cross-family pairing is fine when the contrast is the point** (a contrast serif
   display over a neutral grotesque body), but then you must *justify the relationship* — what they
   share (proportion, era, mood) and what they deliberately oppose.
