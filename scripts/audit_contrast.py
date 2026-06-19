@@ -207,6 +207,56 @@ def gate_failures(rows):
 
 
 # ---------------------------------------------------------------------------
+# PUBLISHED contrast table: a design contract is more trustworthy when it shows
+# the per-pair ratios it claims pass — a reader (or a second agent) can recompute
+# and verify, instead of taking "0 fails via the auditor" on faith. contrast_table()
+# renders the ENFORCED foreground/background role pairs as a markdown table (measured
+# ratio + AA verdict + required level), ready to paste into §2/§10 of DESIGN.md.
+# Same math as audit(); it just makes the numbers visible in the doc.
+# ---------------------------------------------------------------------------
+
+def contrast_table(colors, include_informational=False):
+    """Render the enforced role pairs of one palette as a markdown ratio table.
+
+    Columns: Foreground · Background · Ratio · Required · WCAG. One row per enforced
+    pair (real text on a real surface, or `on-X` on its `X`), sorted by ratio ascending
+    so any weak pair surfaces first. Informational brand×brand pairs are omitted by
+    default (noise in a published table) — pass include_informational=True to keep them.
+    Ratios are the EXACT values audit() computes (no drift)."""
+    rows = audit(colors)
+    if not include_informational:
+        rows = [r for r in rows if not r.get("informational")]
+    lines = [
+        "| Foreground | Background | Ratio | Required | WCAG |",
+        "|------------|------------|-------|----------|------|",
+    ]
+    for r in sorted(rows, key=lambda x: x["ratio"]):
+        need = "AA-large 3:1" if r["required"] == AA_LARGE else "AA 4.5:1"
+        if r["passes"]:
+            verdict = "AAA ✓" if r["aaa_normal"] else "AA ✓"
+        else:
+            verdict = "FAIL ✗"
+        lines.append(f"| {r['text']} | {r['surface']} | {r['ratio']}:1 | {need} | {verdict} |")
+    return "\n".join(lines)
+
+
+def contrast_table_themed(themes, include_informational=False):
+    """Render a measured contrast table for each theme in `themes`
+    ({"base": {...}, "dark": {...}}) under a labelled section heading. The light
+    palette is "Light"; a present `dark` palette gets its own "Dark" section. A
+    light-only contract emits only the Light table (no empty Dark heading)."""
+    label = {"base": "Light", "dark": "Dark"}
+    order = [k for k in ("base", "dark") if k in themes]
+    parts = []
+    for key in order:
+        parts.append(f"### {label.get(key, key.title())} theme")
+        parts.append("")
+        parts.append(contrast_table(themes[key], include_informational))
+        parts.append("")
+    return "\n".join(parts).rstrip() + "\n"
+
+
+# ---------------------------------------------------------------------------
 # RENDERED contrast: measure ACTUAL painted text/background pairs at their ACTUAL
 # size. The token-pair audit() above pairs colors by NAME heuristics — it can flag
 # pairs never used together (false positives) and miss text whose color isn't a token,
@@ -329,7 +379,7 @@ if __name__ == "__main__":
     target = next((a for a in args if not a.startswith("-")), None)
     if not target:
         print("usage: audit_contrast.py <repo | design-tokens.json | DESIGN.md> "
-              "[--json] [--apca] [--apca-gate[=N]]")
+              "[--json] [--table [--all]] [--apca] [--apca-gate[=N]]")
         sys.exit(2)
 
     # APCA opt-in: contract config OR CLI flag. `--apca` reports it; `--apca-gate[=N]`
@@ -350,6 +400,11 @@ if __name__ == "__main__":
     show_apca = ("--apca" in args) or apca_gate_on
 
     themes = load_themed_colors(target)
+    # --table: print a measured markdown contrast table (per theme) for the doc to embed,
+    # then exit. Same numbers as the audit; this just makes them publishable/verifiable.
+    if "--table" in args:
+        print(contrast_table_themed(themes, include_informational="--all" in args))
+        sys.exit(0)
     by_theme = {name: audit(cols) for name, cols in themes.items()}
     wcag_fails = sum(len(gate_failures(rows)) for rows in by_theme.values())
     apca_fails = (sum(len(apca_gate_failures(rows, apca_target)) for rows in by_theme.values())
