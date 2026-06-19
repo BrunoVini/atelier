@@ -150,6 +150,21 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   decoration that Chromium rasterizes on print — verify 0 image XObjects, not vector type over
   rasterized gradient bands). `qa.py --kind print` gates a fixed-size print artifact correctly
   (skips the responsive-reflow + focus-order checks that don't apply to a poster).
+- Type-system & specimen craft (`typography.md`, a new dedicated capability for type systems,
+  type-specimen pages, and brand type sections): how to choose a display+body+mono **pairing** that
+  coheres by construction and contrasts by role, build a true **modular scale** (named steps, leading
+  paired to size, honest legibility-floor exceptions), demonstrate **language coverage** on the page,
+  and engineer an offline **fallback**. Three rules earned in practice: (1) **uncovered glyphs are
+  shown in place, never silently dropped** — leave the codepoint in the rendered string and show its
+  real `.notdef` box (or a marked slot) where it occurs, with a note naming the codepoint and a
+  covering face, so the gap is honest on the render rather than hidden in prose; (2) **a fallback
+  demonstration shows the worst case AND the engineered fix** — a raw, untuned system fallback (so the
+  real shift is visible) beside a metric-tuned `@font-face` carrying `size-adjust` / `ascent-override`
+  / `descent-override` / `line-gap-override` that is *actually applied* to the comparison, not merely
+  printed in a code block; (3) **an all-one-family trio must manufacture display presence** — engineer
+  a distinct display voice from the family's own axes (a condensed/optical cut, a decisive weight jump,
+  tracking contrast, a large size jump) so the display commands its line instead of reading as bigger
+  body. A reviewer section gates the coverage-honesty and applied-fallback rules.
 - Prototype craft + a binding offline gate (`prototypes.md`, `check_offline.py`, `qa.py --kind
   prototype`): a clickable app prototype is judged first on **booting offline by double-click**, so
   type must be **self-contained** (inline `woff2` or a native system-font stack) — a runtime
