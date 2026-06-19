@@ -277,7 +277,7 @@ function handleControl(req, res, opts) {
         res.writeHead(403); res.end('{"ok":false,"reason":"file outside project dir"}');
         return;
       }
-      const position = ['before', 'after'].includes(p.position) ? p.position : 'after';
+      const position = ['before', 'after', 'first_child', 'last_child'].includes(p.position) ? p.position : 'after';
       const args = [
         path.join(scriptsDir, 'live_insert.py'), target,
         '--anchor', JSON.stringify(p.anchor),
