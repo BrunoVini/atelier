@@ -33,6 +33,21 @@ shader craft live. Don't reimplement it here.
    - **Palette → color nodes.** Pass the contract's colors as the scene's material /
      gradient / light colors (e.g. TSL `color(...)` nodes, fog, background). The hero
      uses `brand`/`accent`/`surface`, not arbitrary shader rainbows.
+   - **Honor the palette's DOMINANCE HIERARCHY — not just the hex list.** On-brand means
+     more than "every color traces to a token." A palette names a *dominant* signal (the
+     `brand` hue) and a *secondary* accent (`accent`/`brand-2`); the rendered field must
+     reflect that ranking. The dominant hue must visually LEAD — own the larger painted
+     area and the higher overall luminance/saturation mass — while the secondary reads as
+     the energy/flow accent threaded through it (cores, edges, highlights), and any
+     tertiary spark stays a literal spark (a few %). A shader that gives the secondary hue
+     equal-or-greater area/brightness reads as **off-brand even with zero off-token hexes**
+     — a violet-led brand that renders cyan-dominant has drifted, and a blind viewer (and
+     judge) will call the lead hue wrong. **Verify it on the RENDERED frame, not the
+     source:** the still must obviously read as "the brand color, with the accent as
+     energy." A quick check — sample the hero region, sum each token's painted area; the
+     `brand` hue should clearly out-mass the secondary. Weight the shader so the dominant
+     hue is the base/ground and the secondary is mixed in by a minority factor (e.g. a flow
+     mask biased ≪ 0.5 toward the accent), not a 50/50 lerp.
    - **Motion tokens → time.** Drive oscillation/rotation speed from the contract's
      motion durations/easing so the 3D motion matches the rest of the page's tempo.
    - **Depth/elevation** stays consistent with §4 — a 3D hero shouldn't fight a
