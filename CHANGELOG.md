@@ -150,6 +150,20 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   a spike with an annotation. And "dense" is the amount of information per screen, not small type:
   hold a comfortable floor (a hero metric that commands its card, readable data/table sizes, calm row
   rhythm) and get density from more well-sized panels, not from miniaturizing the type.
+- Dense data tables — a dedicated craft layer for records lists, inventories, ledgers, and admin
+  tables (`data-viz-craft.md`): the selection / bulk-action bar is part of the table's own calm
+  surface (a quiet tonal lift or a soft tint of the one accent + a hairline), never a loud inverted
+  slab dropped onto the grid — that bar is the loudest seam on the page and undoes "depth felt, not
+  seen." Selected and hovered rows separate by a tonal step + a structural edge marker that reads in
+  grayscale, not by a saturated hue band; header, body, hover, selected, and a sticky header form a
+  legible elevation order by tone alone (no heavy zebra or gridlines). An active-filter chip must be
+  honest against the rows actually drawn — actually filter them, pick a chip that's true of the shown
+  set, or label it staged; a chip claiming a filter the data contradicts reads as a dead control. And
+  because a table is judged from what's on screen, demonstrate the affordances live: show one filter
+  dropdown open, the sorted column's caret and `aria-sort`, a couple of rows selected with the calm
+  bulk bar, and one row in its hover state. Status reads by glyph shape + label (not hue alone) in a
+  stable column; density is more legible rows per screen (tight comfortable rows + a two-line identity
+  cell), not breathy oversized ones; numeric columns right-align with tabular figures into a hard edge.
 - The quietest sufficient cue wins subtle layering (`layering.md`): two interfaces can both be
   one-depth-strategy-per-surface yet read very differently — one a calm instrument, one a grid of
   outlined boxes. Depth should be *felt*, not *seen*: prefer a tonal surface step + spacing to a
