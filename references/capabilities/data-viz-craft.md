@@ -60,6 +60,11 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   narrow (e.g. 83–100), stretch the ramp across that domain so the steps are perceptible rather than
   collapsing 90/91/92 into one shade — but the mapping stays value-driven, not positional. Not-yet-
   elapsed / missing cells get a distinct non-color treatment (hatch / "—"), never a zero-value shade.
+  Keep the ramp's LIGHT end legible AND substantial: flip the in-cell value to dark ink on light
+  cells so every value stays AA-readable, and don't begin the scale so pale that the low-value cells
+  read as washed-out/empty next to a competitor's (even if incorrectly) uniformly-saturated grid —
+  start the sequential ramp at a visible tint, not near-white, so the whole grid reads as a confident
+  instrument while staying strictly value-monotonic.
 - **Never encode by color alone.** Deltas carry a sign + arrow glyph (colorblind-safe), not
   just red/green. Series get labels/patterns, not only hue.
 - **Chromatic restraint = engineered calm — a dense instrument UI should hold FEW hues.** On a
@@ -80,6 +85,21 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 - **Dense but scannable:** a clear KPI row, one primary chart with real hierarchy, secondary
   panels that don't compete, a table with aligned right-set numerics. Show a prior-value
   reference on KPIs ("vs 44.5k", "2.2pp") — more informative than "vs prev period".
+- **A panel must be FILLED by its content — true-zero is not licence for a dead upper void.** The
+  most common way a correct, honest dashboard loses the *density* dimension: a primary trend on a
+  true-zero axis where the series sits in the upper band (e.g. $96k–$148k against a 0–160k scale)
+  floats in the bottom third of an over-tall full-width panel, leaving the top half empty air. The
+  axis is right; the *panel proportion* is wrong. Fixes (keep the honest zero baseline): size the
+  plot height so the data spans most of it (a trend panel roughly 2:1–3:1 wide, not a tall square
+  with acres above the line); add a faint zero-band shading or a `// axis break` indicator ONLY if
+  you also keep the true zero visible (never a silent truncation); or — better for density —
+  **don't let the commanding chart span full-width with empty air beside/above it: pair it in a row
+  with a secondary panel** (composition, a stat stack) so the screen reads as a packed instrument,
+  not a lone chart over a void. A dashboard is judged on *uniform richness per screen*: a 2-column
+  trend+composition row above a 2-column breakdown row reads denser and more instrument-like than
+  four full-width bands stacked with gaps. No dead voids inside or beside a panel; no claustrophobic
+  cramming either — every panel earns its box and breathes within it (the deck/poster no-void rule,
+  applied to a dashboard grid).
 - **Cap categories to what stays legible — aggregate or re-type the rest.** A categorical chart
   (bar / stacked-bar) must label and visually separate *every* mark it draws. If the data has
   more categories than fit at a readable mark size (rule of thumb: each bar needs enough height
