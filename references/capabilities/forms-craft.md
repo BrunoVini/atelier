@@ -49,6 +49,18 @@ per-component build can still lose to a plainer one.
   arrow-key support), **or** an in-page scroll-nav styled plainly as a jump list (no tab-like
   active pill implying replacement). Mismatched affordance is a quiet credibility hit.
 - **Group within a section by meaning,** with quiet subheads — don't dump 12 fields in one column.
+- **Group the fieldsets WITHIN one section into ONE calm surface divided by hairlines — not N
+  free-floating cards.** This is where a settings panel wins or loses the *layering* dimension. When
+  a section (say "General") has several field groups (Workspace profile / Region & language /
+  Preferences), the senior move is to render them as subgroups *inside a single raised section
+  surface*, separated by internal hairlines + generous vertical rhythm and quiet subheads. Splitting
+  each group into its OWN separate floating panel card reprints the section as a stack of boxes —
+  on the squint test it reads as fragments, not one calm section, and it loses "subtle layering" to
+  a plainer single-surface build even when every card is one-strategy. (See `layering.md` "quietest
+  sufficient cue" — depth *felt* not *seen*; group by tonal step + spacing + a hairline divider, not
+  by giving every group its own bordered/elevated card.) Reserve a *separate* surface only for what
+  is genuinely a different concern at a different elevation — the Danger zone (set apart on purpose),
+  or an overlay. Routine field groups within one section belong on one ground.
 - **Put destructive/rare things last and behind friction** (a "Danger zone" section, a confirm
   step), never adjacent to routine fields where a misclick is costly.
 - **An embedded pricing/plan card is not a settings control.** Linking to billing is fine; a full
