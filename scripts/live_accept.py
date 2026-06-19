@@ -23,8 +23,15 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 
 import edit_apply  # noqa: E402  (same dir; conftest/run.py put scripts/ on the path)
+
+try:
+    import live_journal as _lj
+    _HAS_JOURNAL = True
+except ImportError:
+    _HAS_JOURNAL = False
 
 
 # ── pluggable variant agent (Phase 7 #4) ─────────────────────────────────────
@@ -145,6 +152,17 @@ def accept_variant(file, old, new, qa_target, journal_dir, session,
               "qa_results": qa_results, "journal_id": journal_id}
     if knob_values is not None:
         result["knob_values"] = knob_values
+
+    # Write journal entry on success so the session is recoverable after proxy restart.
+    if _HAS_JOURNAL:
+        try:
+            _lj.write_entry(journal_dir, session, "accept", {
+                "file": file, "journal_id": journal_id,
+                "qa": qa_verdict, "knob_values": knob_values,
+            })
+        except Exception:
+            pass   # journal write failure never blocks the accept
+
     return result
 
 

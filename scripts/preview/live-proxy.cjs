@@ -291,6 +291,25 @@ function handleControl(req, res, opts) {
     return true;
   }
 
+  if (req.url.indexOf('/__atelier/status') === 0 && req.method === 'GET') {
+    var urlParts = new URL('http://x' + req.url);
+    var session = urlParts.searchParams.get('session') || '';
+    if (!session) {
+      res.writeHead(400); res.end('{"ok":false,"reason":"session param required"}');
+      return true;
+    }
+    var statusArgs = [
+      path.join(scriptsDir, 'live_status.py'),
+      '--journal-dir', journalDir,
+      '--session', session,
+    ];
+    shellPython(statusArgs, function(out) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(out);
+    }, 5000);
+    return true;
+  }
+
   return false;
 }
 
