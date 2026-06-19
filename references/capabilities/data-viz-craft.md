@@ -37,6 +37,24 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   exactly at the top of a hypothetical value-`V` bar, that the baseline gridline is at 0, and
   that each bar lands on its own value's gridline. (This is §19d "geometric truth" for charts:
   a misaligned reference grid is a fabricated reading even when the underlying numbers are right.)
+- **A small-magnitude series clamped to a minimum pixel floor is BOTH a lie and illegible — never
+  floor a magnitude to a constant height.** When one stacked/overlaid series is tiny against the
+  shared scale (e.g. an error band of 0.16k–0.95k riding on an 80k traffic scale, or a 7% slice
+  against a 100% bar), the lazy fix — `height = Math.max(value × scale, 1px)` so it's "visible" — is
+  the trap. A 1px floor makes a 0.16 and a 0.95 render at the *same* height: the 6× difference
+  vanishes, the series stops being proportional (a fabricated reading), AND a 1px hairline is too
+  thin to read as data (it loses legibility too). Do NOT floor it. Instead pick an HONEST encoding
+  that keeps proportion AND legibility: **(a)** if the small series carries real signal an operator
+  must compare hour-to-hour (the error band IS the point of an error chart), give it its OWN faithful
+  scale in a **linked secondary view** — a thin band/strip or a small-multiple directly below the
+  primary, sharing the x-axis, on its own clearly-labeled value axis (so 0.95k vs 0.16k is a visible
+  6× difference) — rather than crushing it into the primary's stack where it's sub-pixel; **(b)** if
+  it must stay in the stack for the sum-to-total story, draw it strictly proportional (`value × scale`,
+  no floor) and accept that it's a thin honest ribbon — then surface the spike via an annotation/marker
+  and the legend ("errors peak 0.95k @ 15:00"), not by fattening the band. The test: two error
+  values that differ MUST differ in drawn height; if your floor makes them equal, the encoding lies.
+  (This is §19d "chart geometry matches the data" for a small overlaid series: proportionality is not
+  optional just because the values are small.)
 - **No triplicated magnitude.** Don't print the same number three ways in one row
   (label-count + in-bar count + percent). Pick the two that carry distinct meaning.
 
@@ -88,6 +106,19 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 
 - **Tabular numerals on every figure** (`font-feature-settings:"tnum"` / a mono) so columns
   align and values don't jitter when they update.
+- **Density is rich, NOT cramped — the dense surface still has a comfortable floor.** "Dense" is the
+  *amount* of information per screen, not *small* type and *tight* rows. The fastest way to lose the
+  legibility dimension on a dashboard is to win density by shrinking everything: 11px labels, 12px
+  body, 4px row gaps, a hero KPI that's barely larger than its caption. A dense instrument that "runs
+  hot" reads as harder to scan, not more capable. Hold a real type hierarchy with a comfortable floor:
+  the **hero KPI value commands its card** (a clear, large figure — not a number only a touch bigger
+  than its label), supporting **labels and table body stay at a readable size** (≈13px+ for data rows,
+  never sub-12px for values an operator reads all day), and rows get enough vertical rhythm that the
+  eye tracks a line without effort. Achieve density by *fitting more well-sized panels into the grid*
+  (2-up rows, a packed but aligned layout), not by miniaturizing the type inside them. The win is
+  "rich AND comfortable to read," which beats both "sparse" and "cramped"; a competitor that types its
+  KPIs larger and breathes its rows will out-score a technically-denser surface on legibility — match
+  its comfort while keeping your higher information density.
 - **Dense but scannable:** a clear KPI row, one primary chart with real hierarchy, secondary
   panels that don't compete, a table with aligned right-set numerics. Show a prior-value
   reference on KPIs ("vs 44.5k", "2.2pp") — more informative than "vs prev period".
@@ -188,6 +219,8 @@ above. Where a dashboard is a screen, a poster is an object on a wall AND a clos
 - [ ] Each color has ONE consistent meaning; status colors aren't reused as categories
 - [ ] Cohort/heatmap is a single-hue sequential scale with values + legend; shade is a function of the cell VALUE (not its row/column) — equal values → equal shades, higher value → strictly darker (verified on the render)
 - [ ] Tabular numerals everywhere; no triplicated magnitudes
+- [ ] No magnitude floored to a constant pixel height — a small overlaid/stacked series is drawn strictly proportional (two differing values differ in drawn height), or moved to a linked secondary view on its own faithful scale; never a `max(value×scale, 1px)` clamp
+- [ ] Dense but comfortable: hero KPI value commands its card; data labels/table body ≥~13px (never sub-12px); rows have readable vertical rhythm — density from more well-sized panels, not miniaturized type
 - [ ] Categorical charts cap to a legible mark count (top-N + aggregated remainder / re-typed / scrollable); no sub-pixel unlabeled smear; rendered marks match the "top N" caption; each row shows its label + value (not tooltip-only)
 - [ ] Chart type fits each data question (`knowledge/charts.csv`)
 - [ ] Controls work; tooltip sits on the point with a crosshair + keyboard path
