@@ -72,6 +72,41 @@ per-component build can still lose to a plainer one.
 - **Helper text sits with its field, before the error,** explaining format/why (e.g. "Used for
   sign-in and receipts") — not as a tooltip the user must hunt for.
 
+## 3b. Control tactility — the controls must feel like crafted objects, not flat fields
+
+Ergonomics (§3) gets the *right* control labeled correctly; this is what separates a *handsome*
+control set from a correct-but-flat one. Against a strong opponent, "control craft" is won here —
+on whether each control reads as a tactile, intentional object. The repeatable moves:
+
+- **Inputs are INSET, not flush.** A text input, select, or any "type/choose here" field should sit
+  on a fill that is **one tonal step *recessed* from its surface** (darker on light, darker-toward-
+  the-page on dark) — never the *same* as or *lighter* than the panel it lives on. A recessed well
+  signals "content goes in here" before any border does, and reads as a crafted object; a white
+  field on a near-white panel reads flat and relies entirely on its border to exist. Name the token
+  (`--control` / `--field` / `--inset`) as a step *below* `--surface-raised`, not equal to
+  `--control: #fff` sitting on an off-white card. This is the single biggest tactility lever and the
+  one most often missed — a flat field set loses "control craft" to an inset one even when both are
+  consistent and labeled. (It composes with layering.md: the inset well is the input's *one* depth
+  strategy — don't then also shadow it.)
+- **Size fields to their content; don't stretch every control full-bleed.** A timezone select or a
+  workspace-name input stretched edge-to-edge across a wide panel reads as a raw web form, not a
+  crafted admin surface. Cap the form column to a comfortable measure (≈ 60–72ch / 640–760px) and
+  cap individual controls to a width that fits their content (a short select need not be 700px
+  wide). Full-width is for the one thing that wants it (a long text area, the panel itself), not the
+  default for every field. Width discipline is a senior tell.
+- **The selected/active member of a group is shown with a step of PRESENCE, not hue alone.** A
+  selected segment in a segmented control should *lift* (a tonal fill + a hairline + a micro-shadow
+  or inset-flip) so it reads as pressed-in/raised, not merely tinted; a checked radio/checkbox reads
+  by **shape** (a filled mark, a dot) first and color second; a chosen radio *row* can carry a quiet
+  tonal fill + a mark so the whole row reads selected. The cue must survive the squint test and a
+  grayscale check — if desaturating the screenshot loses which one is selected, the cue is hue-only.
+- **A consistent control metric scale.** Pick ONE control height (e.g. 40–44px), ONE corner radius
+  for inputs/buttons, ONE border weight/color, ONE inner padding, and hold every control to it so
+  the input, the select trigger, the segmented control, and the buttons all sit on the same baseline
+  grid and look like one family. Mismatched heights/radii across controls is the clearest "no system"
+  tell in a form. (Mono/tabular numerals on system-value fields like IDs and codes is a nice, honest
+  touch — but keep it for data, not every label.)
+
 ## 4. State, validation & feedback — the page must respond honestly
 
 - **Validate inline, on blur or submit — not on every keystroke,** and never block typing.
@@ -154,6 +189,15 @@ per-component build can still lose to a plainer one.
   keep source order logical.
 - **Honest ARIA only.** A `role="switch"` needs `aria-checked` kept in sync; a tablist needs
   `aria-selected`; don't sprinkle roles that the JS doesn't maintain.
+- **A switch's on/off state must read by more than knob-position + hue.** A toggle whose only
+  difference between on and off is "knob left, track gray" vs "knob right, track accent" fails the
+  *state-not-by-color-alone* bar (color-blind/low-vision users, and a grayscale screenshot, can't
+  tell which is on). Add a non-color cue: a small **On / Off text label** beside the switch (or an
+  `I` / `O` glyph marked on the track), and a shape change on the knob. This is simultaneously a
+  control-craft tactility win (the toggle reads more deliberate) and an a11y win — verify by
+  desaturating the render: the on/off toggles must still be distinguishable. The same grayscale test
+  applies to every checked/selected state (radio dot, checkbox mark, selected segment): if it
+  vanishes in grayscale, the cue is hue-only and must gain a shape/text/position cue.
 
 ## 6. Self-QA — operate it, don't just look at it
 
