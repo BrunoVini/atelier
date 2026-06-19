@@ -42,17 +42,35 @@ _NEXT_SIGNS = (
     "/_next/static",        # chunks
     "__next_f",             # Next 13+ flight payload global
 )
+_SVELTEKIT_SIGNS = (
+    "/_app/immutable/",     # SvelteKit asset path
+    "__sveltekit_",         # SvelteKit globals
+    "@sveltejs/kit",        # package references in source maps / comments
+    "svelte-kit",           # fallback hint
+)
+_ASTRO_SIGNS = (
+    "/_astro/",             # Astro asset path
+    "astro-island",         # Astro island custom element
+    "@astrojs",             # package references
+    "astro:scripts",        # Astro script markers
+)
+_NUXT_SIGNS = (
+    "/_nuxt/",              # Nuxt asset path
+    "__nuxt",               # Nuxt global (window.__nuxt, __nuxt_data)
+    "usenuxtapp",           # lowercase match of useNuxtApp
+    "nuxt-link",            # Nuxt router-link component
+)
 
 
 def classify_html(body, headers=None):
-    """Classify a framework from an HTML body (+ optional headers dict). Pure, so the
-    detection logic is unit-testable on fixture strings with no network. Returns
-    (framework, hmr) where framework is 'vite' | 'next' | 'unknown' and hmr is a bool
-    best-effort guess (Vite/Next dev servers both ship HMR)."""
+    """Classify a framework from HTML body + optional response headers.
+
+    Returns (framework, hmr) where framework is one of:
+      'vite' | 'next' | 'sveltekit' | 'astro' | 'nuxt' | 'html' | 'unknown'
+    'html' means a plain HTML page with no recognized framework (still injectable).
+    'unknown' means the response was not HTML at all.
+    """
     hay = (body or "").lower()
-    # Fold a few telling headers into the haystack — Vite sometimes advertises itself
-    # and a Next dev server sets x-powered-by/server hints. The mere PRESENCE of a
-    # vite-specific header (x-vite) is itself a Vite signal, so fold the key name in too.
     if headers:
         lower_keys = {str(k).lower() for k in headers}
         if "x-vite" in lower_keys:
@@ -65,6 +83,17 @@ def classify_html(body, headers=None):
         return "vite", True
     if any(s in hay for s in _NEXT_SIGNS):
         return "next", True
+    if any(s in hay for s in _SVELTEKIT_SIGNS):
+        return "sveltekit", True
+    if any(s in hay for s in _ASTRO_SIGNS):
+        return "astro", False   # Astro static may not have live HMR
+    if any(s in hay for s in _NUXT_SIGNS):
+        return "nuxt", True
+    # Plain HTML: the response IS an HTML document, just no known framework.
+    # Still injectable — the picker client works fine in a vanilla HTML page.
+    is_html_doc = ("<html" in hay or "<!doctype html" in hay)
+    if is_html_doc:
+        return "html", False
     return "unknown", False
 
 
@@ -94,10 +123,11 @@ def detect_dev_server(url_or_none):
     """Given a reachable dev-server URL, fetch `/` and classify the framework.
 
     Returns {url, framework, hmr, can_inject}:
-      • framework: 'vite' | 'next' | 'unknown'
+      • framework: 'vite' | 'next' | 'sveltekit' | 'astro' | 'nuxt' | 'html' | 'unknown'
       • hmr: best-effort bool (whether the dev server ships hot-module-reload)
       • can_inject: True only when we got an HTML response we recognise as a dev
-        server (vite/next) — i.e. the reverse proxy can safely inject the picker.
+        server (vite/next/sveltekit/astro/nuxt) or bare HTML — i.e. the reverse
+        proxy can safely inject the picker.
 
     Never crashes: a None/garbage URL or an unreachable host -> unknown, can_inject False."""
     if not url_or_none or not isinstance(url_or_none, str):
@@ -113,10 +143,9 @@ def detect_dev_server(url_or_none):
     ctype = (headers.get("content-type") or "").lower()
     is_html = "text/html" in ctype or "<html" in body.lower() or "<!doctype html" in body.lower()
     framework, hmr = classify_html(body, headers)
-    # We only claim we can inject when it's HTML AND a recognised dev server. An HTML
-    # page from an unknown framework still can't be proven safe to inject into here —
-    # live mode falls back to atelier's own preview server (capabilities/live-mode.md).
-    can_inject = bool(is_html and framework in ("vite", "next"))
+    # We claim we can inject when it's HTML AND a recognised framework (including bare HTML).
+    _INJECTABLE = {"vite", "next", "sveltekit", "astro", "nuxt", "html"}
+    can_inject = bool(is_html and framework in _INJECTABLE)
     return {"url": url, "framework": framework, "hmr": hmr, "can_inject": can_inject}
 
 

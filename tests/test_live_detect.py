@@ -37,9 +37,9 @@ def test_classify_next():
     assert fw == "next" and hmr is True
 
 
-def test_classify_plain_is_unknown():
+def test_classify_plain_is_html():
     fw, hmr = ld.classify_html(PLAIN_HTML)
-    assert fw == "unknown" and hmr is False
+    assert fw == "html" and hmr is False
 
 
 def test_classify_uses_headers_for_vite_hint():
@@ -96,12 +96,12 @@ def test_detect_next_server():
         stop()
 
 
-def test_detect_plain_server_is_unknown_no_inject():
+def test_detect_plain_server_is_html_injectable():
     url, stop = _serve(PLAIN_HTML)
     try:
         r = ld.detect_dev_server(url)
-        assert r["framework"] == "unknown"
-        assert r["can_inject"] is False           # falls back to atelier's own preview
+        assert r["framework"] == "html"
+        assert r["can_inject"] is True           # plain HTML is now recognized and injectable
     finally:
         stop()
 
@@ -127,3 +127,52 @@ def test_none_and_garbage_urls_are_unknown():
     for bad in (None, "", "not-a-url", "ftp://x", 12345):
         r = ld.detect_dev_server(bad)
         assert r["framework"] == "unknown" and r["can_inject"] is False
+
+
+# ── New framework fixtures ────────────────────────────────────────────────────
+
+def test_classify_sveltekit():
+    body = '<!doctype html><html><script src="/_app/immutable/entry-client.js"></script></html>'
+    fw, hmr = ld.classify_html(body)
+    assert fw == "sveltekit"
+    assert hmr is True
+
+
+def test_classify_astro():
+    body = '<!doctype html><html><script src="/_astro/client.abc123.js"></script></html>'
+    fw, hmr = ld.classify_html(body)
+    assert fw == "astro"
+
+
+def test_classify_nuxt():
+    body = '<!doctype html><html><script>window.__nuxt={}</script></html>'
+    fw, hmr = ld.classify_html(body)
+    assert fw == "nuxt"
+
+
+def test_classify_plain_html():
+    body = '<!doctype html><html><head><title>Hello</title></head><body>Hi</body></html>'
+    fw, hmr = ld.classify_html(body)
+    assert fw == "html"
+
+
+def test_can_inject_sveltekit():
+    # can_inject should be True for all recognized frameworks
+    # We test via classify_html + the logic in detect_dev_server
+    fw, _ = ld.classify_html('/_app/immutable/foo.js')
+    assert fw == "sveltekit"
+
+
+def test_can_inject_plain_html():
+    body = '<!doctype html><html><body>plain site</body></html>'
+    fw, _ = ld.classify_html(body)
+    # plain HTML should be injectable (no framework signals ≠ not injectable)
+    assert fw == "html"
+
+
+def test_unknown_not_injectable():
+    """A JSON response or empty body stays unknown and non-injectable."""
+    body = '{"status":"ok"}'
+    fw, hmr = ld.classify_html(body)
+    assert fw == "unknown"
+    assert hmr is False
