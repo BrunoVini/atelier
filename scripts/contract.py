@@ -170,6 +170,23 @@ def _contract_from_block(block, path):
     raw_shadows = block.get("shadows")
     if isinstance(raw_shadows, dict) and raw_shadows:
         out["shadows"] = {str(k): str(v) for k, v in raw_shadows.items()}
+    # OPTIONAL token-source provenance (additive): `sources` is a {role: "file:line"}
+    # map recording WHERE each token lives in the code, plus an optional nested `dark`
+    # sub-map for the dark theme. This is the measured-repo edge made machine-readable —
+    # a contract atelier MEASURED (vs synthesized greenfield) should carry per-token
+    # provenance in the block, not only in the prose table, so the machine artifact is
+    # itself traceable/verifiable. Values are kept verbatim (file:line / selector /
+    # config-key strings); `dark` is recursed one level.
+    raw_sources = block.get("sources")
+    if isinstance(raw_sources, dict) and raw_sources:
+        srcs = {}
+        for k, v in raw_sources.items():
+            if k == "dark" and isinstance(v, dict):
+                srcs["dark"] = {str(dk): str(dv) for dk, dv in v.items()}
+            elif isinstance(v, (str, int, float)):
+                srcs[str(k)] = str(v)
+        if srcs:
+            out["sources"] = srcs
     if dropped or dark_dropped:
         out["machine_block_dropped"] = dropped + dark_dropped
     return out
@@ -788,10 +805,17 @@ def validate_contract(contract):
             f"component(s) reference undefined token(s): {pretty} — define the scale "
             "in the machine block (e.g. add a `rounded`/`shadows` map, or the color role) "
             "so every component ref resolves")
+    # token-source coverage: how many color roles carry a machine-readable file:line
+    # provenance pointer (the measured-repo edge). Counts only top-level color-role keys
+    # (the `dark` sub-map is per-theme provenance, not a separate role). Surfaced so a
+    # measured contract can prove its provenance is in the block, not prose-only.
+    srcs = contract.get("sources") or {}
+    token_sources = sum(1 for k in srcs if k != "dark") if isinstance(srcs, dict) else 0
     report = {
         "source": contract.get("source"),
         "colors": len(colors), "fonts": len(fonts), "spacing": len(contract.get("spacing", [])),
         "dark_colors": len(contract.get("dark_colors") or {}),
+        "token_sources": token_sources,
         "depth": contract.get("depth"), "register": register,
         "component_ref_issues": ref_issues,
         "issues": issues, "ok": not issues,

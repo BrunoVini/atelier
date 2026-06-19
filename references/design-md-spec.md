@@ -94,6 +94,42 @@ All these keys are absent by default; a block without them yields a contract wit
 such keys (fully backward-compatible). If you declare `components` but no scale maps,
 validation flags the dangling refs.
 
+**Token-source provenance (the measured-repo edge — put it IN the block).** When the
+contract is **MEASURED from a repo** (vs synthesized greenfield), carry an optional
+`"sources"` map: `{role: "file:line"}` recording WHERE each token lives in the code, with
+an optional nested `"dark"` sub-map for the dark theme's lines. This is what makes a
+measured DESIGN.md *traceable and verifiable* — and it is the whole point of measuring
+instead of eyeballing. A prose table that lists `globals.css:7` per row but a machine
+block that carries only `{role: "#hex"}` throws the provenance away in the artifact a tool
+actually consumes; every token in the block should be re-findable in the source. Put the
+file:line **in the block**, not only in the prose. `contract.py` parses it to
+`contract["sources"]` and `--validate` reports `token_sources` (how many color roles carry
+a pointer), so a measured contract can PROVE its provenance is machine-readable.
+
+```json atelier-contract
+{
+  "colors": { "background": "#ffffff", "foreground": "#0f172a", "primary": "#0f172a" },
+  "dark":   { "background": "#030711", "foreground": "#e1e7ef", "primary": "#f8fafc" },
+  "sources": {
+    "background": "styles/globals.css:7", "foreground": "styles/globals.css:8",
+    "primary": "styles/globals.css:22",
+    "dark": { "background": "styles/globals.css:40", "foreground": "styles/globals.css:41",
+              "primary": "styles/globals.css:58" }
+  },
+  "fonts": ["Inter", "Cal Sans"], "radius": ["4px", "6px", "8px"], "register": "product"
+}
+```
+
+**Measure only what is bespoke — point at the rest, don't transcribe it as a "value."**
+When a repo's spacing / type-scale / shadows are a **framework default** (Tailwind's
+default scale, MUI defaults, …) and only the *colors* + a `--radius` are bespoke, do NOT
+list the framework's default px values in `spacing`/`shadows` as if they were measured
+project tokens — that reads as inflating the measured surface. State plainly that those
+scales are the framework default (e.g. "spacing/type/shadows = Tailwind v3 defaults, used
+inline; the only bespoke tokens are the color vars + `--radius`") and keep the block's
+measured surface to what the repo actually owns. Accuracy and honesty both reward a tight,
+truthful measured surface over a padded one.
+
 ## Importing a Google Stitch DESIGN.md
 
 Google Stitch emits a `DESIGN.md` whose contract lives in a YAML front-matter block

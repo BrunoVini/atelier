@@ -400,3 +400,62 @@ def test_no_components_means_no_ref_issues():
     ok, rep = validate_contract(c)
     assert ok is True
     assert rep.get("component_ref_issues", []) == []
+
+
+# --- token source provenance in the machine block (measured-repo edge) -----------
+def test_block_parses_sources_map():
+    """A MEASURED contract carries per-token file:line provenance in the block, so the
+    machine artifact (not just the prose) is traceable. `sources` is a {role: "file:line"}
+    map; an optional nested `dark` sub-map gives dark-theme provenance."""
+    from contract import _contract_from_block
+    c = _contract_from_block({
+        "colors": {"background": "#ffffff", "foreground": "#0f172a"},
+        "dark": {"background": "#030711", "foreground": "#e1e7ef"},
+        "fonts": ["Inter"],
+        "sources": {
+            "background": "styles/globals.css:7",
+            "foreground": "styles/globals.css:8",
+            "dark": {"background": "styles/globals.css:40", "foreground": "styles/globals.css:41"},
+        },
+    }, "x")
+    assert c["sources"]["background"] == "styles/globals.css:7"
+    assert c["sources"]["foreground"] == "styles/globals.css:8"
+    assert c["sources"]["dark"]["background"] == "styles/globals.css:40"
+
+
+def test_sources_absent_is_backward_compatible():
+    from contract import _contract_from_block
+    c = _contract_from_block({"colors": {"ink": "#111111", "paper": "#ffffff"},
+                              "fonts": ["Sora"]}, "x")
+    assert "sources" not in c
+
+
+def test_sources_type_guarded():
+    from contract import _contract_from_block
+    # a non-dict sources is ignored, not crashed on
+    c = _contract_from_block({"colors": {"ink": "#111111", "paper": "#fff"},
+                              "fonts": ["Sora"], "sources": "globals.css"}, "x")
+    assert "sources" not in c
+
+
+def test_validate_reports_token_source_coverage():
+    """validate_contract surfaces how many color roles carry a source pointer, so a
+    measured contract can prove its provenance is machine-readable (not prose-only)."""
+    from contract import _contract_from_block, validate_contract
+    c = _contract_from_block({
+        "colors": {"background": "#ffffff", "foreground": "#0f172a", "primary": "#0f172a"},
+        "fonts": ["Inter"],
+        "sources": {"background": "styles/globals.css:7", "foreground": "styles/globals.css:8"},
+    }, "x")
+    ok, rep = validate_contract(c)
+    assert ok is True
+    # 2 of 3 roles carry provenance
+    assert rep["token_sources"] == 2
+
+
+def test_validate_zero_sources_when_absent():
+    from contract import _contract_from_block, validate_contract
+    c = _contract_from_block({"colors": {"ink": "#111111", "paper": "#ffffff"},
+                              "fonts": ["Sora"]}, "x")
+    ok, rep = validate_contract(c)
+    assert rep["token_sources"] == 0

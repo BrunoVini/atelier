@@ -156,6 +156,20 @@ the theme:
   values live in `<token_source.path>`; read via the theme. Don't duplicate hexes
   here."). Re-typing values into prose just creates a copy that drifts (the same
   failure as a stale CLAUDE.md).
+- **Carry per-token provenance IN the machine block (`sources`).** Measuring is
+  atelier's edge over eyeballing — so the machine block must be traceable, not just the
+  prose. Fill the contract block's `"sources"` map: `{role: "file:line"}` (+ a nested
+  `"dark"` sub-map for the dark theme), pointing each token at its `token_source` line /
+  selector / config key. A block that lists `{role:"#hex"}` with no `sources` strips the
+  provenance out of the artifact a tool consumes. After writing, confirm with
+  `contract.py --validate` that `token_sources` covers your color roles. (See
+  design-md-spec → "Token-source provenance".)
+- **Measure only what is bespoke — point at the rest.** If the repo's spacing / type
+  scale / shadows are a **framework default** (Tailwind defaults, etc.) and only the
+  colors + `--radius` are bespoke, say so plainly and keep the block's measured surface
+  to what the repo actually owns — don't transcribe the framework's default px values
+  into `spacing`/`shadows` as if they were measured project tokens (that inflates the
+  measured surface and reads as padding).
 
 **If `token_source` is null** (no existing source), fill
 `templates/DESIGN.md.template` with the measured values directly — name the exact
