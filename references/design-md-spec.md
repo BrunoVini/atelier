@@ -130,6 +130,24 @@ inline; the only bespoke tokens are the color vars + `--radius`") and keep the b
 measured surface to what the repo actually owns. Accuracy and honesty both reward a tight,
 truthful measured surface over a padded one.
 
+**Show the value AS STORED when the source isn't hex (HSL channels, oklch, …).** The
+machine block keeps colors as hex (tools need hex). But in the PROSE palette table of a
+*measured* contract, show the **authoritative source value** beside the derived hex — the
+raw HSL channel triple, the `oklch(...)`, or whatever the repo actually declares — and say
+the hex is *derived* from it. e.g. `--foreground | 222.2 47.4% 11.2% (source) | #0f172a
+(derived) | globals.css:8`. This is what proves the measurement is real and
+re-derivable rather than guessed (a doc that shows only resolved hex for an HSL-stored
+palette reads as a weaker, less-faithful read). The source value is the contract;
+the hex is a convenience.
+
+**Re-derive computed scale values; never guess them.** When a scale is defined by
+arithmetic on a bespoke token (e.g. Tailwind `borderRadius: { sm: "calc(var(--radius) -
+4px)" }` with `--radius: 0.5rem` = 8px → `sm` = **4px**, not 2px), COMPUTE each value from
+the real base and the real operation — read `--radius`, do the `calc()`. An off-by-one
+arithmetic slip (writing 2px where the math gives 4px) is a measurement error that makes
+the block contradict its own prose; verify the derived scale matches the source's actual
+computation.
+
 ## Importing a Google Stitch DESIGN.md
 
 Google Stitch emits a `DESIGN.md` whose contract lives in a YAML front-matter block

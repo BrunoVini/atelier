@@ -170,6 +170,17 @@ the theme:
   to what the repo actually owns — don't transcribe the framework's default px values
   into `spacing`/`shadows` as if they were measured project tokens (that inflates the
   measured surface and reads as padding).
+- **Show the source-format value beside the derived hex.** When the palette is stored in
+  a non-hex format (HSL channel triples, `oklch(...)`, …), the prose palette table must
+  show the **authoritative source value** AND the derived hex (label the hex *derived*),
+  so the read is provably faithful and re-derivable — `--foreground | 222.2 47.4% 11.2% |
+  #0f172a (derived) | globals.css:8`. The block stays hex (tools need it). A doc that
+  shows only resolved hex for an HSL-stored palette reads as a weaker measurement.
+- **Re-derive computed scale values — never guess.** For a scale defined by arithmetic on
+  a bespoke token (e.g. `calc(var(--radius) - 4px)` with `--radius: 0.5rem` = 8px → 4px,
+  NOT 2px), read the real base and compute each value; an off-by-one slip makes the block
+  contradict its own prose. (See design-md-spec → "Show the value AS STORED" / "Re-derive
+  computed scale values".)
 
 **If `token_source` is null** (no existing source), fill
 `templates/DESIGN.md.template` with the measured values directly — name the exact
