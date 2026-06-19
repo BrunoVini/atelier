@@ -261,6 +261,36 @@ function handleControl(req, res, opts) {
     });
     return true;
   }
+
+  if (req.url === '/__atelier/insert' && req.method === 'POST') {
+    if (!opts.projectDir) {
+      res.writeHead(403); res.end('{"ok":false,"reason":"--project-dir required for insert"}');
+      return true;
+    }
+    readBody(req, (p) => {
+      if (!p || !p.file || !p.anchor) {
+        res.writeHead(400); res.end('{"ok":false,"reason":"insert needs file and anchor"}');
+        return;
+      }
+      const target = path.resolve(String(p.file));
+      if (!isConfined(target, opts.projectDir)) {
+        res.writeHead(403); res.end('{"ok":false,"reason":"file outside project dir"}');
+        return;
+      }
+      const position = ['before', 'after'].includes(p.position) ? p.position : 'after';
+      const args = [
+        path.join(scriptsDir, 'live_insert.py'), target,
+        '--anchor', JSON.stringify(p.anchor),
+        '--position', position,
+      ];
+      shellPython(args, (out) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(out);
+      }, 10000);
+    });
+    return true;
+  }
+
   return false;
 }
 

@@ -68,6 +68,16 @@
   window.atelier.revert = function (journalId) {
     return post('/revert', { journal_id: journalId });
   };
+  // Insert mode: request an insert scaffold for net-new content at an anchor.
+  // The agent uses the returned {file, line, position} to write new variants ephemerally
+  // and persist the accepted one via atelier.accept() at accept time.
+  window.atelier.insert = function (o) {
+    return post('/insert', {
+      file: o.file,
+      anchor: o.anchor || {},
+      position: o.position || 'after',
+    });
+  };
 
   // ── Knob panel ───────────────────────────────────────────────────────────
   function renderKnobPanel(params, el, barEl) {

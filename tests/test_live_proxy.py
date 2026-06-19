@@ -361,3 +361,89 @@ def test_control_response_has_no_cors_header():
     r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout) is False
+
+
+# ── Insert endpoint ───────────────────────────────────────────────────────────
+
+def test_insert_endpoint_no_project_dir_returns_403():
+    # /insert must 403 when no --project-dir is given (mirrors /accept behaviour).
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN'});"  # no projectDir
+        "let code=0, body='';"
+        "const req = {url:'/__atelier/insert', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}, on(){}, pipe(){}};"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));}};"
+        "srv.emit('request', req, res);"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["code"] == 403
+    assert "project-dir" in out["body"]
+
+
+def test_insert_endpoint_bad_body_returns_400(tmp_path):
+    # /insert must 400 when file or anchor are missing from the request body.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    proj = str(tmp_path)
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN', projectDir: %r});"
+        "let code=0, body='';"
+        # Simulate a POST with a body missing `anchor`
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/insert', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({file:'/some/file.html'}));"
+        "req.emit('end');"
+    ) % (PROXY, proj)
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["code"] == 400
+    assert "anchor" in out["body"]
+
+
+def test_insert_endpoint_file_outside_project_returns_403(tmp_path):
+    # /insert must 403 when the requested file is outside the project dir.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    proj = str(tmp_path / "proj")
+    outside_file = str(tmp_path / "secret.html")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN', projectDir: %r});"
+        "let code=0, body='';"
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/insert', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({file: %r, anchor:{id:'hero'}, position:'after'}));"
+        "req.emit('end');"
+    ) % (PROXY, proj, outside_file)
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["code"] == 403
+    assert "project dir" in out["body"] or "outside" in out["body"]
