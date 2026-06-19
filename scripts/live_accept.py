@@ -94,7 +94,8 @@ def _run_qa(qa_target, contract=None, register=None, timeout=200):
 
 
 def accept_variant(file, old, new, qa_target, journal_dir, session,
-                   register=None, contract=None, label=None, rationale=None, now=None):
+                   register=None, contract=None, label=None, rationale=None,
+                   now=None, knob_values=None):
     """Apply a variant to source, QA it, and auto-revert on failure.
 
     Flow:
@@ -140,8 +141,11 @@ def accept_variant(file, old, new, qa_target, journal_dir, session,
                 "revert": rev, "reason": reason}
 
     # PASS only: keep the edit. (ERROR/FAIL already reverted above; nothing else passes.)
-    return {"ok": True, "reverted": False, "qa": qa_verdict,
-            "qa_results": qa_results, "journal_id": journal_id}
+    result = {"ok": True, "reverted": False, "qa": qa_verdict,
+              "qa_results": qa_results, "journal_id": journal_id}
+    if knob_values is not None:
+        result["knob_values"] = knob_values
+    return result
 
 
 if __name__ == "__main__":
@@ -156,9 +160,12 @@ if __name__ == "__main__":
     ap.add_argument("--register", choices=("brand", "product"))
     ap.add_argument("--label")
     ap.add_argument("--rationale")
+    ap.add_argument("--knob-values", default=None,
+                    help="JSON dict {id:{kind,value}} of accepted knob positions")
     ns = ap.parse_args()
+    kv = json.loads(ns.knob_values) if ns.knob_values else None
     res = accept_variant(ns.file, ns.old, ns.new, ns.qa_target, ns.journal_dir,
                          ns.session, register=ns.register, contract=ns.contract,
-                         label=ns.label, rationale=ns.rationale)
+                         label=ns.label, rationale=ns.rationale, knob_values=kv)
     print(json.dumps(res))
     sys.exit(0 if res.get("ok") else 1)

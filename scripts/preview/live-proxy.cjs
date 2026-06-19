@@ -244,6 +244,7 @@ function handleControl(req, res, opts) {
       if (p.register) args.push('--register', String(p.register));
       if (p.label) args.push('--label', String(p.label));
       if (p.rationale) args.push('--rationale', String(p.rationale));
+      if (p.knob_values) args.push('--knob-values', JSON.stringify(p.knob_values));
       shellPython(args, (out) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(out); });
     });
     return true;

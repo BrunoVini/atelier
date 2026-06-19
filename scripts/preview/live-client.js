@@ -62,11 +62,77 @@
   window.atelier.accept = function (o) {
     return post('/accept', { file: o.file, old: o.old, new: o.new, qa_target: o.qa_target,
                              session: o.session, contract: o.contract, register: o.register,
-                             label: o.label, rationale: o.rationale });
+                             label: o.label, rationale: o.rationale,
+                             knob_values: o.knob_values || null });
   };
   window.atelier.revert = function (journalId) {
     return post('/revert', { journal_id: journalId });
   };
+
+  // ── Knob panel ───────────────────────────────────────────────────────────
+  function renderKnobPanel(params, el, barEl) {
+    var panel = document.createElement('div');
+    panel.id = 'atelier-knob-panel';
+    panel.style.cssText = 'display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;'
+      + 'border-top:1px solid #444;padding-top:8px;margin-top:6px;width:100%;';
+    params.forEach(function(p) {
+      var wrap = document.createElement('label');
+      wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;font-size:11px;color:#bbb;min-width:80px;';
+      var lbl = document.createElement('span');
+      lbl.textContent = p.label || p.id;
+      wrap.appendChild(lbl);
+      if (p.kind === 'range') {
+        var inp = document.createElement('input');
+        inp.type = 'range';
+        inp.min = p.min != null ? p.min : 0;
+        inp.max = p.max != null ? p.max : 1;
+        inp.step = p.step != null ? p.step : 0.05;
+        inp.value = p['default'] != null ? p['default'] : 0.5;
+        el.style.setProperty('--p-' + p.id, inp.value);
+        inp.oninput = function() { el.style.setProperty('--p-' + p.id, inp.value); };
+        wrap.appendChild(inp);
+      } else if (p.kind === 'steps') {
+        var seg = document.createElement('div');
+        seg.style.cssText = 'display:flex;gap:2px;';
+        (p.options || []).forEach(function(opt) {
+          var btn = document.createElement('button');
+          btn.textContent = opt.label || opt.value;
+          var isDefault = opt.value === p['default'];
+          btn.style.cssText = 'background:' + (isDefault ? '#555' : '#2a2a2a')
+            + ';color:#fff;border:1px solid #555;border-radius:3px;'
+            + 'padding:2px 6px;cursor:pointer;font-size:11px;';
+          btn.tabIndex = -1;
+          btn.onmousedown = function(e) { e.preventDefault(); };
+          btn.onclick = function() {
+            el.setAttribute('data-p-' + p.id, opt.value);
+            seg.querySelectorAll('button').forEach(function(b) {
+              b.style.background = '#2a2a2a';
+            });
+            btn.style.background = '#555';
+          };
+          if (isDefault) el.setAttribute('data-p-' + p.id, opt.value);
+          seg.appendChild(btn);
+        });
+        wrap.appendChild(seg);
+      } else if (p.kind === 'toggle') {
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!p['default'];
+        cb.onchange = function() {
+          el.style.setProperty('--p-' + p.id, cb.checked ? '1' : '0');
+          if (cb.checked) el.setAttribute('data-p-' + p.id, '');
+          else el.removeAttribute('data-p-' + p.id);
+        };
+        if (p['default']) {
+          el.style.setProperty('--p-' + p.id, '1');
+          el.setAttribute('data-p-' + p.id, '');
+        }
+        wrap.appendChild(cb);
+      }
+      panel.appendChild(wrap);
+    });
+    barEl.appendChild(panel);
+  }
 
   // ── Picker bar ───────────────────────────────────────────────────────────
   function teardown() {
@@ -126,6 +192,28 @@
             b.onclick = function () { pick(v, b); };
             bar.appendChild(b);
           });
+          // Knob panel (optional): if opts.params is provided, render tuning controls
+          // that drive CSS custom properties + data attributes on the picked element.
+          // No source write happens — purely in-page CSS var / attr manipulation.
+          var currentParams = opts.params || [];
+          if (currentParams.length && chosen) {
+            renderKnobPanel(currentParams, chosen, bar);
+          }
+          // Capture current knob values at accept time
+          function getKnobValues(el) {
+            var out = {};
+            currentParams.forEach(function(p) {
+              if (p.kind === 'range') {
+                var v = el.style.getPropertyValue('--p-' + p.id);
+                out[p.id] = {kind: 'range', value: parseFloat(v) || p['default'] || 0};
+              } else if (p.kind === 'steps') {
+                out[p.id] = {kind: 'steps', value: el.getAttribute('data-p-' + p.id) || p['default'] || ''};
+              } else if (p.kind === 'toggle') {
+                out[p.id] = {kind: 'toggle', value: el.hasAttribute('data-p-' + p.id)};
+              }
+            });
+            return Object.keys(out).length ? out : null;
+          }
           var accept = document.createElement('button');
           accept.textContent = 'Accept (qa-gated)';
           accept.style.cssText = 'background:#2a7;color:#fff;border:0;border-radius:5px;'
@@ -134,8 +222,9 @@
           accept.onmousedown = function (e) { e.preventDefault(); };   // never steal focus (#241)
           accept.onclick = function () {
             if (!chosen) { log('pick a variant first'); return; }
-            if (opts.onAccept) opts.onAccept(chosen, el);
-            else log('accept handler not wired — call atelier.accept({file,old,new,qa_target,session})');
+            var kv = getKnobValues(el);
+            if (opts.onAccept) opts.onAccept(chosen, el, kv);
+            else log('accept handler not wired — call atelier.accept({file,old,new,qa_target,session,knob_values})');
           };
           var reject = document.createElement('button');
           reject.textContent = 'Reject';
