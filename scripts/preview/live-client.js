@@ -78,6 +78,14 @@
       position: o.position || 'after',
     });
   };
+  // Steer: send a page-level direction without picking an element.
+  window.atelier.steer = function (text) {
+    return post('/steer', {
+      session: window.__atelierSession || 'default',
+      message: text,
+      page_url: location.href,
+    });
+  };
 
   // ── Knob panel ───────────────────────────────────────────────────────────
   function renderKnobPanel(params, el, barEl) {
@@ -305,7 +313,70 @@
     } catch (_) { /* MutationObserver absent -> picker still works, just no auto-reattach */ }
   }
 
-  function boot() { attach(); watchHMR(); log('ready — alt+click an element, then atelier.openPicker()'); }
+  // ── Steer bar ────────────────────────────────────────────────────────────
+  // Floating bottom-right input for page-level directions. Always visible.
+  // Visually distinct from the picker bar (bottom-left center vs. bottom-right corner,
+  // smaller, darker bg, labelled "steer:"). Web Speech API is optional — gracefully absent.
+  function addSteerBar() {
+    var existing = document.getElementById('atelier-steer-bar');
+    if (existing) return;
+    var bar = document.createElement('div');
+    bar.id = 'atelier-steer-bar';
+    bar.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:2147483646;'
+      + 'background:#1a1a1a;border-radius:8px;padding:6px 10px;display:flex;gap:6px;'
+      + 'align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.4);';
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'font:11px system-ui,sans-serif;color:#666;white-space:nowrap;';
+    lbl.textContent = 'steer:';
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = 'page direction…';
+    inp.style.cssText = 'background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:4px;'
+      + 'padding:3px 7px;font:12px system-ui,sans-serif;width:180px;outline:none;';
+    inp.onkeydown = function (e) {
+      if (e.key === 'Enter' && inp.value.trim()) {
+        var msg = inp.value.trim();
+        inp.value = '';
+        window.atelier.steer(msg).then(function (r) {
+          log('steer sent: ' + msg + (r.ok ? '' : ' (warn: ' + (r.reason || '') + ')'));
+        });
+      }
+    };
+    // Voice input (Web Speech API, graceful degradation)
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      var mic = document.createElement('button');
+      mic.textContent = '🎙';
+      mic.title = 'Click to speak a steer instruction';
+      mic.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;';
+      mic.tabIndex = -1;
+      mic.onclick = function () {
+        var rec = new SR();
+        rec.lang = 'en-US';
+        rec.maxAlternatives = 1;
+        mic.style.color = '#f88';
+        rec.onresult = function (ev) {
+          var transcript = ev.results[0][0].transcript;
+          inp.value = transcript;
+          mic.style.color = '';
+          inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        };
+        rec.onerror = function () { mic.style.color = ''; };
+        rec.onend = function () { mic.style.color = ''; };
+        rec.start();
+      };
+      bar.appendChild(mic);
+    }
+    bar.appendChild(lbl);
+    bar.appendChild(inp);
+    document.body.appendChild(bar);
+  }
+
+  function boot() {
+    attach(); watchHMR();
+    log('ready — alt+click an element, then atelier.openPicker()');
+    try { addSteerBar(); } catch (_) {}
+  }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else { boot(); }

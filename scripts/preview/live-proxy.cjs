@@ -310,6 +310,29 @@ function handleControl(req, res, opts) {
     return true;
   }
 
+  if (req.url === '/__atelier/steer' && req.method === 'POST') {
+    readBody(req, function(p) {
+      if (!p || !p.message || !p.session) {
+        res.writeHead(400); res.end('{"ok":false,"reason":"steer needs message and session"}');
+        return;
+      }
+      var args = [
+        path.join(scriptsDir, 'live_steer.py'),
+        '--journal-dir', journalDir,
+        '--session', String(p.session),
+        '--message', String(p.message),
+      ];
+      if (p.page_url) args.push('--page-url', String(p.page_url));
+      shellPython(args, function(out) {
+        // Also log to server stdout so the agent sees the steer instruction
+        console.log('[atelier-steer] ' + String(p.message));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(out);
+      }, 5000);
+    });
+    return true;
+  }
+
   return false;
 }
 
