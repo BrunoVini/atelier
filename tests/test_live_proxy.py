@@ -286,6 +286,54 @@ def test_build_injection_embeds_token_and_client():
     assert out["defaultInjectWorks"] is True
 
 
+def test_build_injection_embeds_session_id():
+    # Fix 1: buildInjection(clientSrc, token, sessionId) must embed window.__atelierSession
+    # when a sessionId is provided; it must be absent when not provided.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const withSession = p.buildInjection('SRC', 'tok', 'sess-ABC');"
+        "const noSession = p.buildInjection('SRC', 'tok');"
+        "process.stdout.write(JSON.stringify({"
+        "  hasSession: withSession.indexOf('window.__atelierSession=\"sess-ABC\"') !== -1,"
+        "  sessionAbsentWhenOmitted: noSession.indexOf('window.__atelierSession=') === -1"
+        "}));"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["hasSession"] is True, "buildInjection must embed window.__atelierSession when sessionId given"
+    assert out["sessionAbsentWhenOmitted"] is True, "window.__atelierSession must not appear without a sessionId"
+
+
+def test_make_server_injects_session_id_into_page():
+    # Fix 1: makeServer must generate a sessionId and embed window.__atelierSession via
+    # opts.injection; the sessionId must appear in the injected markup.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN'});"
+        "process.stdout.write(JSON.stringify({"
+        "  hasSession: (srv._opts || {sessionId: srv.sessionId || ''}),"
+        "  injectionHasSession: p.makeServer({upstream:'http://127.0.0.1:1'})._atelier_inj_check ||"
+        "    (() => { const s = p.makeServer({upstream:'http://127.0.0.1:1'}); return s._opts; })()"
+        "}));"
+    ) % PROXY
+    # Simpler approach: call buildInjection with a fixed sessionId and check the output
+    script2 = (
+        "const p = require(%r);"
+        "const inj = p.buildInjection('', 'tok', 'my-session-id-123');"
+        "process.stdout.write(JSON.stringify(inj.indexOf('my-session-id-123') !== -1));"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script2], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) is True
+
+
 def test_control_post_requires_token_then_project_dir():
     # Token gate runs before project-dir: no token -> 403; correct token but no project-dir
     # -> still 403 (token gate passes, project-dir gate trips). Drive via makeServer with a

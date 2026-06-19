@@ -32,15 +32,19 @@ const clientPath = path.join(__dirname, 'live-client.js');
 let CLIENT_SRC = '';
 try { CLIENT_SRC = fs.readFileSync(clientPath, 'utf-8'); } catch (_) { CLIENT_SRC = ''; }
 
-// Build the injected markup for a given client source + optional session token. When a
-// token is present we prepend a tiny same-origin <script> that exposes it as
-// window.__atelierToken so the in-page client can echo it back on control POSTs (the
-// server then validates it — see tokenOk). Pure string builder, unit-tested.
-function buildInjection(clientSrc, token) {
+// Build the injected markup for a given client source + optional session token and
+// sessionId. When a token is present we prepend a tiny same-origin <script> that
+// exposes it as window.__atelierToken so the in-page client can echo it back on control
+// POSTs (the server then validates it — see tokenOk). When a sessionId is present it is
+// similarly exposed as window.__atelierSession. Pure string builder, unit-tested.
+function buildInjection(clientSrc, token, sessionId) {
   var tokenScript = (token != null && token !== '')
     ? '<script>window.__atelierToken=' + JSON.stringify(String(token)) + ';</script>\n'
     : '';
-  return '\n' + tokenScript + '<script data-atelier-live="1">\n' + (clientSrc || '') + '\n</script>\n';
+  var sessionScript = (sessionId != null && sessionId !== '')
+    ? '<script>window.__atelierSession=' + JSON.stringify(String(sessionId)) + ';</script>\n'
+    : '';
+  return '\n' + tokenScript + sessionScript + '<script data-atelier-live="1">\n' + (clientSrc || '') + '\n</script>\n';
 }
 
 // Default (token-less) injection — kept exported so existing unit tests that call inject()
@@ -293,7 +297,7 @@ function handleControl(req, res, opts) {
 
   if (req.url.indexOf('/__atelier/status') === 0 && req.method === 'GET') {
     var urlParts = new URL('http://x' + req.url);
-    var session = urlParts.searchParams.get('session') || '';
+    var session = urlParts.searchParams.get('session') || opts.sessionId || '';
     if (!session) {
       res.writeHead(400); res.end('{"ok":false,"reason":"session param required"}');
       return true;
@@ -395,9 +399,11 @@ function proxyRequest(req, res, opts) {
 function makeServer(opts) {
   opts = opts || {};
   // Per-instance session token (overridable via --token / ATELIER_TOKEN so the driving
-  // agent knows it) and the matching injection that embeds it into the page.
+  // agent knows it) and a stable sessionId that identifies this proxy session. Both are
+  // embedded into the page via window.__atelierToken / window.__atelierSession.
   if (!opts.token) opts.token = crypto.randomBytes(24).toString('hex');
-  if (opts.injection == null) opts.injection = buildInjection(CLIENT_SRC, opts.token);
+  if (!opts.sessionId) opts.sessionId = crypto.randomBytes(16).toString('hex');
+  if (opts.injection == null) opts.injection = buildInjection(CLIENT_SRC, opts.token, opts.sessionId);
   // Hosts we accept beyond the loopback set: the configured bind host and the url-host.
   const allowedHosts = [opts.host, opts.host === '127.0.0.1' ? 'localhost' : opts.host];
 

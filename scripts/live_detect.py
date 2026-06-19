@@ -146,6 +146,18 @@ def detect_dev_server(url_or_none):
     # We claim we can inject when it's HTML AND a recognised framework (including bare HTML).
     _INJECTABLE = {"vite", "next", "sveltekit", "astro", "nuxt", "html"}
     can_inject = bool(is_html and framework in _INJECTABLE)
+
+    if framework == 'html':
+        # Only inject into plain HTML when it's clearly a local dev server.
+        # Vite/Next/SvelteKit/Astro/Nuxt have distinctive fingerprints and are safe
+        # regardless of host; plain-HTML fallback requires localhost to avoid granting
+        # can_inject to arbitrary remote pages that happen to be HTML documents.
+        from urllib.parse import urlparse
+        host = urlparse(url).hostname or ''
+        if host not in ('localhost', '127.0.0.1'):
+            framework = 'unknown'
+            can_inject = False
+
     return {"url": url, "framework": framework, "hmr": hmr, "can_inject": can_inject}
 
 

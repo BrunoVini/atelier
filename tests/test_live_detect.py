@@ -115,6 +115,39 @@ def test_detect_non_html_content_type_no_inject():
         stop()
 
 
+def test_detect_plain_html_non_localhost_not_injectable():
+    # Fix 2: plain HTML from a non-localhost host must NOT get can_inject:True.
+    # We simulate a non-localhost URL by patching _fetch so detect_dev_server sees plain
+    # HTML but thinks the URL is an external host.
+    import unittest.mock as mock
+    external_url = "http://example.com/"
+    with mock.patch.object(ld, "_fetch", return_value=(PLAIN_HTML, {"content-type": "text/html; charset=utf-8"})):
+        r = ld.detect_dev_server(external_url)
+    assert r["framework"] == "unknown", "plain HTML from non-localhost must downgrade to unknown"
+    assert r["can_inject"] is False, "plain HTML from non-localhost must not be injectable"
+
+
+def test_detect_plain_html_localhost_still_injectable():
+    # Fix 2 (regression guard): plain HTML on localhost keeps can_inject:True.
+    import unittest.mock as mock
+    local_url = "http://localhost:3000/"
+    with mock.patch.object(ld, "_fetch", return_value=(PLAIN_HTML, {"content-type": "text/html; charset=utf-8"})):
+        r = ld.detect_dev_server(local_url)
+    assert r["framework"] == "html"
+    assert r["can_inject"] is True
+
+
+def test_detect_vite_non_localhost_still_injectable():
+    # Fix 2 (regression guard): Vite has a distinctive fingerprint so it stays injectable
+    # regardless of host (only the plain-HTML fallback needs the localhost restriction).
+    import unittest.mock as mock
+    external_url = "http://example.com/"
+    with mock.patch.object(ld, "_fetch", return_value=(VITE_HTML, {"content-type": "text/html; charset=utf-8"})):
+        r = ld.detect_dev_server(external_url)
+    assert r["framework"] == "vite"
+    assert r["can_inject"] is True
+
+
 # ── no-crash contract ────────────────────────────────────────────────────────
 
 def test_unreachable_host_is_unknown_no_crash():
