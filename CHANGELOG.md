@@ -373,8 +373,18 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   folds every result into a severity-tiered punch list, and re-checks every cited number — a
   wrong ratio/width discredits the critique. Honest copy "shows, doesn't announce" (repeated
   anti-slop meta-commentary is its own tell).
-- WCAG contrast audit for every text/surface pairing in the locked palette, with
-  nearest-passing shade suggestions and on-pair contrast scoring.
+- WCAG contrast audit for every text/surface pairing in the locked palette, applying the
+  correct AA threshold per use (4.5:1 normal text, 3:1 large text and UI / graphical
+  objects), with on-pair contrast scoring.
+- **Minimal, brand-preserving nearest-passing fixes.** For each failing pair the auditor
+  proposes a concrete fix that reaches AA with the *smallest perceptual move* from the
+  original brand color: it blends in fine steps (so it clears the threshold without
+  overshooting it into a needlessly large change) and weighs **both levers** — adjusting
+  the foreground or adjusting the background fill — returning whichever moves least. For a
+  white (or near-white) label on a saturated brand fill it darkens the **fill** and keeps
+  the label, rather than dumping the text toward near-black; for ordinary dark-text-on-light
+  it nudges the foreground. Every suggested fix is recomputed and confirmed to meet its
+  threshold, and reported alongside its new ratio.
 - **Custom-control accessibility checks** in the static a11y audit — catches two subtle,
   common ways a hand-built control (a styled toggle, checkbox, radio, or select) silently
   ships with no usable state for assistive tech: an `aria-labelledby` that points only at
