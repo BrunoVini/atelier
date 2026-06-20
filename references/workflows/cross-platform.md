@@ -60,12 +60,18 @@ flat `class AppColors { static const … }` dump:
   (3.22+; disclosed with a downgrade path). `onSecondary`/`onTertiary` have no source
   token, so they're set to a readable contrast (not fabricated). M3 dropped
   `background`/`onBackground` — don't emit them (use `scaffoldBackgroundColor`).
-- **A `ThemeExtension<AppTokens>`** — the Flutter-canonical carrier for everything that
-  has no ColorScheme slot (the brand `accent`, the full semantic palette
-  success/warning, the complete role set, spacing, radii). It implements `copyWith` AND
-  `lerp` (colors via `Color.lerp`, doubles via `lerpDouble` from `dart:ui`) so tokens
-  animate across a theme transition. NOTHING from the contract is dropped: every role
-  appears both on the ColorScheme (where it fits) and on `AppTokens`.
+- **Per-concern `ThemeExtension`s** — the Flutter-canonical carriers for everything that
+  has no ColorScheme slot, each a single-responsibility extension with `copyWith` AND a
+  real interpolating `lerp` so the WHOLE token set animates across a theme transition:
+  - `AppTokens` — the brand `accent`, the full semantic palette, the complete color role
+    set, plus spacing + radii (colors via `Color.lerp`, doubles via `lerpDouble`).
+  - `AppTypography` — every type role as a field, lerped via `TextStyle.lerp`, with a
+    `toTextTheme()` building the full 15-slot M3 `TextTheme`.
+  - `AppElevation` — the card shadow as a `List<BoxShadow>`, lerped via
+    `BoxShadow.lerpList`.
+  NOTHING from the contract is dropped: every role appears both on the ColorScheme (where
+  it fits) and on an extension, and every extension genuinely interpolates (don't leave
+  typography/elevation as static const classes — they must lerp like the rest).
 - **A FULL Material 3 `TextTheme`** — every canonical slot (`displayLarge`…`labelSmall`)
   filled from the contract's closest role so stock widgets (AppBar, ListTile, chips,
   buttons) inherit the scale — plus an `AppTextStyles` class keeping every role under its
@@ -76,11 +82,12 @@ flat `class AppColors { static const … }` dump:
   **`AppElevation.card`** as a derived `List<BoxShadow>` (one `BoxShadow` per CSS layer,
   the token's REAL color + offset, blur→`blurRadius`; disclosed as not a 1:1 primitive).
 - **`AppTheme.light`/`.dark`** (`useMaterial3: true`) wiring the colorScheme, textTheme,
-  `scaffoldBackgroundColor`, and the extension; plus an ergonomic **`context.tokens`**
-  `BuildContext` extension reading `Theme.of(context).extension<AppTokens>()` — which
-  **asserts** (with an actionable message) when the extension isn't registered rather
-  than silently falling back to the light tokens (a silent fallback would show LIGHT
-  tokens in an unthemed dark subtree and mask the bug).
+  `scaffoldBackgroundColor`, and all three extensions; plus ergonomic
+  **`context.tokens` / `context.type` / `context.elevation`** `BuildContext` accessors
+  reading `Theme.of(context).extension<…>()` — each **asserts** (with an actionable
+  message) when the extension isn't registered rather than silently falling back to the
+  light tokens (a silent fallback would show LIGHT tokens in an unthemed dark subtree and
+  mask the bug).
 
 The `ThemeExtension`'s `lerp` interpolates **every** field — colors via `Color.lerp`,
 radii + the spacing scale (element-wise) via `lerpDouble` (imported from `dart:ui`, since

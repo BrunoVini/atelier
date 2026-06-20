@@ -325,6 +325,35 @@ def test_flutter_lerp_interpolates_spacing():
     assert "spacing: spacing," not in out
 
 
+def test_flutter_typography_is_lerpable_extension():
+    # Typography participates in theme transitions: a ThemeExtension with copyWith
+    # + a lerp that uses TextStyle.lerp, registered on ThemeData, read via
+    # context.type — not just a static const class.
+    out = flutter(COLORS, ["Inter"], dark=DARK, typography=TYPO)
+    assert "class AppTypography extends ThemeExtension<AppTypography>" in out
+    assert "TextStyle.lerp(" in out
+    assert "AppTypography get type" in out
+    assert "toTextTheme()" in out  # builds the M3 TextTheme from itself
+
+
+def test_flutter_elevation_is_lerpable_extension():
+    out = flutter(COLORS, ["Inter"], dark=DARK, shadows=SHADOWS)
+    assert "class AppElevation extends ThemeExtension<AppElevation>" in out
+    # lerps a List<BoxShadow> the idiomatic way
+    assert "BoxShadow.lerpList(" in out
+    assert "AppElevation get elevation" in out
+
+
+def test_flutter_extensions_registered_on_themedata():
+    out = flutter(COLORS, ["Inter"], dark=DARK, spacing=SPACING, rounded=ROUNDED,
+                  typography=TYPO, shadows=SHADOWS)
+    # every concern is registered as a ThemeExtension so context.<x> resolves
+    assert "AppTypography" in out
+    assert "AppElevation" in out
+    # the extensions list carries the typography + elevation extensions
+    assert "extensions:" in out
+
+
 def test_flutter_full_m3_texttheme_slots():
     # The TextTheme should fill the canonical M3 slots across the families, not
     # just a sparse 7 — so stock widgets (AppBar, ListTile, chips, labels) inherit.

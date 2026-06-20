@@ -705,6 +705,22 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     out.append("    );")
     out.append("    return tokens!;")
     out.append("  }")
+    if typography:
+        out.append("")
+        out.append("  /// The type scale: `context.type.headline`.")
+        out.append("  AppTypography get type {")
+        out.append("    final t = Theme.of(this).extension<AppTypography>();")
+        out.append("    assert(t != null, 'AppTypography ThemeExtension not found. Use AppTheme.light/.dark.');")
+        out.append("    return t!;")
+        out.append("  }")
+    if shadows:
+        out.append("")
+        out.append("  /// Elevation shadows: `context.elevation.card`.")
+        out.append("  AppElevation get elevation {")
+        out.append("    final e = Theme.of(this).extension<AppElevation>();")
+        out.append("    assert(e != null, 'AppElevation ThemeExtension not found. Use AppTheme.light/.dark.');")
+        out.append("    return e!;")
+        out.append("  }")
     out.append("}")
     out.append("")
 
@@ -735,30 +751,53 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     if shadows:
         first_shadow = next(iter(shadows.values())) if isinstance(shadows, dict) else str(shadows)
         css_layers = _parse_box_shadow(first_shadow)
+        def card_list_literal(indent):
+            pad = " " * indent
+            L = ["<BoxShadow>["]
+            if css_layers:
+                for (r, g, b, a, ox, oy, blur) in css_layers:
+                    a8 = max(0, min(255, round(a * 255)))
+                    ox_s = str(int(ox)) if ox == int(ox) else f"{ox:g}"
+                    oy_s = str(int(oy)) if oy == int(oy) else f"{oy:g}"
+                    bl_s = str(int(blur)) if blur == int(blur) else f"{blur:g}"
+                    L.append(f"{pad}  BoxShadow(")
+                    L.append(f"{pad}    color: Color(0x{a8:02X}{r:02X}{g:02X}{b:02X}),")
+                    L.append(f"{pad}    offset: Offset({ox_s}, {oy_s}),")
+                    L.append(f"{pad}    blurRadius: {bl_s},")
+                    L.append(f"{pad}  ),")
+            else:
+                L.append(f"{pad}  // token unparseable — a conservative single-layer fallback.")
+                L.append(f"{pad}  BoxShadow(color: Color(0x14000000), offset: Offset(0, 1), blurRadius: 3),")
+            L.append(f"{pad}]")
+            return ("\n").join(L)
+
         out.append("/// Card elevation, derived from the contract's CSS box-shadow token:")
         out.append(f"///   `{first_shadow}`")
         out.append("/// Flutter has no single box-shadow primitive, so each CSS layer becomes")
         out.append("/// a `BoxShadow` using the token's REAL color + offset (blur as blurRadius;")
         out.append("/// a Gaussian blurRadius is not identical to a CSS blur — disclosed).")
-        out.append("abstract final class AppElevation {")
-        if css_layers:
-            out.append("  static const List<BoxShadow> card = <BoxShadow>[")
-            for (r, g, b, a, ox, oy, blur) in css_layers:
-                a8 = max(0, min(255, round(a * 255)))
-                ox_s = str(int(ox)) if ox == int(ox) else f"{ox:g}"
-                oy_s = str(int(oy)) if oy == int(oy) else f"{oy:g}"
-                bl_s = str(int(blur)) if blur == int(blur) else f"{blur:g}"
-                out.append(f"    BoxShadow(")
-                out.append(f"      color: Color(0x{a8:02X}{r:02X}{g:02X}{b:02X}),")
-                out.append(f"      offset: Offset({ox_s}, {oy_s}),")
-                out.append(f"      blurRadius: {bl_s},")
-                out.append(f"    ),")
-            out.append("  ];")
-        else:
-            out.append("  // token unparseable — a conservative single-layer fallback.")
-            out.append("  static const List<BoxShadow> card = <BoxShadow>[")
-            out.append("    BoxShadow(color: Color(0x14000000), offset: Offset(0, 1), blurRadius: 3),")
-            out.append("  ];")
+        out.append("/// A ThemeExtension so shadows animate on a theme transition and are read")
+        out.append("/// via `context.elevation.card`.")
+        out.append("@immutable")
+        out.append("class AppElevation extends ThemeExtension<AppElevation> {")
+        out.append("  final List<BoxShadow> card;")
+        out.append("  const AppElevation({required this.card});")
+        out.append("")
+        out.append("  static const AppElevation standard = AppElevation(")
+        out.append("    card: " + card_list_literal(4) + ",")
+        out.append("  );")
+        out.append("")
+        out.append("  @override")
+        out.append("  AppElevation copyWith({List<BoxShadow>? card}) =>")
+        out.append("      AppElevation(card: card ?? this.card);")
+        out.append("")
+        out.append("  @override")
+        out.append("  AppElevation lerp(ThemeExtension<AppElevation>? other, double t) {")
+        out.append("    if (other is! AppElevation) return this;")
+        out.append("    return AppElevation(")
+        out.append("      card: BoxShadow.lerpList(card, other.card, t) ?? card,")
+        out.append("    );")
+        out.append("  }")
         out.append("}")
         out.append("")
 
@@ -816,27 +855,69 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
             return ("TextStyle(\n" + ",\n".join(pad + "  " + p for p in parts)
                     + ",\n" + pad + ")")
 
-        out.append("/// The type scale as a FULL Material 3 TextTheme — every canonical slot")
-        out.append("/// is filled from the contract's closest role, so stock widgets (AppBar,")
-        out.append("/// ListTile, chips, buttons, labels) inherit the scale. The exact role")
-        out.append("/// names are also exposed verbatim on AppTextStyles below.")
-        out.append("const TextTheme _textTheme = TextTheme(")
+        typo_roles = list(typography.keys())
+        out.append("/// The type scale as a lerp-able ThemeExtension: every contract role is a")
+        out.append("/// field (exact size / FontWeight / family / lineHeight-as-ratio), it builds")
+        out.append("/// the FULL 15-slot Material 3 TextTheme via `toTextTheme()` so stock widgets")
+        out.append("/// inherit the scale, and it interpolates on a theme transition. Read named")
+        out.append("/// roles via `context.type.headline`.")
+        out.append("@immutable")
+        out.append("class AppTypography extends ThemeExtension<AppTypography> {")
+        for role in typo_roles:
+            out.append(f"  final TextStyle {_camel(role)};")
+        out.append("")
+        out.append("  const AppTypography({")
+        for role in typo_roles:
+            out.append(f"    required this.{_camel(role)},")
+        out.append("  });")
+        out.append("")
+        out.append("  static const AppTypography standard = AppTypography(")
+        for role in typo_roles:
+            out.append(f"    {_camel(role)}: {style_expr(typography[role], 4)},")
+        out.append("  );")
+        out.append("")
+        # toTextTheme: fill every canonical M3 slot from the closest role field.
+        out.append("  /// Build the FULL Material 3 [TextTheme] from this scale so stock")
+        out.append("  /// widgets (AppBar, ListTile, chips, buttons, labels) inherit it.")
+        out.append("  TextTheme toTextTheme() => TextTheme(")
         for slot, role in m3_full.items():
             if role and role in typography:
-                out.append(f"  {slot}: {style_expr(typography[role], 2)},")
-        out.append(");")
+                out.append(f"        {slot}: {_camel(role)},")
+        out.append("      );")
         out.append("")
-        # Also expose each role by its CONTRACT name (so nothing is renamed-away).
-        out.append("/// Every type role under its CONTRACT name (nothing renamed away).")
-        out.append("abstract final class AppTextStyles {")
-        for role, spec in typography.items():
-            out.append(f"  static const TextStyle {_camel(role)} = {style_expr(spec, 2)};")
+        out.append("  @override")
+        out.append("  AppTypography copyWith({")
+        for role in typo_roles:
+            out.append(f"    TextStyle? {_camel(role)},")
+        out.append("  }) {")
+        out.append("    return AppTypography(")
+        for role in typo_roles:
+            cm = _camel(role)
+            out.append(f"      {cm}: {cm} ?? this.{cm},")
+        out.append("    );")
+        out.append("  }")
+        out.append("")
+        out.append("  @override")
+        out.append("  AppTypography lerp(ThemeExtension<AppTypography>? other, double t) {")
+        out.append("    if (other is! AppTypography) return this;")
+        out.append("    return AppTypography(")
+        for role in typo_roles:
+            cm = _camel(role)
+            out.append(f"      {cm}: TextStyle.lerp({cm}, other.{cm}, t)!,")
+        out.append("    );")
+        out.append("  }")
         out.append("}")
         out.append("")
 
     # ---- AppTheme: the two ThemeData --------------------------------------
     out.append("/// The app themes. Inject via `MaterialApp(theme: AppTheme.light,")
     out.append("/// darkTheme: AppTheme.dark, themeMode: ThemeMode.system)`.")
+    # Shared (brightness-independent) extensions: typography + elevation.
+    shared_exts = []
+    if typography:
+        shared_exts.append("AppTypography.standard")
+    if shadows:
+        shared_exts.append("AppElevation.standard")
     out.append("abstract final class AppTheme {")
     for scheme in ("light", "dark"):
         out.append(f"  static ThemeData get {scheme} => ThemeData(")
@@ -846,10 +927,13 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
             getv = dval if scheme == "dark" else (lambda n: colors[n])
             out.append(f"        scaffoldBackgroundColor: Color({argb(getv(role_bg))}),")
         if typography:
-            out.append("        textTheme: _textTheme,")
+            out.append("        textTheme: AppTypography.standard.toTextTheme(),")
         if first_family:
             out.append(f"        fontFamily: '{first_family}',")
-        out.append(f"        extensions: const <ThemeExtension<dynamic>>[AppTokens.{scheme}],")
+        exts = [f"AppTokens.{scheme}"] + shared_exts
+        out.append("        extensions: const <ThemeExtension<dynamic>>[")
+        out.append("          " + ", ".join(exts) + ",")
+        out.append("        ],")
         out.append("      );")
     out.append("}")
     out.append("")
@@ -872,10 +956,11 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     out.append("        color: scheme.surface,")
     out.append(f"        borderRadius: {rad},")
     out.append("        border: Border.all(color: tokens.border),")
+    if shadows:
+        out.append("        boxShadow: context.elevation.card,")
     out.append("      ),")
     if typography:
-        out.append("      child: Text('Aurora',")
-        out.append("          style: Theme.of(context).textTheme.titleLarge),")
+        out.append("      child: Text('Aurora', style: context.type.headline),")
     else:
         out.append("      child: Text('Aurora', style: TextStyle(color: scheme.onSurface)),")
     out.append("    );")
