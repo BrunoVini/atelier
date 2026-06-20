@@ -831,7 +831,7 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
 
     # ---- AppTheme: the two ThemeData --------------------------------------
     out.append("/// The app themes. Inject via `MaterialApp(theme: AppTheme.light,")
-    out.append("/// darkThemeMode: ..., darkTheme: AppTheme.dark)`.")
+    out.append("/// darkTheme: AppTheme.dark, themeMode: ThemeMode.system)`.")
     out.append("abstract final class AppTheme {")
     for scheme in ("light", "dark"):
         out.append(f"  static ThemeData get {scheme} => ThemeData(")
