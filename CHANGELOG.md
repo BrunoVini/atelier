@@ -342,6 +342,19 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   *prove* the system is shared, render both brands at once side by side (the second brand
   reachable with no interaction, not hidden behind a JS-only toggle) and keep the
   comparison chrome token-driven and quiet so it never contaminates the brands it frames.
+  For **dark mode specifically**, the guidance now goes past "passes AA": a finished dark
+  theme is built as a co-equal `[data-theme="dark"]` token scope with its OWN role hexes
+  (muted / faint / border / on-fill chosen for the dark surface, not an inversion),
+  contrast **audited per theme** so AA holds in light *and* dark; it lifts the surface off
+  pure black and softens the ink off pure white (a deterministic check flags the harsh
+  pure-`#000`+pure-`#fff` pairing), builds a real luminance elevation ladder
+  (canvas < card < inset), desaturates and lifts the accent for the dark surface, and
+  **reserves the accent for meaning** — neutral resting chart bars and progress tracks,
+  accent only on the active/current element, primary action, links, and active nav, rather
+  than painting everything in the brand color. A dark-mode task is treated as making the
+  *whole* page correct: the light theme is re-audited too, so both themes ship as
+  equal-finish, AA-clean peers — and the contrast report is honest about both, flagging any
+  borderline pair instead of claiming a blanket pass.
 - i18n / RTL logical-property linting.
 - Design planning + a 5-seat Design Council (for / against / neutral / UX / craft → a
   synthesized verdict) for hard, multi-surface calls.
