@@ -393,8 +393,18 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   role overrides the native `:checked`, so a screen reader announces no on/off state). Both
   flag as blocking findings in the `qa.py --hook` loop.
 - Overlap / collision hunting across screen sizes, on by default in any scan or review:
-  rendered text-on-text and decoration-over-text detection, plus a static no-render
-  risk lint for absolutely-positioned decorations and negative margins.
+  a render-grounded width sweep that opens the page at each width and **measures** the
+  defects from real geometry — horizontal overflow (element/document wider than the
+  viewport), text-on-text and decoration-over-text collisions (bounding-box
+  intersection), and content that overruns or escapes its box — rather than guessing
+  from the source. Because it measures the rendered layout, it flags only layout that
+  *actually* breaks (a plausible-looking rule that doesn't collide at any width is left
+  clean, and a misleading source comment never fools it), and it distinguishes a real
+  opaque collision from a see-through decoration the text reads cleanly over. Each
+  finding carries the element(s), the width range, and the CSS cause; a fix is confirmed
+  by re-rendering the swept widths to show the defect is gone with no other width
+  regressed. Paired with a static no-render risk lint (absolutely-positioned decorations,
+  negative margins) for when the page can't be rendered.
 - Design lint ("design ESLint") flagging off-contract colors/fonts with
   file · line · severity · fix (perceptual, so near-duplicates don't false-positive).
   Now also catches **off-scale spacing and non-token border-radius** — when the contract
