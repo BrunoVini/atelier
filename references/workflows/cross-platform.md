@@ -50,3 +50,44 @@ Switch themes with `<html data-theme="dark">`; the preview frame already reads
 `/design/tokens.css`, so the chrome follows. **Audit every theme** for contrast
 (`audit_contrast.py`) — a brand override can silently break AA. Each theme that
 diverges in more than color belongs in its own `DESIGN.<theme>.md`.
+
+### Each brand must be a complete identity, not a recolor
+
+The point of a token-driven multi-brand system is that ONE component set yields
+two builds that read as **genuinely different products**. A brand override that only
+swaps the accent hue (and maybe a radius) produces "two recolors of the same vibe" —
+which loses the *coherence-per-brand* bar even though the architecture is correct.
+A brand's token scope owns its **whole surface treatment**, not just its accent:
+
+- **Surface mode / luminance is part of the identity.** A brand scope may flip the
+  entire surface family — `--bg`/`--surface`/`--card`/`--text`/`--border` — to a
+  **dark** (or warm-paper, or cool-light) register if that is what the brand *is*. A
+  serious fintech/instrument tool often reads more precise and trustworthy on a dark
+  ink surface; a warm consumer brand on a light, warm one. Don't keep every brand on
+  the same light surface and only tint the button — that is the recolor trap. Re-audit
+  contrast for the brand's full role set when you flip the surface (a dark scope needs
+  its own muted/border/on-fill pairs to hold AA).
+- **Density, radius, and depth diverge with personality.** Generous radii + airy
+  spacing + soft shadows for a playful brand; small/sharp radii + tight spacing +
+  hairline borders (depth felt, not seen) for a precise one. These all live in the
+  token layer (`--radius-*`, the spacing rhythm, `--shadow-*`/elevation), so the
+  shared components inherit each brand's density automatically.
+- **Type personality, including numerals.** A brand scope swaps the font stack AND
+  numeric features — `font-feature-settings`/`font-variant-numeric: tabular-nums` (a
+  `--num-feature` token) for a figures-heavy fintech brand, proportional for a
+  consumer one. Wire it through a token so every figure across the system follows.
+- **Verify the divergence on the render, per brand.** Screenshot EACH brand
+  (`screenshot.mjs`) and confirm a stranger would not mistake one for the other —
+  different surface, different density, different voice — while the DOM is identical.
+
+### Demonstrating reuse (make it checkable)
+
+When the deliverable's job is to *prove* the system is shared (a brand showcase, a
+review artifact), render **both brands at once, side by side**, so a reviewer SEES
+one component set themed two ways with zero interaction — and the second brand isn't
+hidden behind a JS toggle (a static/no-JS reviewer would only ever see one). If you
+do use a toggle, still render a complete default brand with no JS, and keep the toggle
+keyboard-accessible. Either way, the **comparison/demo chrome itself must be
+token-driven and quiet** (a neutral scaffold from `var(--token)`, not a pile of
+hardcoded hexes) so it never competes with — or visually contaminates — the two
+brands it frames.
