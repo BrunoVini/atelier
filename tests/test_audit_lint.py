@@ -122,7 +122,11 @@ def test_lint_scale_ignores_rem_when_scale_is_px(tmp_path):
 def test_export_native_codegen():
     from export_native import swiftui, flutter, react_native
     cols, fonts = {"primary": "#2563eb"}, ["Sora", "Inter"]
-    assert "Color(red:" in swiftui(cols, fonts)
+    sw = swiftui(cols, fonts, dark={"primary": "#3b82f6"})
+    # idiomatic scheme-aware dynamic color + exact sRGB fidelity (#2563eb -> .145 .388 .922)
+    assert "init(light: Color, dark: Color)" in sw
+    assert "light: .srgb(0.145, 0.388, 0.922)" in sw
+    assert "public struct Theme {" in sw
     assert "Color(0xFF2563EB)" in flutter(cols, fonts)
     assert 'primary: "#2563eb"' in react_native(cols, fonts)
 

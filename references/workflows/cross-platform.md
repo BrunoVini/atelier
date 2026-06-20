@@ -11,7 +11,7 @@ consumes them in its own dialect.
 | Web (CSS/vanilla) | `design/tokens.css` | `@import` and use `var(--color-primary)` |
 | Web (Tailwind) | `design/tailwind-preset.js` | `presets: [require('./design/tailwind-preset')]` |
 | Web (any build) | `design/design-tokens.json` | Style Dictionary / your token pipeline |
-| iOS (SwiftUI) | `design-tokens.json` | generate a `Color`/`Font` extension from the JSON |
+| iOS (SwiftUI) | `design-tokens.json` | generate a dynamic-color `Theme` + `Environment` from the JSON (`export_native.py`) |
 | React Native | `design-tokens.json` | generate a JS theme object |
 | Flutter | `design-tokens.json` | generate a `ThemeData` / token Dart file |
 | Slides | `tokens.css` | the deck engine reads the same vars |
@@ -26,13 +26,39 @@ per platform — **generate** each platform's theme file from the contract:
 python3 scripts/export_native.py <repo>   # -> design/native/{AppColors.swift, app_colors.dart, theme.native.ts}
 ```
 
-This emits idiomatic SwiftUI (`Color` extension), Flutter (`AppColors`/`AppFonts`),
-and React Native (`theme` object) from the tokens. **Honest scope:** atelier does
-*token + theme handoff* for native — it does NOT produce native-fidelity UI (the
-device frames and engines are HTML/React). For native UI, hand these theme files to
-the native team / agent; for web/RN, generate the components too. A per-surface override (e.g. a denser mobile spacing scale)
-belongs in a `DESIGN.<surface>.md` that inherits the global contract
-(`design-md-spec.md` → Hierarchy), not in ad-hoc values.
+This emits a **complete, idiomatic** theme per platform from the tokens — not a flat
+color dump. The SwiftUI file (`Theme.swift`) carries:
+
+- **Dynamic light+dark colors** done the right way — a `Color(light:dark:)`
+  initializer backed by a `UIColor`/`NSColor` *dynamic provider* (resolves per
+  `ColorScheme` at runtime; `#if canImport(UIKit)`/`AppKit` so it builds on iOS *and*
+  macOS). NOT a flat `Color(red:…)` per role, and NOT a stringly-typed hex everywhere.
+  Every role from the contract's light **and** `dark` palette is emitted; the light
+  value is used for both schemes (disclosed in the header) only when no dark palette
+  exists.
+- **A named type scale** (`ThemeTypography`) — each text style as a `TextStyleSpec`
+  (font with the right `.weight(...)`, plus `lineSpacing` derived from the token's
+  `lineHeight − size`), consumed via an idiomatic `.textStyle(_:)` `View` modifier.
+- **Spacing + radius** as typed `CGFloat` constants (`ThemeSpacing`, `ThemeRadius`).
+- **A `Theme` value + `EnvironmentKey`** so a view reads `@Environment(\.theme)` and
+  writes `theme.colors.primary` / `theme.spacing.lg` / `theme.radius.md` — discoverable,
+  no globals.
+- **Honesty in the header**: the file states it was NOT compiled here (generate +
+  verify in Xcode) and that the web multi-layer `box-shadow` elevation token has no 1:1
+  SwiftUI form — it is surfaced as a single-layer `.cardShadow()` approximation, called
+  out as an approximation rather than a fabricated equivalence.
+
+**Token fidelity is the load-bearing property:** every emitted sRGB triple is the exact
+`channel/255` of the source hex (3-dp), so the native theme can't silently drift from
+the contract. Run `export_native.py` — never hand-pick colors per platform, and never
+claim "it compiles" for code a headless environment never built.
+
+**Honest scope:** atelier does *token + theme handoff* for native — it does NOT produce
+native-fidelity UI (the device frames and engines are HTML/React). For native UI, hand
+these theme files to the native team / agent; for web/RN, generate the components too. A
+per-surface override (e.g. a denser mobile spacing scale) belongs in a
+`DESIGN.<surface>.md` that inherits the global contract (`design-md-spec.md` →
+Hierarchy), not in ad-hoc values.
 
 ## Multi-brand / dark mode / white-label theming
 
