@@ -480,10 +480,13 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     role_primary = first("primary", "brand")
     role_onprimary = first("onPrimary")
     role_secondary = first("secondary", "accent")
+    role_accent = first("accent")
     role_surface = first("surface", "background", "elevated")
     role_bg = first("background", "surface")
     role_elevated = first("elevated", "surface")
     role_text = first("text")
+    role_secondary_ink = first("secondary")
+    role_muted = first("muted")
     role_error = first("danger", "error")
     role_border = first("border", "outline")
 
@@ -506,6 +509,16 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
         out.append("//       it is surfaced as a derived `List<BoxShadow>` on AppTokens using")
         out.append("//       each layer's REAL color + offset + (blur as the Gaussian sigma·2),")
         out.append("//       a disclosed approximation, not a fabricated 1:1 equivalence.")
+    if role_elevated and role_elevated != role_surface:
+        out.append("// NOTE: the `surfaceContainer*` ColorScheme slots require Flutter 3.22+.")
+        out.append("//       On older Flutter, delete those five lines (the minimal surface/")
+        out.append("//       onSurface/outline slots above still theme correctly).")
+    if role_accent:
+        out.append("// NOTE: `accent` has no canonical ColorScheme slot — it is mapped to")
+        out.append("//       `tertiary` AND kept verbatim on `AppTokens.accent`.")
+    if role_secondary or role_accent:
+        out.append("// NOTE: `onSecondary`/`onTertiary` have no source token; they are set to a")
+        out.append("//       readable contrast (onPrimary/surface), not a fabricated value.")
     out.append("// NOT COMPILED in this environment — generated deterministically; verify with")
     out.append("// `dart analyze` / `flutter test` in a Flutter project.")
     out.append("")
@@ -523,10 +536,18 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
             L.append(f"  onPrimary: Color({argb(getv(role_onprimary))}),")
         if role_secondary:
             L.append(f"  secondary: Color({argb(getv(role_secondary))}),")
-            # a sensible onSecondary: reuse onPrimary if present else text
-            on_sec = role_onprimary or role_text
+            # a sensible onSecondary: reuse onPrimary if present else surface.
+            # (No source token for onSecondary; a readable contrast, not fabricated.)
+            on_sec = role_onprimary or role_surface or role_text
             if on_sec:
                 L.append(f"  onSecondary: Color({argb(getv(on_sec))}),")
+        # accent -> tertiary (its closest canonical M3 slot; the exact value also
+        # lives on AppTokens.accent so a widget can read the unblended token).
+        if role_accent:
+            L.append(f"  tertiary: Color({argb(getv(role_accent))}),")
+            on_ter = role_onprimary or role_surface
+            if on_ter:
+                L.append(f"  onTertiary: Color({argb(getv(on_ter))}),")
         if role_error:
             L.append(f"  error: Color({argb(getv(role_error))}),")
             on_err = role_onprimary
@@ -536,8 +557,26 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
             L.append(f"  surface: Color({argb(getv(role_surface))}),")
         if role_text:
             L.append(f"  onSurface: Color({argb(getv(role_text))}),")
+        # secondary ink -> onSurfaceVariant (the M3 slot for muted-on-surface text).
+        if role_secondary_ink:
+            L.append(f"  onSurfaceVariant: Color({argb(getv(role_secondary_ink))}),")
+        # The M3 tonal surface-container ramp: map the contract's elevation ladder
+        # (background < surface < elevated) onto the container slots so stock M3
+        # widgets pick the right tonal surface. Emitted only when an `elevated`
+        # role distinguishes the ramp (else the minimal slots above suffice).
+        # surfaceContainer* require Flutter 3.22+ (disclosed in the header).
+        if role_elevated and role_elevated != role_surface:
+            lowest = role_bg or role_surface
+            L.append(f"  surfaceContainerLowest: Color({argb(getv(lowest))}),")
+            L.append(f"  surfaceContainerLow: Color({argb(getv(role_surface))}),")
+            L.append(f"  surfaceContainer: Color({argb(getv(role_surface))}),")
+            L.append(f"  surfaceContainerHigh: Color({argb(getv(role_elevated))}),")
+            L.append(f"  surfaceContainerHighest: Color({argb(getv(role_elevated))}),")
         if role_border:
             L.append(f"  outline: Color({argb(getv(role_border))}),")
+        # muted -> outlineVariant (the faint divider/disabled-border slot).
+        if role_muted:
+            L.append(f"  outlineVariant: Color({argb(getv(role_muted))}),")
         L.append(");")
         return L
 
@@ -621,7 +660,14 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
         fld = f"radius{nm[:1].upper()}{nm[1:]}"
         out.append(f"      {fld}: lerpDouble({fld}, other.{fld}, t)!,")
     if sp:
-        out.append("      spacing: spacing,")
+        # Interpolate the spacing scale element-wise so EVERY field participates in
+        # a theme transition (not returned verbatim). Lengths are equal across
+        # themes generated from one contract; guarded for safety.
+        out.append("      spacing: <double>[")
+        out.append("        for (var i = 0; i < spacing.length; i++)")
+        out.append("          lerpDouble(spacing[i],")
+        out.append("              i < other.spacing.length ? other.spacing[i] : spacing[i], t)!,")
+        out.append("      ],")
     out.append("    );")
     out.append("  }")
     out.append("")
@@ -646,9 +692,19 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
 
     # ---- BuildContext accessor ---------------------------------------------
     out.append("/// Ergonomic accessor: `context.tokens.accent`, `context.tokens.spacing[3]`.")
+    out.append("/// Asserts (with an actionable message) when the extension isn't registered,")
+    out.append("/// rather than silently falling back to the light tokens — a silent fallback")
+    out.append("/// would show LIGHT tokens in an unthemed dark subtree and mask the bug.")
     out.append("extension AppTokensContext on BuildContext {")
-    out.append("  AppTokens get tokens =>")
-    out.append("      Theme.of(this).extension<AppTokens>() ?? AppTokens.light;")
+    out.append("  AppTokens get tokens {")
+    out.append("    final tokens = Theme.of(this).extension<AppTokens>();")
+    out.append("    assert(")
+    out.append("      tokens != null,")
+    out.append("      'AppTokens ThemeExtension not found. Build ThemeData via '")
+    out.append("      'AppTheme.light / AppTheme.dark so the tokens are registered.',")
+    out.append("    );")
+    out.append("    return tokens!;")
+    out.append("  }")
     out.append("}")
     out.append("")
 
@@ -711,12 +767,32 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     # line up, else keep the role name. Always emit each style with the exact size,
     # FontWeight, fontFamily and height = lineHeight/size.
     first_family = fonts[0] if fonts else None
-    m3_slot = {
-        "largeTitle": "displaySmall", "title": "headlineMedium",
-        "headline": "titleLarge", "body": "bodyLarge", "callout": "bodyMedium",
-        "caption": "bodySmall", "mono": "labelMedium",
-    }
+    # Fill the FULL canonical M3 TextTheme slot set so stock widgets (AppBar,
+    # ListTile, chips, buttons, labels) inherit the contract's scale — not just a
+    # sparse few. Each M3 slot points at the contract role whose visual weight it
+    # matches; when the contract has fewer roles than slots, a nearby role is
+    # reused (a real role, never a fabricated style).
+    def role_for(*prefs):
+        for p in prefs:
+            if p in typography:
+                return p
+        return next(iter(typography)) if typography else None
+
     if typography:
+        r_large = role_for("largeTitle", "display", "title")
+        r_title = role_for("title", "largeTitle", "headline")
+        r_head = role_for("headline", "title")
+        r_body = role_for("body")
+        r_callout = role_for("callout", "body")
+        r_caption = role_for("caption", "callout", "body")
+        # Map every M3 TextTheme slot to a contract role.
+        m3_full = {
+            "displayLarge": r_large, "displayMedium": r_large, "displaySmall": r_title,
+            "headlineLarge": r_title, "headlineMedium": r_head, "headlineSmall": r_head,
+            "titleLarge": r_head, "titleMedium": r_callout, "titleSmall": r_callout,
+            "bodyLarge": r_body, "bodyMedium": r_body, "bodySmall": r_caption,
+            "labelLarge": r_callout, "labelMedium": r_caption, "labelSmall": r_caption,
+        }
         def style_expr(spec, indent):
             fam = spec.get("family") or spec.get("fontFamily") or first_family
             size = _num(spec.get("size") or spec.get("fontSize")) or "16"
@@ -735,13 +811,14 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
             return ("TextStyle(\n" + ",\n".join(pad + "  " + p for p in parts)
                     + ",\n" + pad + ")")
 
-        out.append("/// The type scale as a Material 3 TextTheme. Token roles map to the")
-        out.append("/// closest M3 slot; the exact role names are also exposed on AppTextStyles.")
+        out.append("/// The type scale as a FULL Material 3 TextTheme — every canonical slot")
+        out.append("/// is filled from the contract's closest role, so stock widgets (AppBar,")
+        out.append("/// ListTile, chips, buttons, labels) inherit the scale. The exact role")
+        out.append("/// names are also exposed verbatim on AppTextStyles below.")
         out.append("const TextTheme _textTheme = TextTheme(")
-        for role, spec in typography.items():
-            slot = m3_slot.get(role)
-            if slot:
-                out.append(f"  {slot}: {style_expr(spec, 2)},")
+        for slot, role in m3_full.items():
+            if role and role in typography:
+                out.append(f"  {slot}: {style_expr(typography[role], 2)},")
         out.append(");")
         out.append("")
         # Also expose each role by its CONTRACT name (so nothing is renamed-away).

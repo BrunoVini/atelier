@@ -225,6 +225,30 @@ def test_flutter_colorscheme_maps_roles():
     assert "error:" in out  # danger -> error
 
 
+def test_flutter_colorscheme_surface_container_ramp():
+    # Modern M3: when a contract carries a surface elevation ramp
+    # (background < surface < elevated), wire the surfaceContainer* slots +
+    # onSurfaceVariant / outlineVariant — not just the minimal slots.
+    full = dict(COLORS)
+    full.update({"elevated": "#FFFFFF", "secondary": "#4A5160", "muted": "#8A92A3"})
+    fulld = dict(DARK)
+    fulld.update({"elevated": "#1F242D", "secondary": "#AEB6C4", "muted": "#717B8C"})
+    out = flutter(full, ["Inter"], dark=fulld)
+    assert "surfaceContainerLowest:" in out
+    assert "surfaceContainerHighest:" in out
+    assert "onSurfaceVariant:" in out
+    assert "outlineVariant:" in out
+
+
+def test_flutter_colorscheme_accent_to_tertiary():
+    full = dict(COLORS); full["accent"] = "#7A5CFF"
+    fulld = dict(DARK); fulld["accent"] = "#A78BFF"
+    out = flutter(full, ["Inter"], dark=fulld)
+    assert "tertiary:" in out
+    # accent light #7A5CFF -> 0xFF7A5CFF on the tertiary slot
+    assert "tertiary: Color(0xFF7A5CFF)" in out
+
+
 def test_flutter_theme_extension_with_copywith_and_lerp():
     out = flutter(COLORS, ["Inter"], dark=DARK, spacing=SPACING, rounded=ROUNDED,
                   typography=TYPO)
@@ -275,6 +299,40 @@ def test_flutter_context_accessor_ergonomic():
     # an ergonomic accessor: context.tokens reading Theme.of(context).extension<AppTokens>()
     assert "extension" in out and "AppTokens get tokens" in out
     assert "Theme.of(context).extension<AppTokens>()" in out
+
+
+def test_flutter_accessor_asserts_instead_of_silent_fallback():
+    # A missing extension must fail LOUDLY (assert with a clear message), not
+    # silently return the light tokens — a silent fallback masks an unthemed
+    # subtree showing light tokens in dark mode.
+    out = flutter(COLORS, ["Inter"], dark=DARK)
+    assert "assert(" in out
+    # no silent `?? AppTokens.light` fallback in the accessor
+    assert "?? AppTokens.light" not in out
+
+
+def test_flutter_lerp_interpolates_spacing():
+    # Every lerp-able field must actually interpolate — including the spacing list.
+    out = flutter(COLORS, ["Inter"], dark=DARK, spacing=SPACING)
+    # spacing is interpolated element-wise, not returned verbatim
+    assert "spacing: spacing," not in out
+
+
+def test_flutter_full_m3_texttheme_slots():
+    # The TextTheme should fill the canonical M3 slots across the families, not
+    # just a sparse 7 — so stock widgets (AppBar, ListTile, chips, labels) inherit.
+    out = flutter(COLORS, ["Inter"], dark=DARK, typography={
+        "largeTitle": {"family": "Inter", "size": "34", "weight": "700", "line_height": "41"},
+        "title": {"family": "Inter", "size": "28", "weight": "700", "line_height": "34"},
+        "headline": {"family": "Inter", "size": "20", "weight": "600", "line_height": "26"},
+        "body": {"family": "Inter", "size": "16", "weight": "400", "line_height": "24"},
+        "callout": {"family": "Inter", "size": "15", "weight": "500", "line_height": "21"},
+        "caption": {"family": "Inter", "size": "13", "weight": "400", "line_height": "18"},
+        "mono": {"family": "JetBrains Mono", "size": "14", "weight": "400", "line_height": "20"},
+    })
+    for slot in ("displayLarge:", "headlineLarge:", "titleLarge:", "titleMedium:",
+                 "bodyLarge:", "bodyMedium:", "labelLarge:", "labelSmall:"):
+        assert slot in out, slot
 
 
 def test_flutter_honest_header():
