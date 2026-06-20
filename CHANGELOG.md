@@ -424,7 +424,20 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Critique / layout scoring with severity tiers, visual-regression diffing, and
   performance budgets.
 - Token-migration codemod — rewrites hardcoded values to `var(--token)`, dry-run first,
-  paired with visual-regression to prove "zero pixels moved".
+  paired with visual-regression to prove "zero pixels moved". **Pixel-safe and
+  role-aware:** it rewrites only EXACT matches (never a near-but-unequal value, which
+  would move a pixel) and maps each literal to the right token *for its role* — an `8px`
+  gap becomes a spacing token, an `8px` `border-radius` becomes a radius token, the same
+  number, the correct token. It covers colors, spacing, radius and font-family (and the
+  Tailwind arbitrary values / inline `style={{…}}` colors — including conditional/ternary
+  values — in JSX), while leaving the things that must not move alone: token *definitions*
+  themselves (no `--x: var(--x)` self-reference), `calc()` interiors, `@media`
+  breakpoints, rgba()/tints, element dimensions and grid track sizing, hairline borders,
+  bare-hex values in JS data arrays, and any block you mark `/* atelier-ignore */` (a
+  vendor or hand-tuned block). The workflow renders before/after at the breakpoints that
+  matter — including across each media-query boundary — and writes an auditable report:
+  migrations grouped by kind with the role traps flagged, and a complete "left alone, with
+  reason" list, so a reviewer can verify the whole change without re-reading the repo.
 - Coherence score + design-debt report — one 0–100 number with hotspots and a trend.
 - Design QA in CI — a merge gate (GitHub Actions + Azure Pipelines templates), plus PR
   design review and team onboarding packs.
