@@ -280,8 +280,15 @@ def test_flutter_texttheme_weights_and_sizes():
     assert "FontWeight.w400" in out
     # fontFamily wired
     assert "fontFamily: 'Inter'" in out
-    # line height expressed as the unitless multiple (height: lineHeight/size)
+    # line height expressed as the EXACT unitless ratio (lineHeight / size), not a
+    # pre-rounded decimal — full double precision + self-documenting.
     assert "height:" in out
+    # title: lineHeight 34 / size 28 — emitted as the exact division expression
+    assert "height: 34 / 28" in out
+    # body: 24 / 16
+    assert "height: 24 / 16" in out
+    # no lossy pre-rounded decimal for these ratios
+    assert "1.2143" not in out and "1.5," not in out.replace("height: 24 / 16", "")
 
 
 def test_flutter_spacing_and_radius_constants():

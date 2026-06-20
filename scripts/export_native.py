@@ -803,8 +803,13 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
                 parts.append(f"fontFamily: '{fam}'")
             if lh is not None:
                 try:
-                    h = float(lh) / float(size)
-                    parts.append(f"height: {round(h, 4)}")
+                    # Emit the EXACT unitless ratio as a division expression
+                    # (`lineHeight / size`) rather than a pre-rounded decimal — it
+                    # evaluates at full double precision and is self-documenting, so
+                    # the token's line height is reproduced exactly, not to 4 dp.
+                    lh_s = str(int(float(lh))) if float(lh) == int(float(lh)) else f"{float(lh):g}"
+                    size_s = str(int(float(size))) if float(size) == int(float(size)) else f"{float(size):g}"
+                    parts.append(f"height: {lh_s} / {size_s}")
                 except (ValueError, ZeroDivisionError):
                     pass
             pad = " " * indent
