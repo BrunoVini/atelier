@@ -6,7 +6,8 @@ type scale, spacing + radius, and honest disclosure of what SwiftUI can't expres
 Token fidelity (every emitted value EXACTLY equals the source) is the load-bearing
 property — verified here against known hexes.
 """
-from export_native import swiftui, flutter, react_native, _swift_weight, _camel, _num
+from export_native import (swiftui, flutter, react_native, _swift_weight, _camel,
+                           _num, _parse_box_shadow)
 
 COLORS = {
     "background": "#F7F8FA", "surface": "#FFFFFF", "text": "#1A1D24",
@@ -124,12 +125,44 @@ def test_swiftui_spacing_and_radius_named():
     assert "public let pill: CGFloat = 999" in out
 
 
+def test_parse_box_shadow_layers_and_color():
+    layers = _parse_box_shadow(
+        "0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.10)")
+    assert len(layers) == 2
+    # (r,g,b,a, offx, offy, blur)
+    assert layers[0] == (16, 24, 40, 0.06, 0.0, 1.0, 2.0)
+    assert layers[1] == (16, 24, 40, 0.1, 0.0, 1.0, 3.0)
+    # hex color form
+    h = _parse_box_shadow("0 2px 4px #101828")
+    assert h and h[0][:3] == (16, 24, 40)
+    # garbage -> [] so the caller falls back honestly
+    assert _parse_box_shadow("inset") == []
+    assert _parse_box_shadow("") == []
+
+
+def test_swiftui_shadow_uses_real_token_color_per_layer():
+    out = swiftui(COLORS, ["Inter"], dark=DARK,
+                  shadows={"card": "0 1px 2px rgba(16,24,40,0.06), 0 1px 3px rgba(16,24,40,0.10)"})
+    # the helper carries the token's REAL base color (#101828 -> .063 .094 .157), not
+    # a hardcoded .black, and stacks BOTH layers (blur/2 -> radius 1 and 1.5)
+    assert "red: 0.063, green: 0.094, blue: 0.157, opacity: 0.06" in out
+    assert "red: 0.063, green: 0.094, blue: 0.157, opacity: 0.1" in out
+    assert "radius: 1," in out and "radius: 1.5," in out
+    # no hardcoded black guess when the token parses
+    assert ".black.opacity(0.10)" not in out
+
+
 def test_swiftui_honest_about_shadow_and_compile():
     out = swiftui(COLORS, ["Inter"], dark=DARK, shadows=SHADOWS)
     # Discloses the box-shadow limitation + that it was not compiled.
     assert "box-shadow" in out
     assert "NOT COMPILED" in out
     assert "func cardShadow()" in out
+
+
+def test_swiftui_spacing_has_scale_array():
+    out = swiftui(COLORS, ["Inter"], dark=DARK, spacing=SPACING)
+    assert "var scale: [CGFloat]" in out
 
 
 def test_swiftui_no_dark_falls_back_disclosed():

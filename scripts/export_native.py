@@ -8,6 +8,7 @@ Usage:
     python3 export_native.py <repo | design-tokens.json> [--out design/native]
 """
 import os
+import re
 import sys
 
 from contract import resolve_contract
@@ -55,6 +56,63 @@ def _num(v):
     return str(int(f)) if f == int(f) else f"{f:g}"
 
 
+def _parse_box_shadow(css):
+    """Parse a CSS `box-shadow` string into [(r,g,b,alpha, offX, offY, blur), ...] —
+    one tuple per comma-separated layer. Returns [] on anything it can't parse, so the
+    caller can fall back honestly. Handles `<x> <y> <blur> rgba(r,g,b,a)` and hex colors;
+    units (px) are stripped. This lets the SwiftUI shadow helper carry the token's REAL
+    color(s) and every layer, not a hardcoded guess."""
+    if not isinstance(css, str) or not css.strip():
+        return []
+    # split layers on commas that are NOT inside rgba(...)
+    layers, depth, cur = [], 0, ""
+    for ch in css:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch == "," and depth == 0:
+            layers.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    if cur.strip():
+        layers.append(cur)
+
+    def numpx(tok):
+        t = tok.strip().lower().replace("px", "")
+        try:
+            return float(t)
+        except ValueError:
+            return None
+
+    out = []
+    for layer in layers:
+        s = layer.strip()
+        col = (1.0,)  # placeholder
+        r = g = b = 0
+        a = 1.0
+        m = re.search(r"rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?\s*\)", s)
+        if m:
+            r, g, b = (int(float(m.group(i))) for i in (1, 2, 3))
+            av = m.group(4)
+            if av:
+                a = float(av.rstrip("%")) / (100 if av.endswith("%") else 1)
+            s = s[:m.start()] + " " + s[m.end():]
+        else:
+            mh = re.search(r"#([0-9a-fA-F]{6})", s)
+            if mh:
+                r, g, b = _hex_to_rgb("#" + mh.group(1))
+                s = s.replace(mh.group(0), " ")
+        nums = [n for n in (numpx(t) for t in s.split()) if n is not None]
+        if len(nums) < 2:
+            return []  # need at least x + y to be a real shadow layer
+        offx, offy = nums[0], nums[1]
+        blur = nums[2] if len(nums) >= 3 else 0.0
+        out.append((r, g, b, round(a, 4), offx, offy, blur))
+    return out
+
+
 def swiftui(colors, fonts, dark=None, typography=None, spacing=None,
             radius=None, rounded=None, shadows=None):
     """Emit a complete, idiomatic SwiftUI theme from the contract.
@@ -88,9 +146,10 @@ def swiftui(colors, fonts, dark=None, typography=None, spacing=None,
         out.append("//       value for both schemes (still a valid dynamic color).")
     if shadows:
         out.append("// NOTE: the web box-shadow elevation token has no 1:1 SwiftUI form;")
-        out.append("//       it is surfaced as a `.shadow(color:radius:x:y:)` helper below,")
-        out.append("//       approximating the CSS shadow (SwiftUI shadows are single-layer,")
-        out.append("//       and a Gaussian `radius` is not the same primitive as a CSS blur).")
+        out.append("//       it is surfaced as a `.cardShadow()` helper that stacks one")
+        out.append("//       `.shadow` per CSS layer using the token's REAL color + offsets")
+        out.append("//       (blur/2 as the Gaussian radius — a Gaussian radius is not the")
+        out.append("//       same primitive as a CSS blur, so this is a disclosed approximation).")
     if typography:
         out.append("// NOTE: SwiftUI has no precise total-line-height control — `.lineSpacing`")
         out.append("//       adds gap BETWEEN lines on top of the font's intrinsic leading. Each")
@@ -142,10 +201,15 @@ def swiftui(colors, fonts, dark=None, typography=None, spacing=None,
     sp = [s for s in (_num(x) for x in (spacing or [])) if s is not None]
     if sp:
         names = ["xs", "sm", "md", "lg", "xl", "xxl", "xxxl"]
+        used = []
         out.append("public struct ThemeSpacing {")
         for i, v in enumerate(sp):
             nm = names[i] if i < len(names) else f"s{i}"
+            used.append(nm)
             out.append(f"    public let {nm}: CGFloat = {v}")
+        # An ordered array for programmatic iteration (e.g. a spacing legend / debug grid).
+        out.append("    /// The scale in token order, for programmatic iteration.")
+        out.append("    public var scale: [CGFloat] { [" + ", ".join(used) + "] }")
         out.append("}")
         out.append("")
 
@@ -276,13 +340,33 @@ def swiftui(colors, fonts, dark=None, typography=None, spacing=None,
     out.append("}")
     out.append("")
 
-    # --- Shadow helper (honest approximation of the CSS elevation token) ------
+    # --- Shadow helper (faithful, per-layer approximation of the CSS token) ---
     if shadows:
+        # Use the FIRST elevation token (the canonical card shadow). Parse its CSS into
+        # layers so the helper carries the token's REAL color(s) + every layer, not a
+        # hardcoded guess. CSS blur -> SwiftUI Gaussian radius via the blur/2 heuristic.
+        first_shadow = next(iter(shadows.values())) if isinstance(shadows, dict) else str(shadows)
+        css_layers = _parse_box_shadow(first_shadow)
         out.append("public extension View {")
-        out.append("    /// Card elevation — a single-layer approximation of the contract's")
-        out.append("    /// multi-layer CSS box-shadow (SwiftUI shadows are single-layer).")
+        out.append("    /// Card elevation, derived from the contract's CSS box-shadow token:")
+        out.append(f"    ///   `{first_shadow}`")
+        out.append("    /// SwiftUI shadows are single-layer with a Gaussian `radius` (not a CSS")
+        out.append("    /// blur), so each CSS layer is approximated as a stacked `.shadow` using")
+        out.append("    /// the token's real color + offsets and blur/2 as the radius.")
         out.append("    func cardShadow() -> some View {")
-        out.append("        self.shadow(color: .black.opacity(0.10), radius: 3, x: 0, y: 1)")
+        if css_layers:
+            body = "self"
+            for (r, g, b, a, ox, oy, blur) in css_layers:
+                rad = blur / 2 if blur else 0
+                rad_s = str(int(rad)) if rad == int(rad) else f"{rad:g}"
+                ox_s = str(int(ox)) if ox == int(ox) else f"{ox:g}"
+                oy_s = str(int(oy)) if oy == int(oy) else f"{oy:g}"
+                body += (f"\n            .shadow(color: Color(.sRGB, red: {r/255:.3f}, "
+                         f"green: {g/255:.3f}, blue: {b/255:.3f}, opacity: {a:g}), "
+                         f"radius: {rad_s}, x: {ox_s}, y: {oy_s})")
+            out.append("        " + body)
+        else:
+            out.append("        self.shadow(color: .black.opacity(0.10), radius: 3, x: 0, y: 1)")
         out.append("    }")
         out.append("}")
         out.append("")
