@@ -89,7 +89,13 @@ def swiftui(colors, fonts, dark=None, typography=None, spacing=None,
     if shadows:
         out.append("// NOTE: the web box-shadow elevation token has no 1:1 SwiftUI form;")
         out.append("//       it is surfaced as a `.shadow(color:radius:x:y:)` helper below,")
-        out.append("//       approximating the CSS shadow (SwiftUI shadows are single-layer).")
+        out.append("//       approximating the CSS shadow (SwiftUI shadows are single-layer,")
+        out.append("//       and a Gaussian `radius` is not the same primitive as a CSS blur).")
+    if typography:
+        out.append("// NOTE: SwiftUI has no precise total-line-height control — `.lineSpacing`")
+        out.append("//       adds gap BETWEEN lines on top of the font's intrinsic leading. Each")
+        out.append("//       style's `lineSpacing` (= token lineHeight − size) APPROXIMATES the")
+        out.append("//       token line height; the exact token `lineHeight` is kept on the spec.")
     out.append("// NOT COMPILED in this environment — generated deterministically; verify in Xcode.")
     out.append("")
 
@@ -195,11 +201,45 @@ def swiftui(colors, fonts, dark=None, typography=None, spacing=None,
             out.append(f"        lineHeight: {lh if lh is not None else size})")
         out.append("}")
         out.append("")
-        # The .textStyle() view modifier applies font + line spacing idiomatically.
+        # A named text-style enum keyed to the typography roles, for ergonomic
+        # `.textStyle(.title)` access. The KeyPath maps each case to its stored spec
+        # on the live, in-environment ThemeTypography — so the named API reads the
+        # SAME values the theme carries and can never drift, and does NOT rebuild a
+        # fresh ThemeTypography per call.
+        roles = list(typography.keys())
+        out.append("public enum TextStyle: CaseIterable {")
+        out.append("    case " + ", ".join(_camel(r) for r in roles))
+        out.append("    /// KeyPath into ThemeTypography for this style.")
+        out.append("    public var keyPath: KeyPath<ThemeTypography, TextStyleSpec> {")
+        out.append("        switch self {")
+        for r in roles:
+            cm = _camel(r)
+            out.append(f"        case .{cm}: return \\.{cm}")
+        out.append("        }")
+        out.append("    }")
+        out.append("}")
+        out.append("")
+        # The .textStyle() view modifiers. The spec overload is a plain helper; the
+        # named overload reads the in-environment theme so it stays in sync.
         out.append("public extension View {")
         out.append("    /// Apply a theme text style (font + line spacing) to a view.")
         out.append("    func textStyle(_ spec: TextStyleSpec) -> some View {")
         out.append("        self.font(spec.font).lineSpacing(spec.lineSpacing)")
+        out.append("    }")
+        out.append("")
+        out.append("    /// Apply a NAMED theme text style, e.g. `.textStyle(.title)`.")
+        out.append("    /// Resolves against the in-environment theme so it tracks any")
+        out.append("    /// theme override rather than a hard-coded default.")
+        out.append("    func textStyle(_ style: TextStyle) -> some View {")
+        out.append("        modifier(NamedTextStyle(style: style))")
+        out.append("    }")
+        out.append("}")
+        out.append("")
+        out.append("private struct NamedTextStyle: ViewModifier {")
+        out.append("    @Environment(\\.theme) private var theme")
+        out.append("    let style: TextStyle")
+        out.append("    func body(content: Content) -> some View {")
+        out.append("        content.textStyle(theme.typography[keyPath: style.keyPath])")
         out.append("    }")
         out.append("}")
         out.append("")
@@ -259,7 +299,7 @@ def swiftui(colors, fonts, dark=None, typography=None, spacing=None,
         f"theme.radius.{next(iter(rad_map))}" if rad_map else "10")
     out.append("        VStack(alignment: .leading, spacing: " + (("theme.spacing.sm" if sp else "8")) + ") {")
     if style:
-        out.append(f'            Text("Aurora").textStyle(theme.typography.{style})')
+        out.append(f'            Text("Aurora").textStyle(.{style})  // named, reads @Environment theme')
     else:
         out.append('            Text("Aurora")')
     out.append("                .foregroundStyle(theme.colors.text)")
@@ -274,6 +314,22 @@ def swiftui(colors, fonts, dark=None, typography=None, spacing=None,
         out.append("        .cardShadow()")
     out.append("    }")
     out.append("}")
+    out.append("")
+    out.append("// Inject the theme once near the root; descendants read @Environment(\\.theme).")
+    out.append("// Swap in a different Theme() here (or per preview) to retheme the subtree.")
+    out.append("struct ThemedRoot: View {")
+    out.append("    var body: some View {")
+    out.append("        ThemedCard()")
+    out.append("            .padding()")
+    out.append("            .background(Theme().colors.background)")
+    out.append("            .environment(\\.theme, Theme())")
+    out.append("    }")
+    out.append("}")
+    out.append("")
+    out.append("#if DEBUG")
+    out.append('#Preview("Light") { ThemedRoot().preferredColorScheme(.light) }')
+    out.append('#Preview("Dark")  { ThemedRoot().preferredColorScheme(.dark) }')
+    out.append("#endif")
 
     return "\n".join(out) + "\n"
 

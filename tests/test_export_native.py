@@ -99,6 +99,20 @@ def test_swiftui_type_scale_size_weight_lineheight():
     assert "lineSpacing: 6" in out
     # the idiomatic .textStyle modifier exists
     assert "func textStyle(_ spec: TextStyleSpec) -> some View" in out
+    # a NAMED text-style enum + an environment-reading named overload (ergonomic
+    # .textStyle(.title) that does NOT rebuild ThemeTypography per call)
+    assert "public enum TextStyle: CaseIterable {" in out
+    assert "func textStyle(_ style: TextStyle) -> some View" in out
+    assert "struct NamedTextStyle: ViewModifier" in out
+    assert "@Environment(\\.theme) private var theme" in out
+    assert "theme.typography[keyPath: style.keyPath]" in out
+
+
+def test_swiftui_honest_about_lineheight_limit():
+    out = swiftui(COLORS, ["Inter"], dark=DARK, typography=TYPO)
+    # discloses that SwiftUI .lineSpacing only APPROXIMATES the token line height
+    assert "lineSpacing" in out and "APPROXIMATE" in out.upper()
+    assert "intrinsic" in out or "between lines" in out.lower() or "BETWEEN lines" in out
 
 
 def test_swiftui_spacing_and_radius_named():
