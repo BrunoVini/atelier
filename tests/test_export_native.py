@@ -7,7 +7,17 @@ Token fidelity (every emitted value EXACTLY equals the source) is the load-beari
 property — verified here against known hexes.
 """
 from export_native import (swiftui, flutter, react_native, _swift_weight, _camel,
-                           _num, _parse_box_shadow)
+                           _num, _parse_box_shadow, _flutter_weight)
+
+
+def test_flutter_weight_maps_numeric_and_named():
+    assert _flutter_weight("700") == "w700"
+    assert _flutter_weight("400") == "w400"
+    assert _flutter_weight("600") == "w600"
+    assert _flutter_weight("bold") == "w700"
+    assert _flutter_weight("regular") == "w400"
+    # unknown -> a REAL weight, never fabricated
+    assert _flutter_weight("zzz") == "w400"
 
 COLORS = {
     "background": "#F7F8FA", "surface": "#FFFFFF", "text": "#1A1D24",
@@ -172,10 +182,110 @@ def test_swiftui_no_dark_falls_back_disclosed():
     assert "init(light: Color, dark: Color)" in out
 
 
-def test_flutter_and_rn_still_emit():
-    f = flutter(COLORS, ["Inter"])
-    assert "class AppColors {" in f
-    assert "0xFF2F6BFF" in f
+def test_rn_still_emits():
     rn = react_native(COLORS, ["Inter"])
     assert "export const theme" in rn
     assert '"#2F6BFF"' in rn or '"#2f6bff"' in rn
+
+
+# --- Flutter: a COMPLETE idiomatic Material 3 theme handoff -------------------
+
+def test_flutter_color_fidelity_argb():
+    out = flutter(COLORS, ["Inter"], dark=DARK)
+    # hex -> 0xFF + RRGGBB ARGB (opaque); both schemes.
+    assert "Color(0xFF2F6BFF)" in out  # primary light
+    assert "Color(0xFF6E9BFF)" in out  # primary dark
+    assert "Color(0xFF1A1D24)" in out  # text light
+    assert "Color(0xFFEDF0F5)" in out  # text dark
+    assert "Color(0xFFD6453D)" in out  # danger light
+    assert "Color(0xFFFF6B62)" in out  # danger dark
+
+
+def test_flutter_uses_material3():
+    out = flutter(COLORS, ["Inter"], dark=DARK)
+    assert "useMaterial3: true" in out
+
+
+def test_flutter_builds_both_themedata():
+    out = flutter(COLORS, ["Inter"], dark=DARK)
+    # a light AND a dark ThemeData, brightness-correct
+    assert "static ThemeData get light" in out
+    assert "static ThemeData get dark" in out
+    assert "brightness: Brightness.light" in out
+    assert "brightness: Brightness.dark" in out
+
+
+def test_flutter_colorscheme_maps_roles():
+    out = flutter(COLORS, ["Inter"], dark=DARK)
+    # the canonical ColorScheme slots are wired from the contract roles
+    assert "ColorScheme(" in out
+    assert "primary:" in out
+    assert "onPrimary:" in out
+    assert "surface:" in out
+    assert "error:" in out  # danger -> error
+
+
+def test_flutter_theme_extension_with_copywith_and_lerp():
+    out = flutter(COLORS, ["Inter"], dark=DARK, spacing=SPACING, rounded=ROUNDED,
+                  typography=TYPO)
+    # the Flutter-canonical token carrier for things outside ColorScheme
+    assert "class AppTokens extends ThemeExtension<AppTokens>" in out
+    assert "AppTokens copyWith(" in out
+    assert "AppTokens lerp(" in out
+    # lerp must actually interpolate colors (not a non-null-safe stub)
+    assert "Color.lerp(" in out
+
+
+def test_flutter_extension_carries_brand_and_semantic_colors():
+    out = flutter(COLORS, ["Inter"], dark=DARK)
+    # roles that don't fit ColorScheme (accent/success/warning/border + brand aliases)
+    # live on the extension so nothing is dropped
+    assert "border" in out
+    # both light and dark instances of the extension exist
+    assert "AppTokens.light" in out or "static const AppTokens light" in out or "_lightTokens" in out
+    assert "AppTokens.dark" in out or "static const AppTokens dark" in out or "_darkTokens" in out
+
+
+def test_flutter_texttheme_weights_and_sizes():
+    out = flutter(COLORS, ["Inter"], dark=DARK, typography=TYPO)
+    assert "TextTheme(" in out
+    # title: size 28 weight 700 -> FontWeight.w700, height = 34/28
+    assert "fontSize: 28" in out
+    assert "FontWeight.w700" in out
+    assert "fontSize: 16" in out
+    assert "FontWeight.w400" in out
+    # fontFamily wired
+    assert "fontFamily: 'Inter'" in out
+    # line height expressed as the unitless multiple (height: lineHeight/size)
+    assert "height:" in out
+
+
+def test_flutter_spacing_and_radius_constants():
+    out = flutter(COLORS, ["Inter"], dark=DARK, spacing=SPACING, rounded=ROUNDED)
+    # spacing scale present as doubles
+    assert "4" in out and "48" in out
+    # radii named
+    assert "999" in out  # pill
+    # radius helper as BorderRadius is ergonomic but at minimum the values present
+    assert "sm" in out and "md" in out and "lg" in out and "pill" in out
+
+
+def test_flutter_context_accessor_ergonomic():
+    out = flutter(COLORS, ["Inter"], dark=DARK)
+    # an ergonomic accessor: context.tokens reading Theme.of(context).extension<AppTokens>()
+    assert "extension" in out and "AppTokens get tokens" in out
+    assert "Theme.of(context).extension<AppTokens>()" in out
+
+
+def test_flutter_honest_header():
+    out = flutter(COLORS, ["Inter"], dark=DARK, shadows=SHADOWS)
+    assert "NOT COMPILED" in out
+    # discloses the box-shadow mapping caveat
+    assert "shadow" in out.lower()
+
+
+def test_flutter_no_dark_falls_back_disclosed():
+    out = flutter(COLORS, ["Inter"])  # no dark map
+    assert "no dark palette" in out.lower()
+    # still emits both ThemeData (dark uses light values, disclosed)
+    assert "static ThemeData get dark" in out

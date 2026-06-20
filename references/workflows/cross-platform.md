@@ -13,7 +13,7 @@ consumes them in its own dialect.
 | Web (any build) | `design/design-tokens.json` | Style Dictionary / your token pipeline |
 | iOS (SwiftUI) | `design-tokens.json` | generate a dynamic-color `Theme` + `Environment` from the JSON (`export_native.py`) |
 | React Native | `design-tokens.json` | generate a JS theme object |
-| Flutter | `design-tokens.json` | generate a `ThemeData` / token Dart file |
+| Flutter | `design-tokens.json` | generate a Material 3 `ThemeData` (light+dark) + a `ThemeExtension` (`export_native.py`) |
 | Slides | `tokens.css` | the deck engine reads the same vars |
 | Marketing / preview | `tokens.css` | preview server links it (`capabilities/preview.md`) |
 
@@ -23,7 +23,7 @@ consumes them in its own dialect.
 per platform — **generate** each platform's theme file from the contract:
 
 ```bash
-python3 scripts/export_native.py <repo>   # -> design/native/{AppColors.swift, app_colors.dart, theme.native.ts}
+python3 scripts/export_native.py <repo>   # -> design/native/{Theme.swift, app_theme.dart, theme.native.ts}
 ```
 
 This emits a **complete, idiomatic** theme per platform from the tokens — not a flat
@@ -48,10 +48,42 @@ color dump. The SwiftUI file (`Theme.swift`) carries:
   SwiftUI form — it is surfaced as a single-layer `.cardShadow()` approximation, called
   out as an approximation rather than a fabricated equivalence.
 
+The Flutter file (`app_theme.dart`) carries the **Material 3 canonical** form — NOT a
+flat `class AppColors { static const … }` dump:
+
+- **`ColorScheme.light`/`.dark`** mapping the contract's roles onto the canonical M3
+  slots (`primary`/`onPrimary`/`secondary`/`error`/`surface`/`onSurface`/`outline`,
+  each `brightness`-correct), so a stock Material widget is themed right out of the box.
+  `danger` maps to `error`; surfaces map to `surface`; `border` maps to `outline`. M3
+  dropped `background`/`onBackground` — don't emit them.
+- **A `ThemeExtension<AppTokens>`** — the Flutter-canonical carrier for everything that
+  has no ColorScheme slot (the brand `accent`, the full semantic palette
+  success/warning, the complete role set, spacing, radii). It implements `copyWith` AND
+  `lerp` (colors via `Color.lerp`, doubles via `lerpDouble` from `dart:ui`) so tokens
+  animate across a theme transition. NOTHING from the contract is dropped: every role
+  appears both on the ColorScheme (where it fits) and on `AppTokens`.
+- **A named `TextTheme`** (each role on its closest M3 slot) + an `AppTextStyles` class
+  keeping every role under its CONTRACT name. Each `TextStyle` has the exact `fontSize`,
+  `FontWeight.wNNN`, `fontFamily`, and `height` = `lineHeight / size` (the unitless
+  multiple Flutter uses — disclosed as approximating the token's pixel line height).
+- **`AppSpacing` / `AppRadii`** const scales (radii also as ready `BorderRadius`), and
+  **`AppElevation.card`** as a derived `List<BoxShadow>` (one `BoxShadow` per CSS layer,
+  the token's REAL color + offset, blur→`blurRadius`; disclosed as not a 1:1 primitive).
+- **`AppTheme.light`/`.dark`** (`useMaterial3: true`) wiring the colorScheme, textTheme,
+  `scaffoldBackgroundColor`, and the extension; plus an ergonomic **`context.tokens`**
+  `BuildContext` extension reading `Theme.of(context).extension<AppTokens>()`.
+
+The idiom hinge for Flutter: **dark is a real `ColorScheme.dark` + a dark `AppTokens`
+instance, NOT a single flat const class**; the token carrier is a `ThemeExtension` (with
+`copyWith`+`lerp`), NOT loose globals — that's what a Flutter dev expects and what makes
+`Theme.of(context)` Just Work. Honest header: NOT compiled here (verify with
+`dart analyze` / `flutter test`); the line-height + box-shadow caveats are stated inline.
+
 **Token fidelity is the load-bearing property:** every emitted sRGB triple is the exact
-`channel/255` of the source hex (3-dp), so the native theme can't silently drift from
-the contract. Run `export_native.py` — never hand-pick colors per platform, and never
-claim "it compiles" for code a headless environment never built.
+`channel/255` of the source hex (3-dp), and every Flutter `Color(0xAARRGGBB)` is the
+exact `0xFF` + uppercase `RRGGBB` of the source hex, so the native theme can't silently
+drift from the contract. Run `export_native.py` — never hand-pick colors per platform,
+and never claim "it compiles" for code a headless environment never built.
 
 **Honest scope:** atelier does *token + theme handoff* for native — it does NOT produce
 native-fidelity UI (the device frames and engines are HTML/React). For native UI, hand
