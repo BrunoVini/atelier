@@ -131,3 +131,12 @@ elevation craft and palette discipline. Bake these into the dark token scope:
   while you only audited one half is a HONESTY miss. Run `audit_contrast.py` on BOTH
   palettes and `qa.py --hook` on the page in BOTH states; report ratios for both and flag
   any borderline pair truthfully (a pair that clears 4.5 by 0.1, a UI border at ~3.1).
+
+- **Reserve the accent in data viz too — neutral by default, accent for meaning.** The
+  most common restraint slip in a dark dashboard is painting EVERY chart bar and EVERY
+  progress track in the brand accent. A calmer, more deliberate read uses a neutral
+  surface tone for the resting data (bars, tracks) and spends the accent only where it
+  carries meaning — the current/active bar, the value portion of a progress track, the
+  active nav, primary actions, links. Accent everywhere reads as decoration; accent
+  reserved for the one thing that matters reads as restraint. (Status colors — success/
+  warning/danger — stay semantic and are not "the accent.")
