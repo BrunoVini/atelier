@@ -605,6 +605,92 @@ def test_migrate_rewrites_tailwind_arbitrary_and_css():
     assert m == 1 and "var(--color-primary)" in css
 
 
+def test_migrate_color_is_exact_match_only_not_near():
+    # A near-but-unequal hex must NOT be rewritten — snapping it would move pixels.
+    contract = {"#5e6ad2": "primary"}
+    css, n = migrate_text(".x{background:#5a66cc;}", contract)  # ΔE small but != token
+    assert n == 0 and "#5a66cc" in css and "var(" not in css
+    # the exact one IS rewritten
+    css2, n2 = migrate_text(".x{background:#5e6ad2;}", contract)
+    assert n2 == 1 and "var(--color-primary)" in css2
+
+
+def test_migrate_never_rewrites_token_definition_rhs():
+    # The definition of a custom property must stay literal (no self-reference cycle).
+    contract = {"#0d1117": "bg"}
+    css, n = migrate_text(":root{--color-bg:#0d1117;}\n.a{background:#0d1117;}", contract)
+    flat = css.replace(" ", "")
+    assert "--color-bg:#0d1117" in flat            # definition stays literal
+    assert "--color-bg:var(--color-bg)" not in flat  # no self-reference cycle
+    assert n == 1  # only the .a usage migrated, not the definition
+
+
+def test_migrate_role_aware_spacing_vs_radius_same_value():
+    # 8px as gap -> spacing token; 8px as border-radius -> radius token. Same literal.
+    spacing = {"8px": "--space-2"}
+    radius = {"8px": "--radius-md"}
+    css, n = migrate_text(".c{gap:8px;border-radius:8px;}", {}, spacing, radius)
+    assert n == 2
+    assert "gap:var(--space-2)" in css.replace(" ", "")
+    assert "border-radius:var(--radius-md)" in css.replace(" ", "")
+
+
+def test_migrate_spacing_leaves_nonspacing_roles_alone():
+    # 16px width / font-size must NOT be tokenized even when 16px is a spacing token.
+    spacing = {"16px": "--space-4"}
+    css, n = migrate_text(".c{padding:16px;width:16px;font-size:16px;}", {}, spacing)
+    assert "padding:var(--space-4)" in css.replace(" ", "")
+    assert "width:16px" in css.replace(" ", "")
+    assert "font-size:16px" in css.replace(" ", "")
+    assert n == 1
+
+
+def test_migrate_leaves_calc_interior_alone():
+    spacing = {"16px": "--space-4"}
+    css, n = migrate_text(".c{padding:calc(16px + 2px);}", {}, spacing)
+    assert n == 0 and "calc(16px + 2px)" in css
+
+
+def test_migrate_extracts_tokens_and_roles_from_css_defs():
+    from migrate_to_tokens import extract_css_tokens
+    roles = extract_css_tokens(
+        ":root{--color-primary:#5e6ad2;--space-2:8px;--radius-md:8px;"
+        "--font-sans:\"Inter\", sans-serif;}")
+    assert roles["color"]["#5e6ad2"] == "--color-primary"
+    assert roles["spacing"]["8px"] == "--space-2"
+    assert roles["radius"]["8px"] == "--radius-md"
+    assert "inter, sans-serif" in roles["font"]
+
+
+def test_migrate_font_family_to_token():
+    fonts = {'inter, system-ui, sans-serif': "--font-sans"}
+    css, n = migrate_text('.c{font-family:"Inter", system-ui, sans-serif;}', {}, font_tokens=fonts)
+    assert n == 1 and "font-family:var(--font-sans)" in css.replace(" ", "")
+
+
+def test_migrate_rem_px_equivalence():
+    # 1rem == 16px at default root; a 16px spacing token should match a 1rem literal.
+    spacing = {"16px": "--space-4"}
+    css, n = migrate_text(".c{padding:1rem;}", {}, spacing)
+    assert n == 1 and "padding:var(--space-4)" in css.replace(" ", "")
+
+
+def test_migrate_spacing_after_color_keeps_calc_guard_aligned():
+    # A color rewrite earlier in the file shifts offsets; the calc()-guard and the
+    # downstream spacing rewrite must stay aligned: the real `padding:12px` migrates,
+    # the `calc(14px ...)` is left, and nothing inside calc moves.
+    css = (".a{color:#f85149;}\n"
+           "@media (max-width:600px){.b{padding:12px;font-size:calc(14px + 0.2vw);}}")
+    colors = {"#f85149": "danger"}
+    spacing = {"12px": "--space-3", "14px": "--space-x"}
+    out, n = migrate_text(css, colors, spacing)
+    flat = out.replace(" ", "")
+    assert "color:var(--color-danger)" in flat
+    assert "padding:var(--space-3)" in flat          # the real declaration migrates
+    assert "calc(14px+0.2vw)" in flat                 # calc interior untouched
+    assert "var(--space-x)" not in flat               # nothing inside calc moved
+
+
 def test_nearest_passing_returns_a_passing_shade():
     from scan_repo import contrast_ratio, _hex_to_rgb
     suggestion = _nearest_passing("#c9a227", "#f7f5ef", target=4.5)
