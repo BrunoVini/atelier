@@ -152,6 +152,39 @@ def _in_spans(pos, spans):
     return any(a <= pos < b for a, b in spans)
 
 
+# `/* atelier-ignore */` opts the FOLLOWING rule block out of migration (vendor /
+# non-themable / hand-tuned). `atelier-ignore-line` opts out the rest of that line.
+_IGNORE_BLOCK = re.compile(r"/\*\s*atelier-ignore\s*\*/", re.I)
+_IGNORE_LINE = re.compile(r"/\*\s*atelier-ignore-line\s*\*/", re.I)
+
+
+def _ignore_spans(text):
+    """Char-spans the migrator must skip because an `atelier-ignore` directive opted
+    them out. A bare `atelier-ignore` covers the next `{...}` rule block; an
+    `atelier-ignore-line` covers to the end of its line."""
+    spans = []
+    for m in _IGNORE_LINE.finditer(text):
+        eol = text.find("\n", m.end())
+        spans.append((m.start(), len(text) if eol == -1 else eol))
+    for m in _IGNORE_BLOCK.finditer(text):
+        if _IGNORE_LINE.match(text, m.start()):
+            continue  # already handled as a line directive
+        brace = text.find("{", m.end())
+        if brace == -1:
+            continue
+        depth, i = 0, brace
+        while i < len(text):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    spans.append((m.start(), i + 1))
+                    break
+            i += 1
+    return spans
+
+
 def migrate_text(text, color_tokens, spacing_tokens=None, radius_tokens=None,
                  font_tokens=None):
     """Rewrite hardcoded literals in a STYLESHEET to var(--token). Exact-match,
@@ -163,9 +196,13 @@ def migrate_text(text, color_tokens, spacing_tokens=None, radius_tokens=None,
     radius_tokens = radius_tokens or {}
     font_tokens = font_tokens or {}
     count = [0]
-    # calc()/clamp() spans are recomputed AFTER each text-mutating pass — the color
-    # rewrite changes string length, so spans from the pre-color text would be stale.
+    # calc()/clamp() + atelier-ignore spans are recomputed AFTER each text-mutating
+    # pass — the color rewrite changes string length, so pre-color spans would be stale.
     calc_spans = _strip_calc_regions(text)
+    ignore_spans = _ignore_spans(text)
+
+    def skip_at(pos):
+        return _in_spans(pos, calc_spans) or _in_spans(pos, ignore_spans)
 
     def line_is_token_def(at):
         # True when the value at `at` belongs to the RHS of a `--custom-prop:` decl
@@ -175,9 +212,14 @@ def migrate_text(text, color_tokens, spacing_tokens=None, radius_tokens=None,
         slice_ = re.sub(r"/\*.*?\*/", " ", text[start:at], flags=re.S)
         return bool(_DECL_HEAD_IS_CUSTOM.match(slice_))
 
+    def refresh_spans():
+        nonlocal calc_spans, ignore_spans
+        calc_spans = _strip_calc_regions(text)
+        ignore_spans = _ignore_spans(text)
+
     # --- colors (exact match only) ---
     def color_repl(m):
-        if _in_spans(m.start(), calc_spans) or line_is_token_def(m.start()):
+        if skip_at(m.start()) or line_is_token_def(m.start()):
             return m.group(0)
         name = color_tokens.get(m.group(0).lower())
         if name:
@@ -186,19 +228,19 @@ def migrate_text(text, color_tokens, spacing_tokens=None, radius_tokens=None,
         return m.group(0)
 
     text = _HEX.sub(color_repl, text)
-    calc_spans = _strip_calc_regions(text)  # refresh after color rewrite shifted offsets
+    refresh_spans()  # color rewrite shifted offsets
 
     # --- spacing & radius (role-scoped: only inside the right declaration) ---
     def make_len_rewriter(value_map):
         def rewrite_decl(decl_m):
             prop, val = decl_m.group(1), decl_m.group(2)
             val_start = decl_m.start(2)
-            if line_is_token_def(decl_m.start()):
+            if line_is_token_def(decl_m.start()) or skip_at(decl_m.start()):
                 return decl_m.group(0)
 
             def len_repl(lm):
                 abspos = val_start + lm.start()
-                if _in_spans(abspos, calc_spans):
+                if skip_at(abspos):
                     return lm.group(0)
                 name = value_map.get(_norm_len(lm.group(0)))
                 if name:
@@ -212,15 +254,16 @@ def migrate_text(text, color_tokens, spacing_tokens=None, radius_tokens=None,
 
     if spacing_tokens:
         text = _SPACING_PROPS.sub(make_len_rewriter(spacing_tokens), text)
-        calc_spans = _strip_calc_regions(text)  # refresh: spacing rewrite shifted offsets
+        refresh_spans()
     if radius_tokens:
         text = _RADIUS_PROPS.sub(make_len_rewriter(radius_tokens), text)
+        refresh_spans()
 
     # --- font-family ---
     if font_tokens:
         def font_repl(decl_m):
             prop, val = decl_m.group(1), decl_m.group(2)
-            if line_is_token_def(decl_m.start()) or "var(" in val:
+            if line_is_token_def(decl_m.start()) or skip_at(decl_m.start()) or "var(" in val:
                 return decl_m.group(0)
             name = font_tokens.get(_font_key(val))
             if name:
@@ -242,13 +285,40 @@ _STYLE_PROP_HEX = re.compile(
     r"\s*:\s*['\"])#([0-9a-fA-F]{3,8})(['\"])")
 
 
+# A quoted hex string literal, e.g. "#2ea043" / '#fff'. Used ONLY inside a JSX
+# style={{...}} object, where every quoted color is unambiguously styling (covers
+# conditional/ternary values a flat `prop: "#hex"` pattern misses).
+_QUOTED_HEX = re.compile(r"(['\"])#([0-9a-fA-F]{3,8})(['\"])")
+
+
+def _jsx_style_spans(text):
+    """Char-spans of JSX `style={{ ... }}` object literals (brace-balanced)."""
+    spans = []
+    for m in re.finditer(r"style\s*=\s*\{\{", text):
+        depth, i = 0, m.end() - 2  # at the first of the two `{{`
+        while i < len(text):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    spans.append((m.start(), i + 1))
+                    break
+            i += 1
+    return spans
+
+
 def migrate_code_text(text, color_tokens, **_ignored):
     """Rewrite color hex in code only where it's unambiguously styling: Tailwind
-    arbitrary values `-[#hex]` and inline-style color props. EXACT match only. A bare
-    hex elsewhere in JS (config arrays, data) is left alone, by design."""
+    arbitrary values `-[#hex]`, inline-style color props, and any quoted hex inside a
+    JSX `style={{...}}` object (so a ternary `cond ? "#a" : "#b"` migrates too). EXACT
+    match only. A bare hex elsewhere in JS (config arrays, data) is left alone."""
     count = [0]
+    ignore_spans = _ignore_spans(text)
 
     def repl(m):
+        if _in_spans(m.start(), ignore_spans):
+            return m.group(0)
         name = color_tokens.get(("#" + m.group(2)).lower())
         if name:
             count[0] += 1
@@ -258,6 +328,24 @@ def migrate_code_text(text, color_tokens, **_ignored):
 
     text = _TW_ARBITRARY.sub(repl, text)
     text = _STYLE_PROP_HEX.sub(repl, text)
+    # Quoted hexes inside style={{...}} objects (covers conditional/array-in-style
+    # values). Recompute the style spans after the prior rewrites shifted offsets.
+    style_spans = _jsx_style_spans(text)
+    ignore_spans = _ignore_spans(text)
+
+    def style_repl(m):
+        if not _in_spans(m.start(), style_spans) or _in_spans(m.start(), ignore_spans):
+            return m.group(0)
+        if "var(--" in text[max(0, m.start() - 6):m.start()]:
+            return m.group(0)
+        name = color_tokens.get(("#" + m.group(2)).lower())
+        if name:
+            count[0] += 1
+            ref = _var_ref(name if name.startswith("--") else f"--color-{name}")
+            return f"{m.group(1)}{ref}{m.group(3)}"
+        return m.group(0)
+
+    text = _QUOTED_HEX.sub(style_repl, text)
     return text, count[0]
 
 

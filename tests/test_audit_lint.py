@@ -675,6 +675,30 @@ def test_migrate_rem_px_equivalence():
     assert n == 1 and "padding:var(--space-4)" in css.replace(" ", "")
 
 
+def test_migrate_jsx_style_object_covers_conditional_hex():
+    # A hex inside a JSX style={{...}} object — including a ternary value — is styling
+    # and should migrate; a bare hex in a data array stays put.
+    contract = {"#2ea043": "success", "#f85149": "danger", "#5e6ad2": "primary"}
+    src = ('<i style={{ backgroundColor: ok ? "#2ea043" : "#f85149" }} />\n'
+           'export const C = ["#5e6ad2", "#2ea043"];')
+    out, n = migrate_code_text(src, contract)
+    assert 'ok ? "var(--color-success)" : "var(--color-danger)"' in out
+    assert '["#5e6ad2", "#2ea043"]' in out   # bare data array untouched
+    assert n == 2
+
+
+def test_migrate_respects_ignore_directive():
+    # An `atelier-ignore` directive on a CSS block leaves that block untouched
+    # (vendor / non-themable). The rest of the file still migrates.
+    contract = {"#5e6ad2": "primary"}
+    css = ("/* atelier-ignore */\n.vendor{background:#5e6ad2;}\n"
+           ".mine{background:#5e6ad2;}")
+    out, n = migrate_text(css, contract)
+    assert ".vendor{background:#5e6ad2;}" in out          # ignored block untouched
+    assert "background:var(--color-primary)" in out.split(".mine")[1]
+    assert n == 1
+
+
 def test_migrate_spacing_after_color_keeps_calc_guard_aligned():
     # A color rewrite earlier in the file shifts offsets; the calc()-guard and the
     # downstream spacing rewrite must stay aligned: the real `padding:12px` migrates,
