@@ -2,7 +2,7 @@
 import json
 import os
 
-from audit_contrast import audit, _nearest_passing
+from audit_contrast import audit, _nearest_passing, nearest_passing_fix
 from lint_design import lint_repo
 from migrate_to_tokens import migrate_code_text, migrate_text
 
@@ -610,6 +610,59 @@ def test_nearest_passing_returns_a_passing_shade():
     suggestion = _nearest_passing("#c9a227", "#f7f5ef", target=4.5)
     assert suggestion is not None
     assert contrast_ratio(_hex_to_rgb(suggestion), _hex_to_rgb("#f7f5ef")) >= 4.5
+
+
+def test_nearest_passing_is_minimal_does_not_overshoot():
+    """The shade must clear the target without wildly overshooting it — a coarse
+    blend step lands far past 4.5 (a bigger, needless perceptual move). The fine
+    solver should clear the bar and stay near it."""
+    from scan_repo import contrast_ratio, _hex_to_rgb
+    s = _nearest_passing("#2f7df6", "#ffffff", target=4.5)  # the t30 link case
+    ratio = contrast_ratio(_hex_to_rgb(s), _hex_to_rgb("#ffffff"))
+    assert ratio >= 4.5
+    assert ratio < 4.75   # within a tight band of the target, not overshot to ~4.9
+
+
+def test_nearest_passing_fix_prefers_darkening_fill_for_white_on_brand():
+    """For a white label on a saturated brand fill, blending the WHITE TEXT toward
+    black to reach AA destroys the label (huge perceptual move). The brand-preserving
+    fix darkens the FILL and keeps the white label. nearest_passing_fix must return the
+    smaller-move option = changing the background fill here."""
+    from scan_repo import contrast_ratio, _hex_to_rgb, _delta_e
+    fix = nearest_passing_fix("#ffffff", "#2f7df6", target=4.5)
+    assert fix is not None
+    assert fix["change"] == "background"          # darken the fill, keep the label
+    # the new fill actually clears AA with the unchanged white label
+    assert contrast_ratio(_hex_to_rgb("#ffffff"), _hex_to_rgb(fix["new_value"])) >= 4.5
+    # and the move is far smaller than pushing the white text to near-black
+    text_move = _delta_e(_hex_to_rgb("#ffffff"), _hex_to_rgb(_nearest_passing("#ffffff", "#2f7df6", 4.5)))
+    assert fix["delta_e"] < text_move
+    assert fix["delta_e"] < 30                     # a recognizable brand shade, not a dump
+
+
+def test_nearest_passing_fix_moves_foreground_for_dark_text_on_light():
+    """For ordinary dark-text-on-light failures, moving the foreground is the smaller
+    move (darkening the fill = lightening the whole surface = a bigger change), so the
+    fix changes the foreground."""
+    from scan_repo import contrast_ratio, _hex_to_rgb
+    fix = nearest_passing_fix("#8a93a3", "#ffffff", target=4.5)  # t30 muted-on-bg
+    assert fix is not None
+    assert fix["change"] == "foreground"
+    assert contrast_ratio(_hex_to_rgb(fix["new_value"]), _hex_to_rgb("#ffffff")) >= 4.5
+
+
+def test_nearest_passing_fix_reports_recomputed_ratio_and_reaches_target():
+    from scan_repo import contrast_ratio, _hex_to_rgb
+    for fg, bg, tgt in [("#ffffff", "#36b37e", 4.5), ("#ffffff", "#e5534b", 4.5),
+                        ("#c4ccd6", "#ffffff", 3.0), ("#6e7686", "#10141b", 4.5)]:
+        fix = nearest_passing_fix(fg, bg, target=tgt)
+        assert fix is not None
+        if fix["change"] == "foreground":
+            got = contrast_ratio(_hex_to_rgb(fix["new_value"]), _hex_to_rgb(bg))
+        else:
+            got = contrast_ratio(_hex_to_rgb(fg), _hex_to_rgb(fix["new_value"]))
+        assert got >= tgt
+        assert abs(round(got, 2) - fix["new_ratio"]) < 0.02   # reported ratio is honest
 
 
 def test_lint_repo_flags_rogue_color_and_font(tmp_path):

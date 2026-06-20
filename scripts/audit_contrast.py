@@ -142,19 +142,69 @@ def _enforced(t, s):
     return _role(t) == "text" and _role(s) == "surface"
 
 
-def _nearest_passing(text_hex, surface_hex, target=AA_NORMAL):
-    """Blend the text color toward black/white until it clears `target`."""
-    sr = _hex_to_rgb(surface_hex)
+from scan_repo import _delta_e  # CIE76 ΔE for measuring how far a fix moved
+
+
+def _blend_to_target(color_hex, against_hex, target, steps=60):
+    """Blend `color_hex` toward black AND toward white in FINE steps against the
+    fixed `against_hex`; return (hex, delta_e) of the variant that first clears
+    `target` with the SMALLER perceptual move (ΔE) from the original. A fine step
+    (1/60) clears the bar without overshooting it (a coarse step lands needlessly
+    far past the threshold = a bigger, wasted color change). Returns None if neither
+    direction can reach the target."""
+    against = _hex_to_rgb(against_hex)
+    orig = _hex_to_rgb(color_hex)
     best = None
     for towards in ((0, 0, 0), (255, 255, 255)):
-        for step in range(1, 21):
-            t = step / 20
-            mixed = tuple(round(o + (d - o) * t) for o, d in zip(_hex_to_rgb(text_hex), towards))
-            if contrast_ratio(mixed, sr) >= target:
-                cand = _rgb_to_hex(*mixed)
-                if best is None:
-                    best = cand
+        for step in range(1, steps + 1):
+            t = step / steps
+            mixed = tuple(round(o + (d - o) * t) for o, d in zip(orig, towards))
+            if contrast_ratio(mixed, against) >= target:
+                de = _delta_e(orig, mixed)
+                if best is None or de < best[1]:
+                    best = (_rgb_to_hex(*mixed), de)
                 break
+    return best
+
+
+def _nearest_passing(text_hex, surface_hex, target=AA_NORMAL):
+    """Nearest passing FOREGROUND shade: blend the text color toward black/white in
+    fine steps until it clears `target`, choosing the smaller perceptual move. Returns
+    a hex (backward-compatible single-value API used by audit()'s `suggest`)."""
+    best = _blend_to_target(text_hex, surface_hex, target)
+    return best[0] if best else None
+
+
+def nearest_passing_fix(text_hex, surface_hex, target=AA_NORMAL):
+    """Minimal-perceptual-change fix for ONE failing pair, considering BOTH levers:
+    move the FOREGROUND (text) or move the BACKGROUND (the fill/surface), and return
+    whichever reaches `target` with the smaller ΔE from its original — the
+    brand-preserving choice.
+
+    This matters for a white/near-white label on a saturated brand FILL: blending the
+    white text toward black to reach AA pushes it to a near-black gray (a huge move that
+    destroys the label), whereas darkening the FILL a couple of steps keeps the white
+    label and the brand hue — far smaller. For ordinary dark-text-on-light failures the
+    foreground move is the smaller one, so that is returned. Contrast is symmetric, so a
+    fill move is found by blending the surface against the fixed text.
+
+    Returns a dict {change: 'foreground'|'background', new_value: '#hex',
+    new_ratio: float, delta_e: float, alternatives: [...]} or None if unreachable.
+    """
+    fg = _blend_to_target(text_hex, surface_hex, target)   # move text vs fixed surface
+    bg = _blend_to_target(surface_hex, text_hex, target)   # move fill vs fixed text
+    cands = []
+    if fg:
+        cands.append({"change": "foreground", "new_value": fg[0], "delta_e": round(fg[1], 1),
+                      "new_ratio": round(contrast_ratio(_hex_to_rgb(fg[0]), _hex_to_rgb(surface_hex)), 2)})
+    if bg:
+        cands.append({"change": "background", "new_value": bg[0], "delta_e": round(bg[1], 1),
+                      "new_ratio": round(contrast_ratio(_hex_to_rgb(text_hex), _hex_to_rgb(bg[0])), 2)})
+    if not cands:
+        return None
+    cands.sort(key=lambda c: c["delta_e"])   # smallest perceptual move first
+    best = dict(cands[0])
+    best["alternatives"] = cands[1:]
     return best
 
 
@@ -197,6 +247,9 @@ def audit(colors):
             }
             if not passes and not informational:
                 row["suggest"] = _nearest_passing(colors[t], colors[s], required)
+                # The brand-preserving fix considers moving the fill too (and reports
+                # which lever moved least) — used by callers that show an actionable fix.
+                row["fix"] = nearest_passing_fix(colors[t], colors[s], required)
             rows.append(row)
     return rows
 
@@ -347,7 +400,12 @@ def _format(rows, apca=False, apca_target=None):
             tag = "AA✓" if r["aa_normal"] else "AA-large ✓ (heading role)"
         else:
             need = "AA-large 3:1" if r["required"] == AA_LARGE else "AA 4.5:1"
-            tag = f"FAIL (needs {need}; suggest {r.get('suggest', '?')})"
+            fix = r.get("fix")
+            if fix:
+                tag = (f"FAIL (needs {need}; fix: {fix['change']}->{fix['new_value']} "
+                       f"= {fix['new_ratio']}:1)")
+            else:
+                tag = f"FAIL (needs {need}; suggest {r.get('suggest', '?')})"
         apca_col = f"  Lc {abs(r.get('apca_lc', 0.0)):>5.1f}" if apca else ""
         lines.append(f"  {r['ratio']:>5}:1{apca_col}  "
                      f"{r['text']} on {r['surface']:<14} {tag}")
