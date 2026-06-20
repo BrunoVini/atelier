@@ -506,9 +506,11 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
         out.append("//       APPROXIMATES the token's pixel lineHeight (height = lineHeight/size).")
     if shadows:
         out.append("// NOTE: the web multi-layer box-shadow has no single Flutter primitive;")
-        out.append("//       it is surfaced as a derived `List<BoxShadow>` on AppTokens using")
-        out.append("//       each layer's REAL color + offset + (blur as the Gaussian sigma·2),")
-        out.append("//       a disclosed approximation, not a fabricated 1:1 equivalence.")
+        out.append("//       it is surfaced as a derived `List<BoxShadow>` (one BoxShadow per CSS")
+        out.append("//       layer) on AppElevation, carrying each layer's REAL color + offset; the")
+        out.append("//       CSS blur is passed straight to BoxShadow.blurRadius — a disclosed")
+        out.append("//       approximation (a Flutter Gaussian blurRadius is not identical to a CSS")
+        out.append("//       blur), not a fabricated 1:1 equivalence.")
     if role_elevated and role_elevated != role_surface:
         out.append("// NOTE: the `surfaceContainer*` ColorScheme slots require Flutter 3.22+.")
         out.append("//       On older Flutter, delete those five lines (the minimal surface/")
