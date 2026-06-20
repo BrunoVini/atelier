@@ -355,6 +355,23 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   *whole* page correct: the light theme is re-audited too, so both themes ship as
   equal-finish, AA-clean peers — and the contrast report is honest about both, flagging any
   borderline pair instead of claiming a blanket pass.
+- **Native theme handoff that emits a complete, idiomatic theme — not a flat color dump.**
+  `export_native.py` turns the token contract into a ready-to-drop-in SwiftUI `Theme.swift`
+  (alongside Flutter and React Native theme files). The SwiftUI output carries: **dynamic
+  light + dark colors** via a `Color(light:dark:)` initializer backed by a per-trait
+  `UIColor`/`NSColor` *dynamic provider* (resolves at draw time, so colors adapt correctly
+  in mixed-scheme, hosted, and snapshot contexts — iOS *and* macOS, guarded with
+  `#if canImport`); a **named type scale** (`ThemeTypography` + a `.textStyle(.title)`
+  modifier that reads the in-environment theme, with `lineSpacing` derived from each token's
+  line height); **spacing + radius** as typed `CGFloat` scales; and a `Theme` value exposed
+  through an `EnvironmentKey` so views read `theme.colors.primary` / `theme.spacing.lg`. The
+  CSS box-shadow elevation token is reproduced as a stacked, per-layer `.cardShadow()` using
+  the token's **real** color and offsets. **Token fidelity is exact** — every emitted color
+  is the precise `channel/255` of the source hex, both schemes — so the native theme can't
+  silently drift from the contract. The generated header is **honest about scope**: it states
+  the file was not compiled in a headless environment (verify in Xcode), and that SwiftUI has
+  no precise total-line-height control nor a 1:1 CSS-box-shadow equivalent, so those are
+  disclosed approximations rather than fabricated equivalences.
 - i18n / RTL logical-property linting.
 - Design planning + a 5-seat Design Council (for / against / neutral / UX / craft → a
   synthesized verdict) for hard, multi-surface calls.
