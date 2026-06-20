@@ -635,6 +635,29 @@ def ported_tells(html, allowed=None):
                 "neon cyan text on a dark page — the signature AI dark-dashboard "
                 "palette; pick an owned accent")
 
+        # harsh-dark-contrast: pure #000 canvas paired with pure #fff ink in the SAME
+        # body/html rule. AA passes (21:1) but the maximal pairing vibrates harshly —
+        # the low-finish dark-mode tell. A finished dark theme lifts the surface off
+        # pure black (canvas < card < inset elevation) and softens the ink off pure
+        # white. We require BOTH ends maximal in ONE running-text rule, so a lifted
+        # surface OR a softened ink clears it (no FP on real dark themes).
+        for sel, body in css_blocks(html):
+            if not _bodyish(sel):
+                continue
+            bg = re.search(r"background(?:-color)?\s*:\s*([^;}]+)", body, re.I)
+            fg = re.search(r"(?:^|[;{\s])color\s*:\s*([^;}]+)", body, re.I)
+            if not (bg and fg):
+                continue
+            bgc = _parse_rgb(bg.group(1))
+            fgc = _parse_rgb(fg.group(1))
+            if bgc and fgc and max(bgc) == 0 and min(fgc) == 255:
+                add("polish", "harsh-dark-contrast",
+                    "pure #000 canvas with pure #fff text — AA passes but the maximal "
+                    "21:1 pairing reads harsh; lift the surface off pure black "
+                    "(layered canvas<card<inset elevation) and soften the ink off "
+                    "pure white for a finished dark theme")
+                break
+
     # 19. monotonous-spacing — one spacing value everywhere, no rhythm.
     vals = []
     for m in re.finditer(r"(?:padding|margin)(?:-(?:top|right|bottom|left))?\s*:\s*"

@@ -91,3 +91,43 @@ keyboard-accessible. Either way, the **comparison/demo chrome itself must be
 token-driven and quiet** (a neutral scaffold from `var(--token)`, not a pile of
 hardcoded hexes) so it never competes with — or visually contaminates — the two
 brands it frames.
+
+
+### Dark-theme FINISH and RESTRAINT (beyond just passing AA)
+
+Two careful dark themes can BOTH pass WCAG AA on every pair and still differ in
+quality. AA is the floor; what separates a finished dark theme from an adequate one is
+elevation craft and palette discipline. Bake these into the dark token scope:
+
+- **Lift the surface off pure black; soften the ink off pure white.** `#000` canvas with
+  `#fff` text passes AA at a maximal 21:1, but that maximum *vibrates* — it reads cheap
+  and harsh, and it kills your ability to show elevation (you can only go lighter). Set
+  the canvas to a near-black with a slight cool/neutral tint (e.g. `#0e1420`), the top
+  ink to a soft off-white (`#e6eaf2`, not `#fff`). The `harsh-dark-contrast` slop check
+  flags the `#000`+`#fff` pairing.
+- **Build a real elevation ladder in luminance, not just borders.** Dark UIs read depth
+  by getting *lighter* as they come forward: canvas < card < inset/raised. Define at
+  least three distinct surface steps (`--bg` < `--surface` < `--surface-2`) with visibly
+  separated luminance so cards sit ABOVE the canvas and table-headers/search inset sit
+  above the card. One flat near-black for everything is the low-finish tell — the page
+  has no depth. (Shadows do little work on dark; surface luminance carries elevation.)
+- **Desaturate and lift the accent for a dark surface — don't reuse the light hex.** The
+  light primary is tuned for white; on dark it must be a *lighter, less-saturated* tint
+  of the same hue (a light `#2563cc` becomes ~`#6ea8ff`) so it reads as a calm accent,
+  not a glaring chip. Same for status colors (success/danger/warning foregrounds get
+  their own dark hexes). Reserve the accent — primary action, links, the active nav,
+  one chart series; everything else stays neutral. Saturated fills everywhere, or the
+  light accent left unchanged, reads neon-on-black (the opposite of restraint).
+- **Give status chips their OWN dark tokens, not a `color-mix()` of the light fill.**
+  A `color-mix(in srgb, var(--success) 14%, var(--surface))` chip background that worked
+  on a white surface produces an unpredictable muddy tint on a dark one, and couples the
+  chip's legibility to a hue meant for fills. Define explicit `--ok-bg/--ok-fg`,
+  `--risk-bg/--risk-fg`, `--warn-bg/--warn-fg` per theme so each chip is deliberately
+  tuned and audited.
+- **A dark theme is half the deliverable — finish BOTH themes.** When the task is "add a
+  dark theme", the light theme is now ALSO yours to stand behind: re-audit it too. Parity
+  means *equal finish across themes* — shipping a clean dark theme while leaving real AA
+  failures (or slop) in the light one is not an equal-finish peer, and claiming "all pass"
+  while you only audited one half is a HONESTY miss. Run `audit_contrast.py` on BOTH
+  palettes and `qa.py --hook` on the page in BOTH states; report ratios for both and flag
+  any borderline pair truthfully (a pair that clears 4.5 by 0.1, a UI border at ~3.1).
