@@ -330,7 +330,18 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Responsiveness that survives the tablet zone — a width sweep (360→1920, including
   768–1024) so the mid-range stops breaking silently; fluid-first generation.
 - Multi-brand / dark-mode / white-label theming, and native theme handoff
-  (SwiftUI / Flutter / React Native).
+  (SwiftUI / Flutter / React Native). One shared component system, themed for several
+  brands by **swapping a token set** — components consume only `var(--token)`; each brand
+  is a `[data-brand]` token scope that restates just what differs. Guidance now makes each
+  brand a **complete identity, not a recolor**: a brand's token scope owns its *whole*
+  surface treatment — surface mode/luminance (a brand may flip the entire surface family
+  to dark / warm-paper / cool-light), density, radius, depth, and numeric features
+  (tabular vs proportional via a `--num-feature` token) — with AA re-audited per brand on
+  its full role set, so a playful consumer brand and a precise fintech brand read as
+  genuinely different products from the same markup. When the deliverable's job is to
+  *prove* the system is shared, render both brands at once side by side (the second brand
+  reachable with no interaction, not hidden behind a JS-only toggle) and keep the
+  comparison chrome token-driven and quiet so it never contaminates the brands it frames.
 - i18n / RTL logical-property linting.
 - Design planning + a 5-seat Design Council (for / against / neutral / UX / craft → a
   synthesized verdict) for hard, multi-surface calls.
