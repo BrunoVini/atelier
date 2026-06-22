@@ -98,6 +98,41 @@ and it reads as three different designers. Choose the page's dominant strategy (
 flat product UIs are best served by **tint + hairline, no shadows**; marketing surfaces
 can carry soft shadows) and hold every surface to it.
 
+## The quietest sufficient cue wins "subtle layering"
+
+Picking one strategy keeps you *correct*; on a calm product instrument (a dashboard, an
+admin surface), the surface that *wins* the **subtle-layering** dimension is the one that
+groups with the **least visible chrome that still reads** — depth *felt*, not *seen*. Two
+builds can both be one-strategy-per-surface and tokenized, yet one reads as a quiet
+instrument and the other as a grid of outlined boxes. The difference is how hard the cue
+works:
+
+- **Prefer tonal step + spacing over a drawn edge.** A raised surface that's one lightness
+  step up on generous spacing already reads as grouped; adding a hairline outline to *every*
+  panel on top of that reprints the grid as visible boxes. Reserve the outline for where the
+  tonal step alone isn't enough (an inset well, a table head), and let whitespace + the tint
+  carry the rest. The squint test is the judge: if you blur the screen and see a lattice of
+  rectangles, your edges are doing work the spacing should do.
+- **Don't let a "heavy graphic" element undo the calm.** A saturated multi-color donut, a row
+  of filled high-chroma status pills, or a boldly bordered widget is *read*, not *felt* — it
+  pulls the eye and reads louder than the restrained surfaces around it, costing layering even
+  when every panel is technically one-strategy. Quiet these to match the instrument: a
+  composition reads calmer as a single horizontal 100%-stacked bar or a tonal ranked list than
+  as a bright donut; status reads calmer as a **tinted glyph chip** (a low-alpha tonal fill +
+  a shaped glyph + a label) than as a saturated solid pill. Keep the one reserved accent for
+  the single thing that must shout (an active alert), not sprinkled across every status and
+  segment.
+- **A side rail of navigation/context is part of the grouping, not noise.** Grounding the
+  content in a quiet nav rail (same or near-same ground as the canvas, separated by a single
+  hairline — never a different hue) lets the working area read as one calm plane instead of a
+  free-floating stack of panels; it reads as a *product*, and it makes the main surface feel
+  more layered-into-an-app, not less. (See `data-viz-craft.md` §4 "real document skeleton" and
+  the navigation-context note — grounding and quiet layering reinforce each other.)
+
+The bar: against an equally-correct competitor, the calmer instrument wins this dimension.
+When you've made every surface one-strategy and it *still* reads busy, the fix is to **remove
+a cue** (drop a per-panel outline, de-saturate a graphic, collapse the palette), not add one.
+
 ## What atelier auto-checks vs. what you hold by hand
 
 Two of these are cheap to verify from static CSS with a low false-positive rate, so

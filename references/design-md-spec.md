@@ -48,11 +48,27 @@ dark tokens are documentation, not contract. Omit the `dark` key for a light-onl
   `contract.py` normalizes each role to `{family, size, weight, line_height, tracking,
   features}` (only present keys are emitted; `features` is always a list, possibly empty).
   Surfaced as `contract["typography"]` only when a valid map is present.
+- `"rounded"` (alias `"radii"`): a NAMED radii map `{name: "Npx"}` (e.g.
+  `{"sm":"6px","md":"10px","lg":"14px"}`). Distinct from the legacy `spacing`/`radius`
+  LISTS (which the range engine slides): `rounded` is the named scale that component
+  `{rounded.md}` references resolve against. Surfaced as `contract["rounded"]`.
+- `"shadows"`: a NAMED elevation map `{name: "<box-shadow>"}`. Surfaced as
+  `contract["shadows"]`; the first value still seeds the single `elevation` token.
 - `"components"`: `{component: {...}}` — per-component minimum specs (e.g.
   `backgroundColor`, `textColor`, `typography`, `rounded`, `padding`, `height`,
-  `minHeight`, `gap`). Surfaced VERBATIM as `contract["components"]`; `{colors.x}` /
-  `{typography.x}` / `{rounded.x}` references are kept as strings — `contract.py` does
-  NOT resolve them (that's the consumer's job). Surfaced only when present.
+  `minHeight`, `gap`). Surfaced VERBATIM as `contract["components"]`; the `{group.name}`
+  reference strings are kept as-is (the consumer substitutes the literal value).
+
+  **Contract closure (validated).** When you declare `components`, every `{group.name}`
+  token they reference MUST resolve against a scale defined IN the block — `colors` (or
+  `dark`), `typography`, `rounded`/`radii`, `shadows`. `contract.py --validate` walks the
+  component specs and reports any unresolved ref in `component_ref_issues`; a non-empty
+  list FAILS the contract. So if a button is styled by `{rounded.md}`, define a `rounded`
+  map in the block (don't leave radii prose-only). For an enforceable state machine, give
+  each interaction state its own component entry (`button-primary-hover`,
+  `text-input-error`, `tide-chart-loading`) so a linter reads the whole catalog, not just
+  rest. This closes the loophole where a contract LOOKS complete (components present) but
+  references token groups it never defines — a real internal-consistency gap.
 
 ```json atelier-contract
 {
@@ -61,8 +77,11 @@ dark tokens are documentation, not contract. Omit the `dark` key for a light-onl
   "typography": {
     "display-xl": { "fontFamily": "Copernicus, serif", "fontSize": "64px",
                     "fontWeight": 400, "lineHeight": 1.05, "letterSpacing": "-1.5px",
-                    "features": ["ss01", "tnum"] }
+                    "features": ["ss01", "tnum"] },
+    "button":     { "fontFamily": "StyreneB, sans-serif", "fontSize": "14px", "fontWeight": 600 }
   },
+  "rounded": { "sm": "6px", "md": "10px", "lg": "14px" },
+  "shadows": { "sm": "0 1px 2px rgba(0,0,0,.06)", "overlay": "0 8px 24px rgba(0,0,0,.18)" },
   "components": {
     "button-primary": { "backgroundColor": "{colors.primary}", "textColor": "{colors.on-primary}",
                         "typography": "{typography.button}", "rounded": "{rounded.md}",
@@ -71,8 +90,63 @@ dark tokens are documentation, not contract. Omit the `dark` key for a light-onl
 }
 ```
 
-Both keys are absent by default; a block without them yields a contract with no
-`typography`/`components` keys (fully backward-compatible).
+All these keys are absent by default; a block without them yields a contract with no
+such keys (fully backward-compatible). If you declare `components` but no scale maps,
+validation flags the dangling refs.
+
+**Token-source provenance (the measured-repo edge — put it IN the block).** When the
+contract is **MEASURED from a repo** (vs synthesized greenfield), carry an optional
+`"sources"` map: `{role: "file:line"}` recording WHERE each token lives in the code, with
+an optional nested `"dark"` sub-map for the dark theme's lines. This is what makes a
+measured DESIGN.md *traceable and verifiable* — and it is the whole point of measuring
+instead of eyeballing. A prose table that lists `globals.css:7` per row but a machine
+block that carries only `{role: "#hex"}` throws the provenance away in the artifact a tool
+actually consumes; every token in the block should be re-findable in the source. Put the
+file:line **in the block**, not only in the prose. `contract.py` parses it to
+`contract["sources"]` and `--validate` reports `token_sources` (how many color roles carry
+a pointer), so a measured contract can PROVE its provenance is machine-readable.
+
+```json atelier-contract
+{
+  "colors": { "background": "#ffffff", "foreground": "#0f172a", "primary": "#0f172a" },
+  "dark":   { "background": "#030711", "foreground": "#e1e7ef", "primary": "#f8fafc" },
+  "sources": {
+    "background": "styles/globals.css:7", "foreground": "styles/globals.css:8",
+    "primary": "styles/globals.css:22",
+    "dark": { "background": "styles/globals.css:40", "foreground": "styles/globals.css:41",
+              "primary": "styles/globals.css:58" }
+  },
+  "fonts": ["Inter", "Cal Sans"], "radius": ["4px", "6px", "8px"], "register": "product"
+}
+```
+
+**Measure only what is bespoke — point at the rest, don't transcribe it as a "value."**
+When a repo's spacing / type-scale / shadows are a **framework default** (Tailwind's
+default scale, MUI defaults, …) and only the *colors* + a `--radius` are bespoke, do NOT
+list the framework's default px values in `spacing`/`shadows` as if they were measured
+project tokens — that reads as inflating the measured surface. State plainly that those
+scales are the framework default (e.g. "spacing/type/shadows = Tailwind v3 defaults, used
+inline; the only bespoke tokens are the color vars + `--radius`") and keep the block's
+measured surface to what the repo actually owns. Accuracy and honesty both reward a tight,
+truthful measured surface over a padded one.
+
+**Show the value AS STORED when the source isn't hex (HSL channels, oklch, …).** The
+machine block keeps colors as hex (tools need hex). But in the PROSE palette table of a
+*measured* contract, show the **authoritative source value** beside the derived hex — the
+raw HSL channel triple, the `oklch(...)`, or whatever the repo actually declares — and say
+the hex is *derived* from it. e.g. `--foreground | 222.2 47.4% 11.2% (source) | #0f172a
+(derived) | globals.css:8`. This is what proves the measurement is real and
+re-derivable rather than guessed (a doc that shows only resolved hex for an HSL-stored
+palette reads as a weaker, less-faithful read). The source value is the contract;
+the hex is a convenience.
+
+**Re-derive computed scale values; never guess them.** When a scale is defined by
+arithmetic on a bespoke token (e.g. Tailwind `borderRadius: { sm: "calc(var(--radius) -
+4px)" }` with `--radius: 0.5rem` = 8px → `sm` = **4px**, not 2px), COMPUTE each value from
+the real base and the real operation — read `--radius`, do the `calc()`. An off-by-one
+arithmetic slip (writing 2px where the math gives 4px) is a measurement error that makes
+the block contradict its own prose; verify the derived scale matches the source's actual
+computation.
 
 ## Importing a Google Stitch DESIGN.md
 
@@ -96,6 +170,51 @@ typography role, order-preserving), `spacing`, `radius` (from `rounded`), `typog
 and `components` (verbatim). `register`/`depth` stay `None` unless inferable. There is no
 PyYAML on the target machine, so the front matter is parsed by a small stdlib subset
 parser (2-space-indented nested maps, `key: value` scalars, `#` comments tolerated).
+
+## Role taxonomy: triads, interaction-state tokens, and the AA-driven semantic split
+
+A trustworthy palette is more than `primary` + `on-primary`. For a system another agent
+must build from, name the full role surface so nothing is left to guesswork:
+
+- **Surface/text triads.** For each semantic family (brand, success, warning, danger,
+  info, plus the neutral surface ladder), define the trio the builder actually needs:
+  the **fill** (`success`), its **on-color** (`on-success`, the text/icon that sits ON
+  the fill), and a **soft** tint (`success-soft`, a low-chroma background for banners /
+  badges) — and, when the family is also used as colored TEXT on the canvas, a separate
+  **text tone** (`success-text`) tuned to clear AA on the canvas. A single hue rarely
+  serves as both a saturated fill AND as 4.5:1 body text; name both so neither is faked.
+- **The AA-driven semantic split (the hard-hue rule).** Some hues *cannot* be both
+  on-brand AND AA-passing in the same token. The canonical case is amber/“warning”:
+  amber-on-near-white can't reach 4.5:1 while staying amber. Don't dim the brand to force
+  one token to do two jobs, and don't ship a failing pair — **split it deliberately**:
+  `warning-fill` keeps the vivid amber (paired with a dark `on-warning` at the 3:1 large/
+  UI bar) for chips/borders/icons, while `warning-text` is a darkened amber (e.g.
+  `#9a5b00`) that clears 4.5:1 as label text on the canvas. Document the split as a
+  *decision* ("amber text uses `warning-text`; `warning-fill` is for fills only, never
+  body text") — that is correct WCAG design, not a dodge, and it reads as rigor, not a gap.
+- **Named interaction-state tokens.** Don't leave hover/pressed/disabled to "darken it a
+  bit" in prose. Name them: `primary-hover`, `primary-pressed`, `primary-disabled` (and
+  the same for any control that has real states). They belong in the machine block so a
+  component entry can reference `{colors.primary-hover}` and a linter can resolve it.
+- **Decorative exemptions, stated.** Hairlines, disabled text, and large display numerals
+  may sit below AA *intentionally*; list them as decorative-exempt so the contrast table
+  reads honestly (a 1.4:1 hairline is a border, not failing body text).
+
+## Publish the measured contrast table (provability)
+
+Don't merely assert "every pair passes AA via the auditor" — **show the numbers**. Embed a
+measured per-pair ratio table in §2 (Palette) or §10 (Accessibility) so a reader or a second
+agent can recompute and verify. `audit_contrast.py` emits it for you:
+
+```bash
+python3 scripts/audit_contrast.py <repo-or-DESIGN.md> --table        # enforced pairs, per theme
+```
+
+This prints a markdown table (Foreground · Background · **Ratio** · Required · WCAG) for the
+light theme and, when a `dark` palette is present, the dark theme too — the same math the
+gate runs, made visible. Paste it under the palette. A published, recomputable ratio table is
+the single strongest trust signal a token system can carry; an assertion without numbers is the
+weakest.
 
 ## Sections (use the template in `templates/DESIGN.md.template`)
 
@@ -139,6 +258,42 @@ parser (2-space-indented nested maps, `key: value` scalars, `#` comments tolerat
     + ready-to-paste section prompts) so any coding agent, not just atelier, can build
     on-contract without reading the whole file. Synthesize from the tokens; point at §6
     for anti-slop rules rather than hardcoding bans.
+
+## A fuller component catalog (states as first-class, lintable entries)
+
+A catalog beats a token list when **every interaction state is its own keyed, token-bound
+entry** in the machine block — `button-primary`, `button-primary-hover`, `button-primary-
+pressed`, `button-primary-disabled`, `text-input`, `text-input-focus`, `text-input-error`,
+`checkbox`, `checkbox-checked`, `toggle-on`, `toggle-off`, `select`, plus data-surface states
+(`table-row-hover`, `chart-empty`, `chart-loading`, `chart-error`) and any domain components
+the brief implies. Each property is a `{token}` ref, so a linter reads the whole state machine
+(not just rest) and `contract.py --validate` proves every ref resolves. Cover the **standard
+control set** a real product needs — buttons (every variant), text inputs, **form controls
+(checkbox / radio / select / toggle)**, cards/panels, nav, badges/status, alerts/toasts,
+modals, tables — then narrate each in prose so the doc is both machine-readable AND human-
+readable. A narrow catalog (buttons + inputs only) reads as incomplete next to one that names
+form controls and per-state entries.
+
+## Portability: the ready-to-paste CSS scaffold + verify checklist
+
+The portability axis rewards a doc an agent can build from with zero wiring. Two parts make the
+difference:
+
+- **A turnkey dual-theme CSS-variable scaffold.** In §13, ship a complete, copy-paste
+  `:root { --token: #hex; … }` block with EVERY literal value for the light theme and a
+  `[data-theme="dark"] { … }` block with every dark value (colors, plus type/shape/shadow/
+  motion vars and a `body{}` baseline). An agent pastes it and immediately has a wired token
+  system — it removes the wiring step entirely, instead of leaving the agent to transcribe hexes.
+- **A "verify before you ship" checklist.** Close §13 (or §10) with a short, concrete checklist
+  the building agent runs: every interactive control has rest/hover/focus/pressed/disabled; data
+  views have empty/loading/error; contrast pairs match the published table; dark theme rendered,
+  not assumed; touch targets ≥44px on mobile; reduced-motion honored. A checklist turns the
+  contract into something an agent can self-audit against.
+
+Also make §4 carry a real **responsive contract** for a multi-surface product: a breakpoint
+table, the **per-surface collapsing strategy** (e.g. sidebar → icon rail → bottom tab bar), and
+an explicit **touch-target spec** (≥44×44px, ≥48px for primary actions). These are standard
+parts of a portable contract, not extras.
 
 ## Product context (what §1's prose should capture)
 

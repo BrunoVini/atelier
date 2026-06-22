@@ -290,6 +290,34 @@ The hero's focal element depends on what's being sold, and "restrained" never me
   data widgets around a $329 object, you've made it look like a $79 one. (This is the luxury-
   register sharpening of "reserve the accent" and "a dense page must breathe": here restraint is
   not a tax on the register — it IS the register.)
+- **Quiet ≠ bare: a premium product page must AUTHOR its key feature/story surfaces, not leave
+  them type-only.** "Premium reads as quiet" means *remove clutter and reserve the accent* — it does
+  NOT mean a feature/story block is just a heading and a paragraph on an empty field. On a
+  single-product page the story blocks ("a single billet," "the friction joint," "the optic") are
+  where the brand earns belief, and a competitor that authors a small, on-concept render for each —
+  the milled billet, a top-down view of the joint, the light pool — will out-finish AND out-originate
+  a page that argues the same points in prose alone, because the authored art is what reads as
+  *considered* and as *this brand*. Budget the artwork: the hero render is the headline act, but each
+  named feature deserves a small authored visual that shows the thing the copy claims (drawn in the
+  same palette/light language as the hero, so the page reads as one art-directed system). A
+  type-only feature section is the single most common way a quiet page reads as *thin* rather than
+  *restrained* — restraint is removing noise, not removing the craft that proves the product.
+  Relatedly, ONE honest interaction that demonstrates the core behavior (a dimmer that actually dims
+  the rendered light, a colour swap that re-renders the product) can be the originality lever a static
+  page can't match — but it must be real and wired, never a dead control (see §4/no-dead-controls),
+  and never decoration noise. Reserve it for the product's defining behavior, then build it.
+- **Express the concept in the BRAND's own material language — don't graft product-UI/dashboard
+  chrome onto a craft/brand surface.** A strong owned concept is the originality lever, but WHERE you
+  draw it has to match the register. On a craft/maker/brand page (a small roastery, a workshop, a
+  single beautiful object — explicitly "not a venture-backed app"), the reflex to manufacture
+  concept by bolting on app-UI furniture — a floating telemetry/"data" card, a dashboard graph
+  widget, a stat tile, a fake live readout — backfires: it reads as **SaaS-chrome**, betrays the
+  artisanal voice, and a critic dings it on restraint as "one decorative idea more than the page
+  needs." The honest concept lives in the brand's OWN material vocabulary: the bag, the bean, the
+  roast colour, the origin, the grain of the material, the maker's mark — not in a product-UI panel
+  imported from a different register. If the idea is "roast-to-order freshness," show it as a
+  date on the bag's own label or the bean's real roast colour, not as a line-chart card hovering in
+  the hero. Match the artefact to the register: brand concepts wear brand clothes.
 - **The hero artifact must match what's purchasable.** Showing a hero product (color/case/
   finish) that matches none of the items in the collection below is a credibility-killer —
   a real maison shows a flagship you can actually buy. Keep hero and catalog consistent.
@@ -303,6 +331,26 @@ The hero's focal element depends on what's being sold, and "restrained" never me
 - **Copy matches the register.** Luxury/editorial copy is *evocative*, not merely clear;
   developer copy is terse and concrete; fintech is precise and trustworthy. Write to the
   genre's voice, not a generic "benefit + adjective" line.
+- **An editorial portfolio / personal showcase is carried by ONE signature device — own it, then
+  let the work fill the rest.** A portfolio for a creative person (designer, photographer, type/motion
+  studio, illustrator, architect) is a *brand* surface where the bar is a memorable point of view, not
+  a tidy template. Originality and memorability there don't come from the genre skin (dark-grotesk
+  cover, warm-paper serif, three-up project grid are all first-reach looks a blind reviewer has seen a
+  hundred times) — they come from committing to a single **signature device that becomes the page's
+  identity** and that you couldn't paste onto anyone else's portfolio: a device sourced from *what this
+  person actually makes*. A type designer's page can BE a living type specimen (a colossal breathing
+  glyph, a weight ladder, an in-page foundry booklet); a photographer's can be one full-bleed image
+  doing all the work; a motion studio's, one looped kinetic mark. Pick the device the subject's own
+  craft hands you, execute it precisely, and reserve everything else (palette to a couple of inks,
+  motion to that one move) so the device reads as *the* idea, not one of five. Then — this is the half
+  that loses portfolios — **the WORK itself must be present, complete, and the most finished thing on
+  the page.** A signature hero with a blank/half-revealed project index below it is a portfolio with no
+  portfolio: it tanks finish AND memorability (the lasting impression becomes "the one with the empty
+  hole where the work should be"), and no concept survives it. Gate the reveal so every project is
+  visible by default (see §2 — never `opacity:0` on the bare selector; `reveal_check.mjs` must be
+  clean), and set the work index with the same care as the hero (numbered, aligned, tabular years,
+  real descriptions). A committed device + the work fully delivered beats a louder concept that doesn't
+  paint, every time.
 - **No dead markup or dead controls.** Remove abandoned/empty element groups (a commented
   "generated ticks" block with nothing in it), and never ship a control that does nothing
   (a "Menu" button with no handler). It reads as unfinished on close inspection.

@@ -58,7 +58,17 @@ illustration" from "a few flat shapes":
   real; (4) **a real contact shadow / grounding** so it sits in space, plus a three-quarter (not
   dead-flat-front) pose so two planes are visible at once. Render and ZOOM: if it reads as a flat
   charcoal blob, add the cavity, the metal, and the light — that's the difference between winning
-  and losing the "finish" of a product page.
+  and losing the "finish" of a product page. (5) **DRAW THE DEFINING MECHANISM, not a generic
+  silhouette of the category.** The render must show the one feature the copy is selling, not the
+  plinth-shape every example of the category shares. A task lamp whose pitch is "a single arm with a
+  constant-friction joint that holds any angle" must show that *articulated jointed arm* (an elbow,
+  a hinge, a damped knuckle) posed at an angle — a straight rigid pole reads as "a spotlight on a
+  stick," coherent as a light but generic, and forfeits both finish and originality to a render that
+  draws the joint. A chair sold on its recline shows the recline; a watch sold on its complication
+  shows the subdial; a bottle sold on its pour spout shows the spout. Two blind reviewers will both
+  dock a render that "reads as the category" versus one that "reads as THIS product doing the thing
+  it's sold on" — the mechanism is what makes the art un-swappable. Identify the headline mechanical
+  claim, then draw it explicitly and pose the object mid-claim.
 - **A stylized creature/character (or any real-world subject) must be COHERENT — instantly
   recognizable as the specific thing it depicts.** Stylization (flat, geometric, cute, mascot) is
   in scope and expected — but "stylized" is not a licence for "ambiguous." The failure mode: a
@@ -80,6 +90,19 @@ illustration" from "a few flat shapes":
   - This is the stylized-but-coherent counterpart to design-philosophy §3 (no photoreal faces): the
     bar isn't realism, it's unmistakable recognition. A clearly-stylized, clearly-a-fox mascot beats
     a "realistic" attempt AND beats an ambiguous cute blob.
+  - **A small REPEATED glyph must pass the naming test at its RENDERED size — and must not collide
+    with a universal symbol.** The coherence bar applies hardest to the little marks you stamp on
+    every card/feature (a per-item bean, leaf, drop, node), because they're small and you draw them
+    once and trust them. Two specific failures cost real finish points: (1) **a thin OUTLINE mark at
+    small size loses its defining detail and collapses to its bounding shape** — a stroked bean
+    outline at ~20px reads as a coin or a ring, not a bean; draw small marks as a SOLID filled
+    silhouette plus the ONE defining interior detail (the bean's centre crease, the leaf's midrib),
+    not as a hollow outline. (2) **a thin closed curve crossed by a line reads as the prohibition
+    sign ∅ ("no" / "forbidden")**, a slanted ellipse reads as a "no entry" disc — so a rotated
+    outline bean with a centre stroke can read as a *no* symbol, the exact opposite of an
+    appetising product. Before stamping a mark N times, render it ALONE at its real card size and
+    apply the naming test there: if it could be mistaken for ∅, ⊘, a coin, a clock, or any common
+    UI symbol, it fails — make it solid, give it its species detail, and re-check at size.
 
 - **Full-bleed presence — do NOT mat it.** A hero illustration fills its canvas edge-to-edge.
   Wrapping the art in a card/border/dark frame shrinks it and kills impact. Let it bleed.

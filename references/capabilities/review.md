@@ -367,6 +367,26 @@ await document.fonts.ready;
 If a family is `false`, fix the URL/declaration and re-render — don't ship a deck,
 prototype, or variants page whose intended type silently degraded to a fallback.
 
+## 3d-bis. Type systems & specimens — coverage honesty + shown fallback (see `capabilities/typography.md`)
+
+For a **type system / specimen / type-spec page**, judge the five register dims on the *render*,
+and hold these two correctness lines (both caught as decisive deltas in blind judging):
+
+- **Uncovered glyphs are SHOWN IN PLACE, not silently dropped.** When a face can't render a claimed
+  codepoint, the page must leave it in the rendered string and show its real `.notdef` box (or a
+  clearly marked slot) where it occurs, with a one-line note naming the codepoint + a covering face.
+  **Deleting the character and explaining it only in prose reads as hiding the gap** — score it below
+  a page that shows the box. Verify on the render: look for the uncovered codepoint actually
+  appearing as a marked/boxed slot, not missing. (A *visible* tofu that is labeled-honest is good;
+  an *unlabeled* tofu in a script the page claims to cover is a real coverage failure.)
+- **Fallback must show the WORST case AND the engineered fix — and the overrides must be APPLIED.**
+  A fallback demo that shows only the metric-tuned column understates the shift; one that shows only
+  raw `local()` proves honesty but not engineering. Require both, side by side and labeled. Then read
+  the CSS: a documented `size-adjust`/`ascent-override` that the shipped `@font-face` doesn't carry
+  is *asserted, not engineered* — flag the prose↔CSS gap (the rationale oversells the artifact). A
+  forced-fallback comparison column must genuinely render the system face (`local(...)` forced with
+  `!important` or equivalent), not the embedded face relabeled.
+
 ## 3e. Structure the critique so it's act-on-able
 
 A review is only as useful as it is scannable and ordered. Deliver:

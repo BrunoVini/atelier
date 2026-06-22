@@ -19,6 +19,12 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   Compute them so they actually reconcile — don't eyeball widths.
 - **Deltas match arithmetic.** "vs prev 44.5k" with a "+18%" badge must be true against the
   shown current value. Wrong-direction or wrong-magnitude deltas destroy trust instantly.
+- **A DERIVED figure must read as derived — or stay off the chart.** A computed roll-up (a YoY %,
+  a peak, an average, a CAGR) is correct arithmetic but, dropped onto a chart as a bare badge, it
+  reads as a *new asserted number* a reviewer can't tie back to the data — borderline scope-creep on
+  a fixed-dataset brief. If you surface a derived figure, *show its derivation* in the label
+  ("+53.7% vs Jul" / "12-mo growth") so it's transparently a function of shown values, or leave it
+  off and let the trend speak. Never present a derived number with the same weight as a given KPI.
 - **Chart geometry matches the data.** Bar widths / line endpoints / arc angles must
   reflect the real values, and the text/aria summary must match what's drawn.
 - **One scale maps value→position — gridlines, axis labels, AND data marks all use it.**
@@ -31,6 +37,24 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   exactly at the top of a hypothetical value-`V` bar, that the baseline gridline is at 0, and
   that each bar lands on its own value's gridline. (This is §19d "geometric truth" for charts:
   a misaligned reference grid is a fabricated reading even when the underlying numbers are right.)
+- **A small-magnitude series clamped to a minimum pixel floor is BOTH a lie and illegible — never
+  floor a magnitude to a constant height.** When one stacked/overlaid series is tiny against the
+  shared scale (e.g. an error band of 0.16k–0.95k riding on an 80k traffic scale, or a 7% slice
+  against a 100% bar), the lazy fix — `height = Math.max(value × scale, 1px)` so it's "visible" — is
+  the trap. A 1px floor makes a 0.16 and a 0.95 render at the *same* height: the 6× difference
+  vanishes, the series stops being proportional (a fabricated reading), AND a 1px hairline is too
+  thin to read as data (it loses legibility too). Do NOT floor it. Instead pick an HONEST encoding
+  that keeps proportion AND legibility: **(a)** if the small series carries real signal an operator
+  must compare hour-to-hour (the error band IS the point of an error chart), give it its OWN faithful
+  scale in a **linked secondary view** — a thin band/strip or a small-multiple directly below the
+  primary, sharing the x-axis, on its own clearly-labeled value axis (so 0.95k vs 0.16k is a visible
+  6× difference) — rather than crushing it into the primary's stack where it's sub-pixel; **(b)** if
+  it must stay in the stack for the sum-to-total story, draw it strictly proportional (`value × scale`,
+  no floor) and accept that it's a thin honest ribbon — then surface the spike via an annotation/marker
+  and the legend ("errors peak 0.95k @ 15:00"), not by fattening the band. The test: two error
+  values that differ MUST differ in drawn height; if your floor makes them equal, the encoding lies.
+  (This is §19d "chart geometry matches the data" for a small overlaid series: proportionality is not
+  optional just because the values are small.)
 - **No triplicated magnitude.** Don't print the same number three ways in one row
   (label-count + in-bar count + percent). Pick the two that carry distinct meaning.
 
@@ -48,6 +72,23 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   system. Use the neutral/series palette for categories; keep semantic colors for status.
 - **Cohort/heatmap = single-hue sequential scale** (light→dark = low→high), not a rainbow.
   Expose the value in every cell and ship a scale legend.
+  **A heatmap cell's shade is a function of its VALUE — never its row/column position.** The single
+  most common heatmap lie that still "looks like a heatmap": you band by column (M0 darkest, M1
+  lighter, M2 lighter, M3 lightest) or by row, so cells with the *same* value get *different* shades
+  and a higher value can read lighter than a lower one. That's a fabricated reading — the color no
+  longer encodes the number. Map shade from the value through the SAME scale for every cell: pick a
+  domain (e.g. the legend's 80→100% range), and `shade = ramp((value − min) / (max − min))` applied
+  identically across the whole grid. Then **equal values MUST get equal shades, and a strictly higher
+  value MUST be strictly darker** — verify this ON THE RENDER (two 100% cells look identical; an 83%
+  cell is visibly lighter than a 92% cell *regardless of which column they sit in*). If your domain is
+  narrow (e.g. 83–100), stretch the ramp across that domain so the steps are perceptible rather than
+  collapsing 90/91/92 into one shade — but the mapping stays value-driven, not positional. Not-yet-
+  elapsed / missing cells get a distinct non-color treatment (hatch / "—"), never a zero-value shade.
+  Keep the ramp's LIGHT end legible AND substantial: flip the in-cell value to dark ink on light
+  cells so every value stays AA-readable, and don't begin the scale so pale that the low-value cells
+  read as washed-out/empty next to a competitor's (even if incorrectly) uniformly-saturated grid —
+  start the sequential ramp at a visible tint, not near-white, so the whole grid reads as a confident
+  instrument while staying strictly value-monotonic.
 - **Never encode by color alone.** Deltas carry a sign + arrow glyph (colorblind-safe), not
   just red/green. Series get labels/patterns, not only hue.
 - **Chromatic restraint = engineered calm — a dense instrument UI should hold FEW hues.** On a
@@ -65,9 +106,37 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
 
 - **Tabular numerals on every figure** (`font-feature-settings:"tnum"` / a mono) so columns
   align and values don't jitter when they update.
+- **Density is rich, NOT cramped — the dense surface still has a comfortable floor.** "Dense" is the
+  *amount* of information per screen, not *small* type and *tight* rows. The fastest way to lose the
+  legibility dimension on a dashboard is to win density by shrinking everything: 11px labels, 12px
+  body, 4px row gaps, a hero KPI that's barely larger than its caption. A dense instrument that "runs
+  hot" reads as harder to scan, not more capable. Hold a real type hierarchy with a comfortable floor:
+  the **hero KPI value commands its card** (a clear, large figure — not a number only a touch bigger
+  than its label), supporting **labels and table body stay at a readable size** (≈13px+ for data rows,
+  never sub-12px for values an operator reads all day), and rows get enough vertical rhythm that the
+  eye tracks a line without effort. Achieve density by *fitting more well-sized panels into the grid*
+  (2-up rows, a packed but aligned layout), not by miniaturizing the type inside them. The win is
+  "rich AND comfortable to read," which beats both "sparse" and "cramped"; a competitor that types its
+  KPIs larger and breathes its rows will out-score a technically-denser surface on legibility — match
+  its comfort while keeping your higher information density.
 - **Dense but scannable:** a clear KPI row, one primary chart with real hierarchy, secondary
   panels that don't compete, a table with aligned right-set numerics. Show a prior-value
   reference on KPIs ("vs 44.5k", "2.2pp") — more informative than "vs prev period".
+- **A panel must be FILLED by its content — true-zero is not licence for a dead upper void.** The
+  most common way a correct, honest dashboard loses the *density* dimension: a primary trend on a
+  true-zero axis where the series sits in the upper band (e.g. $96k–$148k against a 0–160k scale)
+  floats in the bottom third of an over-tall full-width panel, leaving the top half empty air. The
+  axis is right; the *panel proportion* is wrong. Fixes (keep the honest zero baseline): size the
+  plot height so the data spans most of it (a trend panel roughly 2:1–3:1 wide, not a tall square
+  with acres above the line); add a faint zero-band shading or a `// axis break` indicator ONLY if
+  you also keep the true zero visible (never a silent truncation); or — better for density —
+  **don't let the commanding chart span full-width with empty air beside/above it: pair it in a row
+  with a secondary panel** (composition, a stat stack) so the screen reads as a packed instrument,
+  not a lone chart over a void. A dashboard is judged on *uniform richness per screen*: a 2-column
+  trend+composition row above a 2-column breakdown row reads denser and more instrument-like than
+  four full-width bands stacked with gaps. No dead voids inside or beside a panel; no claustrophobic
+  cramming either — every panel earns its box and breathes within it (the deck/poster no-void rule,
+  applied to a dashboard grid).
 - **Cap categories to what stays legible — aggregate or re-type the rest.** A categorical chart
   (bar / stacked-bar) must label and visually separate *every* mark it draws. If the data has
   more categories than fit at a readable mark size (rule of thumb: each bar needs enough height
@@ -96,6 +165,98 @@ An analyst reads these numbers literally. Any silent gap reads as "there is no v
   a polite `aria-live` region (a changing `aria-valuetext` alone isn't reliably read).
 - `:focus-visible` on every control; `aria-label` text equivalents on each SVG chart
   ("rising from ~37k to 52.8k over 30 days"); `prefers-reduced-motion` honored.
+- **Give the dashboard a real document skeleton — it's part of hierarchy, not just a11y polish.** An
+  analytics surface is keyboard-and-screen-reader operated by analysts; in this register a judge reads
+  the structure as hierarchy. Wrap the primary content in a `<main>` landmark (header/nav/footer
+  outside it), open with a real visible `<h1>` (the page/product title — not a hidden one), and nest
+  each panel's heading correctly (`<h2>` per region, `<h3>` per panel) so the heading outline mirrors
+  the visual reading order KPIs → trend → breakdowns. Ship a **skip-to-content link** as the first
+  focusable element. Don't hide the page's only structural heading: a `visually-hidden` `<h2>` over the
+  KPI row is fine as a label, but the document must still expose a coherent, *visible* heading spine.
+  A page that renders perfectly but has no `<main>`, no skip link, and a flat/hidden heading tree
+  loses the hierarchy dimension to one that's structured — same pixels, weaker instrument.
+
+## 5. Dense data tables (inventories, ledgers, admin lists) — the craft layer
+
+A data table (a list of records: instances/orders/users/invoices, mixed column types) is judged on
+**density · legibility · sort/filter affordances · subtle layering · scannability** — and it is won
+or lost on the SAME "depth felt not seen" discipline a dashboard is, applied to a grid of rows. The
+integrity + density + tabular-numeral rules above all hold; these are the table-specific moves.
+
+- **Density is comfortable rows, not breathy ones AND not crammed ones — and it counts the WHOLE
+  cell.** The trap on a table is the opposite of a dashboard's: instead of sub-12px cramming, an
+  over-careful table goes *breathy* — 48–56px rows, oversized chips/bars, generous cell padding — and
+  loses "density" (info per screen) to a competitor that fits more legible rows in the same height.
+  Hold a tight-but-comfortable row rhythm (≈ 40–46px for a single-line row; a two-line cell — a
+  primary name over a smaller mono id — lets you carry more identity per row WITHOUT a taller row by
+  using the vertical space you already have). Size inline metrics (a CPU/usage bar, a chip) to the
+  *cell*, not larger than the text beside them. The win is "more legible rows per screen," so prefer a
+  two-line identity cell + slim inline gauges over fat single-line rows with big graphics.
+- **The selection / bulk-action bar is PART OF the table's calm surface — never a loud inverted
+  slab.** The single most common way a clean light table loses "subtle layering": when rows are
+  selected, the bulk-action bar is dropped in as a **saturated dark/inverted chrome bar** (a navy or
+  near-black slab on a light table, or vice-versa) — it becomes the loudest seam on the page and
+  breaks "depth felt not seen" on the exact dim the register cares about. Build the bulk bar from the
+  SAME tonal system as the rest of the chrome: a quiet surface lift (one elevation step, or a soft
+  tint of the page's ONE accent — `accent-soft`, not full-saturation), hairline separation, the
+  selection count + actions in normal ink. It should read as "the toolbar, now in selection mode,"
+  not as a foreign black ribbon. (Same rule, inverted, on a dark table: don't drop a glaring light
+  bar.) Reserve the saturated accent for the ONE primary action, the active-filter, and the selection
+  marker — not for the whole bar's background.
+- **Selected & hovered rows separate by a TONAL step + a structural marker, not by hue saturation.**
+  A selected row = a quiet tonal fill (a few % toward the accent or a neutral lift) PLUS a structural
+  cue (a 2–3px accent rule on the leading edge, the checkbox checked) — readable in grayscale, never a
+  loud saturated band. A hovered row = an even quieter tonal lift, distinct from selected. Header,
+  body, hover, selected, and (if used) a sticky header must form a legible elevation *order* by tone
+  alone — squint and the structure holds with no harsh lines. Zebra striping is OPTIONAL and, if used,
+  must be the quietest possible alternation (a 1–2% tint) — heavy zebra or full gridlines read as
+  chrome and lose layering; prefer hairline row separators or generous-enough rhythm that no rule is
+  needed. A sticky `<thead>` gets a one-step tonal distinction (slightly different ground + a bottom
+  hairline) so it reads as fixed without a heavy shadow.
+- **An active-filter chip must be HONEST against the rows actually drawn.** If you render a "pre-filter
+  snapshot" (all rows visible while showing a chip to demonstrate the affordance), the chip must not
+  *contradict* what's on screen: a `Status: Running ✕` chip sitting above a table that visibly
+  contains Stopped/Error/Provisioning rows reads as a lie (the filter plainly isn't applied) and costs
+  honesty AND the affordance's credibility. Pick ONE: **(a)** actually filter the rows so the visible
+  set matches the chip (best — the affordance is real); **(b)** choose a chip that's *true* of the
+  shown snapshot (e.g. a region/owner facet that all visible rows share, or a search term); or **(c)**
+  if you must show an unapplied filter, label it as staged ("Pending · Apply") so it doesn't claim to
+  be active. A chip that claims a filter is on while the data says it's off is the table version of a
+  dead control.
+- **Demonstrate the affordances LIVE in the static render — a still screenshot is the evidence.** A
+  table judged on sort/filter affordances is scored from a screenshot; closed dropdowns and idle rows
+  hide your best craft. In the delivered/captured state, show the machinery working: render with **one
+  custom filter dropdown OPEN** (its popover/listbox visible, the selected option ticked), the **sorted
+  column's caret + `aria-sort` visible**, **≥2 rows selected with the (calm) bulk bar showing**, and
+  **one row in its hover state** (force an `.is-hover`/`:hover`-equivalent class on a single row so the
+  hover treatment is provable in the still). A competitor who renders an open popover + a visible hover
+  row will out-score an identically-built table whose controls are all closed/idle — same code, weaker
+  evidence. (Don't fake it: the open menu must be the real component, the hover class must mirror the
+  real `:hover` rule.)
+- **Status reads by SHAPE + label, not hue alone — and the status column is a stable scan target.**
+  Status is the column an operator scans first. Encode it so it reads before color: a tinted-glyph
+  chip whose **glyph shape differs by state** (e.g. a filled dot = running, a square = stopped, a
+  triangle = error/alert, a ring/spinner = provisioning) + a text label, all left-aligned in a
+  fixed-width chip column so the eye tracks straight down. Same-shape dots distinguished only by hue
+  are slower to scan and fail colorblind-safety. Keep status hues low-chroma tints (not full pills) so
+  the column stays calm while still legible at a glance — the `layering` and `scannability` dims both
+  reward this.
+- **Right-align + tabular-nums every numeric column; left-align text; one alignment grid.** Currency,
+  counts, percentages, vCPU/mem all right-align with `font-variant-numeric: tabular-nums` so the ones,
+  tens, hundreds stack into a hard vertical edge the eye reads instantly; text identifiers left-align.
+  An inline delta (▲4.2% / ▼1.1% / —) carries a sign glyph (not color alone) and right-aligns with its
+  figure. A mixed-alignment numeric column (centered costs, ragged decimals) is the fastest way to lose
+  scannability even when every value is correct.
+
+### Definition of done for a dense data table
+- [ ] Real semantic `<table>` (`<thead>`/`<tbody>`/`<th scope="col">`) or a correct ARIA grid; sorted column exposes `aria-sort`; every control (search, filter triggers, sort buttons, checkboxes, pagination) has an accessible name; `:focus-visible` throughout
+- [ ] Comfortable-but-tight rows (≈40–46px; two-line identity cell to carry more per row, not taller rows); inline metrics sized to the cell, not oversized — more legible rows per screen than a breathy build
+- [ ] Bulk-action bar built from the table's own tonal system (quiet lift / accent-soft tint + hairline), NOT a saturated inverted slab; accent reserved for the one primary action + active-filter + selection marker
+- [ ] Selected row = tonal step + a structural edge marker (grayscale-readable), not a loud hue band; hover row a quieter distinct lift; header/body/hover/selected/sticky-head form a legible elevation order by tone (squint test passes, no harsh gridlines/heavy zebra)
+- [ ] Active-filter chip is honest against the drawn rows (rows actually filtered, OR a chip true of the snapshot, OR labeled staged) — never a chip claiming a filter the data contradicts
+- [ ] The static render demonstrates the affordances: one filter dropdown OPEN, sorted caret + aria-sort visible, ≥2 rows selected + calm bulk bar, one row in hover state
+- [ ] Status by glyph-SHAPE + label (not hue alone) in a stable fixed-width column; low-chroma tints
+- [ ] Numeric columns right-aligned with tabular-nums into a hard edge; text left-aligned; deltas carry sign glyphs; one alignment grid
 
 ## Print posters & infographics (one-page, export-grade)
 
@@ -138,10 +299,13 @@ above. Where a dashboard is a screen, a poster is an object on a wall AND a clos
 - [ ] Every funnel stage shows its drop (or none do); parts sum to the stated total
 - [ ] Deltas are arithmetically correct and carry sign+arrow, not color alone
 - [ ] Each color has ONE consistent meaning; status colors aren't reused as categories
-- [ ] Cohort/heatmap is a single-hue sequential scale with values + legend
+- [ ] Cohort/heatmap is a single-hue sequential scale with values + legend; shade is a function of the cell VALUE (not its row/column) — equal values → equal shades, higher value → strictly darker (verified on the render)
 - [ ] Tabular numerals everywhere; no triplicated magnitudes
+- [ ] No magnitude floored to a constant pixel height — a small overlaid/stacked series is drawn strictly proportional (two differing values differ in drawn height), or moved to a linked secondary view on its own faithful scale; never a `max(value×scale, 1px)` clamp
+- [ ] Dense but comfortable: hero KPI value commands its card; data labels/table body ≥~13px (never sub-12px); rows have readable vertical rhythm — density from more well-sized panels, not miniaturized type
 - [ ] Categorical charts cap to a legible mark count (top-N + aggregated remainder / re-typed / scrollable); no sub-pixel unlabeled smear; rendered marks match the "top N" caption; each row shows its label + value (not tooltip-only)
 - [ ] Chart type fits each data question (`knowledge/charts.csv`)
 - [ ] Controls work; tooltip sits on the point with a crosshair + keyboard path
 - [ ] `:focus-visible` everywhere; SVG charts have aria text equivalents; AA contrast
+- [ ] Real document skeleton: `<main>` landmark, a visible `<h1>`, correct `<h2>`/`<h3>` panel nesting mirroring the reading order, and a skip-to-content link as the first focusable element
 - [ ] `slop_check.py` clean of `important`

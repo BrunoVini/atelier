@@ -46,9 +46,9 @@
      "product" (design SERVES the product — app UI/dashboard/settings/tools). It
      modulates QA severity for this surface (see references/registers/). When ambiguous,
      "product" is the safer default; brand is opt-in. Delete the key to leave it unset. -->
-<!-- OPTIONAL (additive) — a machine-readable type ramp + component minimums. Both keys
-     are surfaced verbatim by contract.py; omit them entirely for a lean contract. To use
-     them, paste the keys INTO the JSON block above (valid JSON, not this comment):
+<!-- OPTIONAL (additive) — a machine-readable type ramp, named scale maps, + component
+     minimums. All keys are surfaced verbatim by contract.py; omit them for a lean
+     contract. To use them, paste the keys INTO the JSON block above (valid JSON):
 
   "typography": {
     "display-xl": { "fontFamily": "Sora, serif", "fontSize": "64px", "fontWeight": 400,
@@ -56,6 +56,8 @@
     "body-md":    { "fontFamily": "Inter, sans-serif", "fontSize": "16px", "fontWeight": 400,
                     "lineHeight": 1.55, "letterSpacing": "0" }
   },
+  "rounded": { "sm": "6px", "md": "10px", "lg": "14px", "full": "9999px" },
+  "shadows": { "sm": "0 1px 2px rgba(0,0,0,.06)", "overlay": "0 8px 24px rgba(0,0,0,.18)" },
   "components": {
     "button-primary": { "backgroundColor": "{colors.primary}", "textColor": "{colors.on-primary}",
                         "typography": "{typography.body-md}", "rounded": "{rounded.md}",
@@ -64,7 +66,18 @@
 
      `features` is a LIST of OpenType tags (e.g. ["ss01","tnum"]); accepts Stitch camelCase
      (fontFamily/fontSize/...) or atelier snake_case (font/size/weight/line_height/tracking).
-     Component `{ref}` strings are NOT resolved by the contract — the consumer resolves them. -->
+
+     CONTRACT-CLOSURE RULE (enforced): if you declare `components`, every `{group.name}`
+     token they reference MUST resolve against a scale defined IN this block — colors (or
+     `dark`), `typography`, `rounded`/`radii`, `shadows`. A component styled by
+     `{rounded.md}` while no `rounded` map exists is a DANGLING ref; `contract.py --validate`
+     reports it as `component_ref_issues` and FAILS the contract. So define the named maps
+     (`rounded`, `shadows`) in the block too — don't leave radii/shadows prose-only while
+     components point at them. Define each interaction state you want enforceable as its
+     own component entry (e.g. `button-primary-hover`, `text-input-error`,
+     `tide-chart-loading`) so a linter can read the whole state machine, not just rest. -->
+<!-- NOTE: the legacy `spacing` list (the range engine slides it) is a LIST; `rounded` is
+     a NAMED map components resolve against. Keep both: spacing values + named radii. -->
 
 
 ## 1. Identity & tone
@@ -86,6 +99,17 @@
 | destructive | {{COLOR_DESTRUCTIVE}} | {{ON_DESTRUCTIVE}} |
 
 _WCAG: {{WCAG_NOTES}}_
+
+**Measured contrast (recompute to verify — don't take it on faith):**
+<!-- PUBLISH the per-pair ratios you claim pass. Generate with:
+       python3 scripts/audit_contrast.py <repo|DESIGN.md> --table
+     and paste the markdown table here (one section per theme). A published,
+     recomputable table is the strongest trust signal a palette can carry. For a
+     hard hue that can't be both on-brand AND AA as text (e.g. amber-on-white),
+     SPLIT the role (`warning-fill` for fills at 3:1 UI + `warning-text` darkened to
+     clear 4.5:1) and note the split as a decision. List decorative-exempt values
+     (hairlines, disabled text) so the table reads honestly. -->
+{{CONTRAST_TABLE}}
 
 **Dark mode:** {{DARK_MODE}}
 <!-- If the repo ships dark mode (scan_repo reports `dark_mode: true`), state the
@@ -121,6 +145,14 @@ _WCAG: {{WCAG_NOTES}}_
        enforce it (e.g. flag a shadow in a borders-only system). -->
 - **Surface scale:** {{SURFACE_SCALE}}   <!-- e.g. --surface-0 base · --surface-1 raised -->
 - **Control tokens:** {{CONTROL_TOKENS}} <!-- --control-bg · --control-border · --control-focus -->
+- **Collapsing strategy (per surface):** {{COLLAPSE_STRATEGY}}
+  <!-- For a multi-surface product, state how layout collapses down the breakpoints —
+       e.g. "dashboard: sidebar → icon rail (md) → bottom tab bar (sm)"; "marketing:
+       3-col → 1-col stack (sm)". A breakpoint table without a collapse plan isn't
+       buildable. -->
+- **Touch targets:** {{TOUCH_TARGETS}}
+  <!-- Minimum hit area on touch surfaces: ≥44×44px (WCAG 2.5.5 / Apple HIG), ≥48px for
+       primary actions. State it so the mobile app and any touch dashboard control obey it. -->
 
 ## 5. Motion
 - **Durations:** {{DURATIONS}}  · **Easing:** {{EASING}}
@@ -141,6 +173,14 @@ _WCAG: {{WCAG_NOTES}}_
   <!-- The interaction states every control must cover: rest / hover / focus /
        pressed / disabled. Data views also need empty / loading / error.
        census.py flags interactive components that document none. -->
+<!-- COVER THE STANDARD CONTROL SET — a catalog that names only buttons + inputs reads
+     as incomplete. Include FORM CONTROLS (checkbox / radio / select / toggle) and their
+     state variants, plus cards/panels, nav, badges/status, alerts/toasts, modals, and
+     tables. For an ENFORCEABLE catalog, give each interaction state its OWN keyed entry
+     in the machine `components` map (button-primary-hover, text-input-error,
+     checkbox-checked, toggle-on, chart-loading) with every property a {token} ref — a
+     linter then reads the whole state machine, and contract.py --validate proves every
+     ref resolves. Narrate each in prose too, so the doc is machine- AND human-readable. -->
 
 ## 8. Data & charts
 - **Charts:** {{CHART_STANDARDS}}
@@ -185,3 +225,31 @@ Paste-ready prompts:
 - *Card grid:* "3 cards, {{RADIUS_SCALE}} radius, {{DEPTH_STRATEGY}} elevation, `{{COLOR_PRIMARY}}` only for the primary action; rest/hover/focus states."
 - *Form:* "Stacked form, labels in `{{COLOR_FG}}`, inputs inset, focus ring `{{COLOR_PRIMARY}}`, one explicit save; visible `:focus-visible`."
 - *Nav:* "Top nav, same background as canvas (`{{COLOR_BG}}`), a subtle border not a different fill; active item in `{{COLOR_PRIMARY}}`."
+
+**Ready-to-paste token scaffold (wire it up with zero transcription):**
+<!-- Emit the COMPLETE CSS-variable system so an agent pastes and builds — every literal
+     value, both themes, plus type/shape/shadow/motion vars and a body baseline. Don't
+     leave the agent to transcribe hexes from the table. Fill {{CSS_SCAFFOLD}} with the
+     :root + [data-theme="dark"] blocks for THIS contract's tokens. -->
+```css
+{{CSS_SCAFFOLD}}
+```
+<!-- Shape of the scaffold to fill (one var per token role, BOTH themes):
+:root {
+  --color-bg: {{COLOR_BG}}; --color-fg: {{COLOR_FG}}; --color-primary: {{COLOR_PRIMARY}};
+  --color-on-primary: {{ON_PRIMARY}}; /* …every role… */
+  --font-display: {{FONT_DISPLAY}}; --font-body: {{FONT_BODY}};
+  --radius-md: {{RADIUS_SCALE}}; /* …shadow/motion vars… */
+}
+[data-theme="dark"] { --color-bg: {{DARK_BG}}; --color-fg: {{DARK_FG}}; /* …every dark role… */ }
+body { background: var(--color-bg); color: var(--color-fg); font-family: var(--font-body); } -->
+
+**Verify before you ship (self-audit checklist):**
+<!-- The building agent runs this against its output before calling it done. -->
+- [ ] Every interactive control has rest / hover / focus / pressed / disabled.
+- [ ] Every data view has empty / loading / error.
+- [ ] Foreground/background pairs match the published contrast table (§2) — recompute if unsure.
+- [ ] Dark theme actually rendered (`[data-theme="dark"]`), not assumed from the light one.
+- [ ] Touch targets ≥44×44px on mobile/touch surfaces; ≥48px for primary actions.
+- [ ] `prefers-reduced-motion` honored; visible `:focus-visible` on every control.
+- [ ] No value off the token scaffold above; anti-slop rules in §6 obeyed.

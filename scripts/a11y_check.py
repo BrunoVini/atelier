@@ -41,6 +41,11 @@ _INPUT_NO_LABEL_NEEDED = {"hidden", "submit", "button", "image"}
 _LANDMARK_TAGS = {"main", "header", "footer", "nav"}
 _LANDMARK_ROLES = {"main", "navigation", "banner", "contentinfo"}
 
+# Checkable ARIA widget roles: each REQUIRES aria-checked (an explicit role
+# overrides a native control's :checked, so the state must be on the ARIA layer).
+_ARIA_CHECKED_ROLES = {"switch", "checkbox", "radio",
+                       "menuitemcheckbox", "menuitemradio"}
+
 
 def _attr_map(attrs):
     """Fold an HTMLParser (name, value) attr list to a dict; later wins.
@@ -131,6 +136,35 @@ class _A11yWalk(HTMLParser):
                               line)
             except ValueError:
                 pass
+
+        # aria-labelledby-self-reference (important) — an element whose
+        # aria-labelledby resolves ONLY to its own id has no real name (a
+        # recursive/empty reference). Common on custom controls built from
+        # <button role=switch>/<div role=checkbox>. Only flag when EVERY token
+        # is the element's own id (if any other token is present, that token
+        # may resolve to a real label, so it's not unambiguously broken).
+        lb = (am.get("aria-labelledby") or "").strip()
+        own_id = (am.get("id") or "").strip()
+        if lb and own_id:
+            tokens = [t for t in lb.split() if t]
+            if tokens and all(t == own_id for t in tokens):
+                self._add("important", "aria-labelledby-self-reference",
+                          f"<{tag} id=\"{own_id}\"> has aria-labelledby pointing only "
+                          "at its own id — a self-reference yields an empty accessible "
+                          "name; point aria-labelledby at the LABEL element's id (or use "
+                          "aria-label / a real <label for>) (WCAG 4.1.2)", line)
+
+        # aria-checked-missing (important) — an element with a checkable ARIA
+        # widget role MUST carry aria-checked. The role is explicit, so it
+        # overrides any native :checked (a <input type=checkbox role=switch>
+        # without aria-checked announces no/incorrect state to AT). Unambiguous.
+        wrole = (am.get("role") or "").strip().lower()
+        if wrole in _ARIA_CHECKED_ROLES and "aria-checked" not in am:
+            self._add("important", "aria-checked-missing",
+                      f"<{tag} role=\"{wrole}\"> has no aria-checked — a checkable "
+                      "ARIA widget role requires aria-checked kept in sync (the role "
+                      "overrides any native :checked, so AT reads no/incorrect state) "
+                      "(WCAG 4.1.2)", line)
 
         # document-shape signals
         if tag == "body":

@@ -120,7 +120,24 @@ enforce the dark tokens too — otherwise dark mode is prose-only and unchecked;
 `python3 scripts/contract.py --validate <repo>` — it fails loudly if the contract parsed too
 thin (e.g. the block was malformed and silently fell back to prose) — and
 `python3 scripts/audit_contrast.py <repo>` to confirm every enforced pair clears AA in
-**both** themes.
+**both** themes. Then **publish the numbers**: `python3 scripts/audit_contrast.py <repo>
+--table` prints a measured per-pair markdown ratio table (per theme) — paste it into §2 so
+the contract proves its AA claim instead of asserting it. For a hard hue that can't be both
+on-brand AND AA as text, split the role (`warning-fill` vs `warning-text`) and document the
+split (see design-md-spec → "Role taxonomy").
+
+**Close the contract — define every scale your components reference.** If you fill the
+optional `components` map, also define the named scales they point at IN the block:
+`rounded`/`radii` (a named radii map `{sm,md,lg,…}`), `shadows` (named elevation), plus
+the `typography` roles and color roles. `contract.py --validate` reports
+`component_ref_issues` for any `{rounded.md}` / `{colors.surface}` / `{typography.x}` a
+component references but the block never defines — and a non-empty list FAILS validation.
+A contract that declares components styled by `{rounded.md}` while defining no `rounded`
+map LOOKS complete but is internally inconsistent: the refs dangle and a second agent
+can't resolve them. Keep iterating until `component_ref_issues` is empty. For an
+enforceable state machine, give each interaction state its own component entry
+(`button-primary-hover`, `text-input-error`, `tide-chart-loading`) so the whole catalog —
+not just rest — is machine-readable.
 
 First check `scan_repo`'s `token_source`. **If it is set** (the repo already owns
 its tokens in a TS/JS theme module, a CSS custom-property theme, or a Tailwind
@@ -139,6 +156,31 @@ the theme:
   values live in `<token_source.path>`; read via the theme. Don't duplicate hexes
   here."). Re-typing values into prose just creates a copy that drifts (the same
   failure as a stale CLAUDE.md).
+- **Carry per-token provenance IN the machine block (`sources`).** Measuring is
+  atelier's edge over eyeballing — so the machine block must be traceable, not just the
+  prose. Fill the contract block's `"sources"` map: `{role: "file:line"}` (+ a nested
+  `"dark"` sub-map for the dark theme), pointing each token at its `token_source` line /
+  selector / config key. A block that lists `{role:"#hex"}` with no `sources` strips the
+  provenance out of the artifact a tool consumes. After writing, confirm with
+  `contract.py --validate` that `token_sources` covers your color roles. (See
+  design-md-spec → "Token-source provenance".)
+- **Measure only what is bespoke — point at the rest.** If the repo's spacing / type
+  scale / shadows are a **framework default** (Tailwind defaults, etc.) and only the
+  colors + `--radius` are bespoke, say so plainly and keep the block's measured surface
+  to what the repo actually owns — don't transcribe the framework's default px values
+  into `spacing`/`shadows` as if they were measured project tokens (that inflates the
+  measured surface and reads as padding).
+- **Show the source-format value beside the derived hex.** When the palette is stored in
+  a non-hex format (HSL channel triples, `oklch(...)`, …), the prose palette table must
+  show the **authoritative source value** AND the derived hex (label the hex *derived*),
+  so the read is provably faithful and re-derivable — `--foreground | 222.2 47.4% 11.2% |
+  #0f172a (derived) | globals.css:8`. The block stays hex (tools need it). A doc that
+  shows only resolved hex for an HSL-stored palette reads as a weaker measurement.
+- **Re-derive computed scale values — never guess.** For a scale defined by arithmetic on
+  a bespoke token (e.g. `calc(var(--radius) - 4px)` with `--radius: 0.5rem` = 8px → 4px,
+  NOT 2px), read the real base and compute each value; an off-by-one slip makes the block
+  contradict its own prose. (See design-md-spec → "Show the value AS STORED" / "Re-derive
+  computed scale values".)
 
 **If `token_source` is null** (no existing source), fill
 `templates/DESIGN.md.template` with the measured values directly — name the exact

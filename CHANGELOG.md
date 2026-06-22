@@ -40,6 +40,18 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Color provenance: each measured color now carries the files it lives in and the
   dominant file's share, so the contract can state evidence ("primary `#2563eb` — 412
   uses across 9 files") instead of an opaque blob count.
+- Per-token source pointers in the machine contract: a measured `DESIGN.md` records a
+  `sources` map — every color role pinned to the exact `file:line` it lives at (light and
+  dark) — so the contract itself, not just the prose, is traceable and re-verifiable;
+  `contract.py --validate` reports how many roles carry a pointer. When a repo already owns
+  its tokens (a CSS-variable theme, a Tailwind config, a theme module), atelier writes a
+  thin **pointer** contract aimed at that source instead of a second copy that drifts.
+- Faithful measurement of the real values: when a palette is stored in a non-hex format
+  (HSL channels, `oklch`, …), the palette table shows the authoritative source value beside
+  the derived hex, so the read is provably re-derivable; computed scales (e.g. a radius
+  derived by `calc()` from a base token) are re-derived from the real base rather than
+  guessed; and framework-default scales (Tailwind's defaults, etc.) are named as defaults
+  rather than transcribed as if they were the project's own measured tokens.
 - Algorithmic token synthesis (`synthesize_tokens.py`): given one or more brand seed
   colors, derives a full WCAG-correct token set for greenfield work — on-colors picked by
   luminance so text always reads (AA-large on fills, AA-normal for body), muted/card by
@@ -144,6 +156,50 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Chart grid-scale truth (`data-viz-craft.md`, the §19d rule for charts): one `value→pixel`
   scale must drive the gridlines, the tick labels AND the data marks — a reference grid on a
   different scale is a fabricated reading even when the underlying numbers are correct.
+- Heatmap value-encoding truth (`data-viz-craft.md`): a cohort/heatmap cell's shade is a function
+  of its **value**, never its row or column position. Equal values get equal shades and a strictly
+  higher value is strictly darker (verified on the render) — mapped through one continuous ramp so
+  distinct values don't collapse into one band, with the light end kept at a legible tint. Banding
+  by position lets a higher number read lighter than a lower one — a silent lie the cell text hides.
+- Dashboard density & document skeleton (`data-viz-craft.md`): a true-zero axis is not licence for a
+  dead upper void — size the plot so the data fills it, or pair a commanding chart beside a secondary
+  panel so each screen reads as a packed instrument (no voids above/beside a panel, no cramming). And
+  a data dashboard is keyboard/screen-reader operated, so its structure reads as hierarchy: a real
+  `<main>` landmark, a visible `<h1>`, correctly-nested panel headings, and a skip-to-content link.
+- Derived-figure honesty (`data-viz-craft.md`): a computed roll-up (a YoY %, a peak, a CAGR) dropped
+  onto a chart as a bare badge reads as a new asserted number a reader can't tie back to the data —
+  show its derivation in the label, or leave it off; never give a derived figure the weight of a
+  measured one.
+- Small-magnitude honesty + dense-but-readable (`data-viz-craft.md`): a small series riding on a
+  large shared scale (an error band against total traffic, a tiny composition slice) must never be
+  floored to a constant pixel height — a `max(value×scale, 1px)` clamp is both a lie (two different
+  values render at the same height) and illegible (a 1px hairline can't be read as data); draw it
+  strictly proportional, or move it to a linked secondary view on its own faithful scale and surface
+  a spike with an annotation. And "dense" is the amount of information per screen, not small type:
+  hold a comfortable floor (a hero metric that commands its card, readable data/table sizes, calm row
+  rhythm) and get density from more well-sized panels, not from miniaturizing the type.
+- Dense data tables — a dedicated craft layer for records lists, inventories, ledgers, and admin
+  tables (`data-viz-craft.md`): the selection / bulk-action bar is part of the table's own calm
+  surface (a quiet tonal lift or a soft tint of the one accent + a hairline), never a loud inverted
+  slab dropped onto the grid — that bar is the loudest seam on the page and undoes "depth felt, not
+  seen." Selected and hovered rows separate by a tonal step + a structural edge marker that reads in
+  grayscale, not by a saturated hue band; header, body, hover, selected, and a sticky header form a
+  legible elevation order by tone alone (no heavy zebra or gridlines). An active-filter chip must be
+  honest against the rows actually drawn — actually filter them, pick a chip that's true of the shown
+  set, or label it staged; a chip claiming a filter the data contradicts reads as a dead control. And
+  because a table is judged from what's on screen, demonstrate the affordances live: show one filter
+  dropdown open, the sorted column's caret and `aria-sort`, a couple of rows selected with the calm
+  bulk bar, and one row in its hover state. Status reads by glyph shape + label (not hue alone) in a
+  stable column; density is more legible rows per screen (tight comfortable rows + a two-line identity
+  cell), not breathy oversized ones; numeric columns right-align with tabular figures into a hard edge.
+- The quietest sufficient cue wins subtle layering (`layering.md`): two interfaces can both be
+  one-depth-strategy-per-surface yet read very differently — one a calm instrument, one a grid of
+  outlined boxes. Depth should be *felt*, not *seen*: prefer a tonal surface step + spacing to a
+  hairline drawn around every panel (reserve the outline for where the tint alone won't separate),
+  and don't let a heavy graphic element — a saturated multi-colour donut, filled high-chroma status
+  pills, a boldly bordered widget — undo the calm; quiet a composition to a tonal stacked bar or
+  ranked list, status to a tinted glyph chip, and keep the one reserved accent for the single thing
+  that must shout. When a surface still reads busy after picking one strategy, remove a cue, not add.
 - Print-poster / infographic craft (`data-viz-craft.md` + `qa.py --kind print`): a single-page
   data poster (→ PDF) is judged like a printed spread — a commanding hero loud in **scale AND
   colour** (a near-black hero gets out-punched by a coloured one), **every panel earns its space**
@@ -152,6 +208,21 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   decoration that Chromium rasterizes on print — verify 0 image XObjects, not vector type over
   rasterized gradient bands). `qa.py --kind print` gates a fixed-size print artifact correctly
   (skips the responsive-reflow + focus-order checks that don't apply to a poster).
+- Type-system & specimen craft (`typography.md`, a new dedicated capability for type systems,
+  type-specimen pages, and brand type sections): how to choose a display+body+mono **pairing** that
+  coheres by construction and contrasts by role, build a true **modular scale** (named steps, leading
+  paired to size, honest legibility-floor exceptions), demonstrate **language coverage** on the page,
+  and engineer an offline **fallback**. Three rules earned in practice: (1) **uncovered glyphs are
+  shown in place, never silently dropped** — leave the codepoint in the rendered string and show its
+  real `.notdef` box (or a marked slot) where it occurs, with a note naming the codepoint and a
+  covering face, so the gap is honest on the render rather than hidden in prose; (2) **a fallback
+  demonstration shows the worst case AND the engineered fix** — a raw, untuned system fallback (so the
+  real shift is visible) beside a metric-tuned `@font-face` carrying `size-adjust` / `ascent-override`
+  / `descent-override` / `line-gap-override` that is *actually applied* to the comparison, not merely
+  printed in a code block; (3) **an all-one-family trio must manufacture display presence** — engineer
+  a distinct display voice from the family's own axes (a condensed/optical cut, a decisive weight jump,
+  tracking contrast, a large size jump) so the display commands its line instead of reading as bigger
+  body. A reviewer section gates the coverage-honesty and applied-fallback rules.
 - Prototype craft + a binding offline gate (`prototypes.md`, `check_offline.py`, `qa.py --kind
   prototype`): a clickable app prototype is judged first on **booting offline by double-click**, so
   type must be **self-contained** (inline `woff2` or a native system-font stack) — a runtime
@@ -177,7 +248,13 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Animations, explainers, and narrated video (MP4 · GIF) with motion best-practices,
   cinematic patterns, scene templates, and BGM; one-command 60fps export; scroll-driven
   motion (pin/scrub, horizontal hijack, scroll-reveal); and 3D / shader / WebGPU heroes
-  fed by the project's tokens.
+  fed by the project's tokens. A token-driven hero now honors the palette's **dominance
+  hierarchy** on the rendered field, not just the hex list: the dominant brand hue must
+  visually lead (own the larger painted area and luminance mass) while the secondary reads
+  as the energy/flow accent and any tertiary stays a literal spark — a field that lets the
+  accent go co-dominant reads off-brand even when every color is on-token, so the rule is
+  verified on the rendered frame (weight the dominant hue as the ground, mix the accent in
+  as a minority, never a 50/50 blend).
 - SVG craft — icons, decorative shapes, diagrams, and animated SVG, plus illustration
   craft (atmospheric perspective, value discipline, mass balance, lead-line to the
   focal point). Hardened for hero illustrations: the near-field foreground anchor must
@@ -190,10 +267,30 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   not a flat silhouette/icon: directional light + speculars (a uniform flat fill is the #1 icon
   tell), a material-defining detail (machined metal ring / brushed yoke / stitch / mesh / glass),
   visible internal structure (the cavity, not just the outline), and a real contact shadow + a
-  three-quarter pose.
+  three-quarter pose. Crucially, the render must **draw the defining mechanism the copy is selling,
+  posed mid-claim** — a task lamp pitched on "holds any angle" shows its articulated jointed arm, a
+  watch its complication, a chair its recline — not the generic category silhouette every example
+  shares (a rigid pole reads as "a spotlight on a stick": coherent as a light, but swappable, and it
+  forfeits finish and originality to a render that draws the joint). And a **small repeated glyph
+  must pass the one-second naming test at its rendered size — and must not collide with a universal
+  symbol**: a thin outline mark at ~20px collapses to its bounding shape (a stroked bean reads as a
+  coin/ring), and a thin closed curve crossed by a line reads as the prohibition sign ∅ ("no") — the
+  opposite of an appetising product. Draw the little marks you stamp on every card as a solid filled
+  silhouette plus the one defining interior detail, and render the mark alone at card size to
+  re-check before repeating it.
 - `forms-craft` for settings / form / app-utility surfaces — restraint and ergonomics,
   one explicit-save mechanism per surface, honest save bars, country-aware validation,
-  and mobile stepper labels.
+  and mobile stepper labels. Plus **control-craft tactility**: form fields are *inset*
+  (a fill one tonal step recessed from their surface — the "type/choose here" affordance,
+  not a flat field flush with its card); controls are sized to content, not stretched
+  full-bleed; the selected member of a group reads by a step of *presence* (a lift, a fill,
+  a shape), not hue alone; one consistent control metric scale (height / radius / border /
+  padding) across every control. A switch's on/off — and every checked/selected state —
+  must read by more than color (an On/Off label, a knob glyph, a filled shape) so it
+  survives grayscale. Group a section's field groups into **one calm surface divided by
+  hairlines + spacing**, not a stack of separate floating cards (which fragments the
+  section and loses the sense of quiet structure). When you demonstrate states statically,
+  cover more than one control kind with real CSS state classes that mirror the live rules.
 - `data-viz-craft` — data integrity and encoding discipline (e.g. a categorical hue
   must not also signal delta direction; a date range must actually re-slice the data).
 - `landing-craft` — genre-matched focal moments, characterful type, and honestly
@@ -223,14 +320,74 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   luxury product hero specifically, **restraint IS the register**: less around the product is more
   — one beautiful render with room to breathe, the accent reserved to the single primary action,
   and only the sections the brief asks for out-premium a feature-packed page (extra bands, stat
-  strips, and a sprayed accent make an expensive product look cheap).
+  strips, and a sprayed accent make an expensive product look cheap). But **quiet ≠ bare**: a premium
+  single-product page must **author its key feature/story surfaces, not leave them type-only** — each
+  named feature deserves a small on-concept authored render in the hero's own palette and light
+  language (a type-only feature block reads as *thin*, not restrained — restraint is removing noise,
+  not removing the craft that proves the product), and **one honest, wired interaction** that
+  demonstrates the core behavior (a dimmer that actually dims the rendered light, a colour swap that
+  re-renders the product) is an originality lever a static page can't match — provided it is real and
+  wired, never a dead control. On a **craft / maker / brand** surface (a small roastery, a workshop,
+  a single object — not a venture-backed app), express the owned concept in the **brand's own
+  material language**, not grafted product-UI chrome: bolting on a floating telemetry/"data" card or
+  a dashboard graph widget to manufacture a concept reads as SaaS-chrome and costs restraint — show
+  roast-to-order freshness as a date on the bag's own label, the idea in the bag/bean/origin/maker's
+  mark, not an app-UI panel from another register. And an **editorial portfolio /
+  personal showcase** (designer, photographer, type/motion studio) is carried by **ONE owned signature
+  device sourced from what the subject actually makes** — a living type specimen, one full-bleed image,
+  a looped kinetic mark — not the genre skin (dark-grotesk cover, warm-paper serif, three-up grid are
+  first-reach looks); commit to that device, reserve everything else (few inks, one move) so it reads
+  as *the* idea, and then **deliver the work fully** — a signature hero over a blank or half-revealed
+  project index is a portfolio with no portfolio, so the projects must be present, finished, and
+  visible by default (never hidden behind a reveal that may not fire).
 - Living style guide page (swatches, type scale, spacing, component inventory).
 - Realistic content with empty / loading / error states so mockups aren't lorem-ipsum.
 - Motion / interaction specs.
 - Responsiveness that survives the tablet zone — a width sweep (360→1920, including
   768–1024) so the mid-range stops breaking silently; fluid-first generation.
 - Multi-brand / dark-mode / white-label theming, and native theme handoff
-  (SwiftUI / Flutter / React Native).
+  (SwiftUI / Flutter / React Native). One shared component system, themed for several
+  brands by **swapping a token set** — components consume only `var(--token)`; each brand
+  is a `[data-brand]` token scope that restates just what differs. Guidance now makes each
+  brand a **complete identity, not a recolor**: a brand's token scope owns its *whole*
+  surface treatment — surface mode/luminance (a brand may flip the entire surface family
+  to dark / warm-paper / cool-light), density, radius, depth, and numeric features
+  (tabular vs proportional via a `--num-feature` token) — with AA re-audited per brand on
+  its full role set, so a playful consumer brand and a precise fintech brand read as
+  genuinely different products from the same markup. When the deliverable's job is to
+  *prove* the system is shared, render both brands at once side by side (the second brand
+  reachable with no interaction, not hidden behind a JS-only toggle) and keep the
+  comparison chrome token-driven and quiet so it never contaminates the brands it frames.
+  For **dark mode specifically**, the guidance now goes past "passes AA": a finished dark
+  theme is built as a co-equal `[data-theme="dark"]` token scope with its OWN role hexes
+  (muted / faint / border / on-fill chosen for the dark surface, not an inversion),
+  contrast **audited per theme** so AA holds in light *and* dark; it lifts the surface off
+  pure black and softens the ink off pure white (a deterministic check flags the harsh
+  pure-`#000`+pure-`#fff` pairing), builds a real luminance elevation ladder
+  (canvas < card < inset), desaturates and lifts the accent for the dark surface, and
+  **reserves the accent for meaning** — neutral resting chart bars and progress tracks,
+  accent only on the active/current element, primary action, links, and active nav, rather
+  than painting everything in the brand color. A dark-mode task is treated as making the
+  *whole* page correct: the light theme is re-audited too, so both themes ship as
+  equal-finish, AA-clean peers — and the contrast report is honest about both, flagging any
+  borderline pair instead of claiming a blanket pass.
+- **Native theme handoff that emits a complete, idiomatic theme — not a flat color dump.**
+  `export_native.py` turns the token contract into a ready-to-drop-in SwiftUI `Theme.swift`
+  (alongside Flutter and React Native theme files). The SwiftUI output carries: **dynamic
+  light + dark colors** via a `Color(light:dark:)` initializer backed by a per-trait
+  `UIColor`/`NSColor` *dynamic provider* (resolves at draw time, so colors adapt correctly
+  in mixed-scheme, hosted, and snapshot contexts — iOS *and* macOS, guarded with
+  `#if canImport`); a **named type scale** (`ThemeTypography` + a `.textStyle(.title)`
+  modifier that reads the in-environment theme, with `lineSpacing` derived from each token's
+  line height); **spacing + radius** as typed `CGFloat` scales; and a `Theme` value exposed
+  through an `EnvironmentKey` so views read `theme.colors.primary` / `theme.spacing.lg`. The
+  CSS box-shadow elevation token is reproduced as a stacked, per-layer `.cardShadow()` using
+  the token's **real** color and offsets. **Token fidelity is exact** — every emitted color
+  is the precise `channel/255` of the source hex, both schemes — so the native theme can't
+  silently drift from the contract. The generated header is **honest about scope**: it states
+  the file was not compiled in a headless environment (verify in Xcode), and that SwiftUI has
+  no precise total-line-height control nor a 1:1 CSS-box-shadow equivalent, so those are
+  disclosed approximations rather than fabricated equivalences.
 - i18n / RTL logical-property linting.
 - Design planning + a 5-seat Design Council (for / against / neutral / UX / craft → a
   synthesized verdict) for hard, multi-surface calls.
@@ -273,19 +430,71 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   folds every result into a severity-tiered punch list, and re-checks every cited number — a
   wrong ratio/width discredits the critique. Honest copy "shows, doesn't announce" (repeated
   anti-slop meta-commentary is its own tell).
-- WCAG contrast audit for every text/surface pairing in the locked palette, with
-  nearest-passing shade suggestions and on-pair contrast scoring.
+- WCAG contrast audit for every text/surface pairing in the locked palette, applying the
+  correct AA threshold per use (4.5:1 normal text, 3:1 large text and UI / graphical
+  objects), with on-pair contrast scoring.
+- **Minimal, brand-preserving nearest-passing fixes.** For each failing pair the auditor
+  proposes a concrete fix that reaches AA with the *smallest perceptual move* from the
+  original brand color: it blends in fine steps (so it clears the threshold without
+  overshooting it into a needlessly large change) and weighs **both levers** — adjusting
+  the foreground or adjusting the background fill — returning whichever moves least. For a
+  white (or near-white) label on a saturated brand fill it darkens the **fill** and keeps
+  the label, rather than dumping the text toward near-black; for ordinary dark-text-on-light
+  it nudges the foreground. Every suggested fix is recomputed and confirmed to meet its
+  threshold, and reported alongside its new ratio.
+- **Custom-control accessibility checks** in the static a11y audit — catches two subtle,
+  common ways a hand-built control (a styled toggle, checkbox, radio, or select) silently
+  ships with no usable state for assistive tech: an `aria-labelledby` that points only at
+  the control's own id (a self-reference that resolves to an *empty* accessible name), and a
+  checkable ARIA role (`switch` / `checkbox` / `radio`) with no `aria-checked` (the explicit
+  role overrides the native `:checked`, so a screen reader announces no on/off state). Both
+  flag as blocking findings in the `qa.py --hook` loop.
 - Overlap / collision hunting across screen sizes, on by default in any scan or review:
-  rendered text-on-text and decoration-over-text detection, plus a static no-render
-  risk lint for absolutely-positioned decorations and negative margins.
+  a render-grounded width sweep that opens the page at each width and **measures** the
+  defects from real geometry — horizontal overflow (element/document wider than the
+  viewport), text-on-text and decoration-over-text collisions (bounding-box
+  intersection), and content that overruns or escapes its box — rather than guessing
+  from the source. Because it measures the rendered layout, it flags only layout that
+  *actually* breaks (a plausible-looking rule that doesn't collide at any width is left
+  clean, and a misleading source comment never fools it), and it distinguishes a real
+  opaque collision from a see-through decoration the text reads cleanly over. Each
+  finding carries the element(s), the width range, and the CSS cause; a fix is confirmed
+  by re-rendering the swept widths to show the defect is gone with no other width
+  regressed. Paired with a static no-render risk lint (absolutely-positioned decorations,
+  negative margins) for when the page can't be rendered.
 - Design lint ("design ESLint") flagging off-contract colors/fonts with
   file · line · severity · fix (perceptual, so near-duplicates don't false-positive).
+  Now also catches **off-scale spacing and non-token border-radius** — when the contract
+  declares a spacing or radius scale, a hardcoded `padding`/`margin`/`gap` length or
+  `border-radius` that falls off the scale is flagged with the nearest scale step as the
+  fix (unit-normalized rem↔px; skipped entirely on repos that declare no scale, and
+  border-width hairlines are never mistaken for spacing) — so a drift audit covers
+  geometry, not just color and type.
+- Reporting a drift audit to a human: guidance to turn the deterministic findings into a
+  report a developer can act on immediately — a verdict + gate summary up top, findings
+  grouped by severity (off-brand identity drift first), every finding with verbatim
+  file:line + the exact value + the exact token fix, and a **"Verified clean — not drift"**
+  section that lists the values which look suspicious but are within tolerance of a token
+  (so no one "fixes" a false positive) — the precision a real checker has over eyeballing.
 - House-rule enforcement ("use a modal, never a flyout") — the repo's own rules are law
   and override atelier's defaults.
 - Critique / layout scoring with severity tiers, visual-regression diffing, and
   performance budgets.
 - Token-migration codemod — rewrites hardcoded values to `var(--token)`, dry-run first,
-  paired with visual-regression to prove "zero pixels moved".
+  paired with visual-regression to prove "zero pixels moved". **Pixel-safe and
+  role-aware:** it rewrites only EXACT matches (never a near-but-unequal value, which
+  would move a pixel) and maps each literal to the right token *for its role* — an `8px`
+  gap becomes a spacing token, an `8px` `border-radius` becomes a radius token, the same
+  number, the correct token. It covers colors, spacing, radius and font-family (and the
+  Tailwind arbitrary values / inline `style={{…}}` colors — including conditional/ternary
+  values — in JSX), while leaving the things that must not move alone: token *definitions*
+  themselves (no `--x: var(--x)` self-reference), `calc()` interiors, `@media`
+  breakpoints, rgba()/tints, element dimensions and grid track sizing, hairline borders,
+  bare-hex values in JS data arrays, and any block you mark `/* atelier-ignore */` (a
+  vendor or hand-tuned block). The workflow renders before/after at the breakpoints that
+  matter — including across each media-query boundary — and writes an auditable report:
+  migrations grouped by kind with the role traps flagged, and a complete "left alone, with
+  reason" list, so a reviewer can verify the whole change without re-reading the repo.
 - Coherence score + design-debt report — one 0–100 number with hotspots and a trend.
 - Design QA in CI — a merge gate (GitHub Actions + Azure Pipelines templates), plus PR
   design review and team onboarding packs.
@@ -337,6 +546,31 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   it for dark-mode projects.
 - `contract.py --validate`: reports what parsed (roles, fonts, spacing) and fails loudly
   when a contract is too thin to enforce, instead of silently degrading lint to noise.
+- **Contract closure — components can't reference tokens the contract never defines.**
+  Validation now walks every component's `{token}` reference and fails the contract if any
+  doesn't resolve against a scale defined in the machine block (colors, typography, named
+  radii, shadows). A button styled by `{rounded.md}` while no `rounded` map exists is now a
+  caught error, not a contract that *looks* complete but dangles — so a second engineer or
+  agent can always resolve what a component points at.
+- **Published, recomputable contrast table.** `audit_contrast.py … --table` prints a measured
+  per-pair WCAG ratio table (Foreground · Background · Ratio · Required · pass/fail), per theme,
+  ready to paste into the palette/accessibility sections — so a `DESIGN.md` can *prove* its AA
+  claim with numbers a reader can recheck, instead of merely asserting it passes.
+- **A more rigorous default token vocabulary.** The DESIGN.md guidance now steers every
+  generated palette toward full role triads (a fill, its `on-` color, and a `-soft` tint, plus
+  a separate `-text` tone where a hue is used as colored text), named interaction-state tokens
+  (`primary-hover` / `-pressed` / `-disabled`), and the WCAG-driven semantic split for hard hues
+  — e.g. amber, which can't be both vivid *and* 4.5:1 as text, splits into a `warning-fill` for
+  fills and a darkened `warning-text` for labels, documented as a deliberate decision. Decorative
+  exemptions (hairlines, disabled text) are stated so the contrast table reads honestly.
+- **A fuller, more buildable component catalog.** Guidance + template now cover the full standard
+  control set — including form controls (checkbox / radio / select / toggle) — with each
+  interaction state as its own keyed, token-bound entry a linter can read, narrated in prose too.
+- **Turnkey portability in the contract.** The template ships a ready-to-paste dual-theme CSS
+  variable scaffold (`:root` + `[data-theme="dark"]`, every literal value plus type / shape /
+  shadow / motion vars and a `body` baseline), a responsive collapsing-strategy and touch-target
+  spec, and a "verify before you ship" self-audit checklist — so any coding agent can paste the
+  token system and build on-contract with no transcription step.
 - Drift ratchet (`check.py --ratchet` / `--update-baseline`): adopt the gate on a legacy
   repo by baselining current drift; the baseline auto-tightens as drift drops, so it can
   only shrink. (Count-based for now — a git-line-aware "only new lines must comply" version

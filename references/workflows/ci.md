@@ -123,13 +123,48 @@ The copy-in `templates/ci/github-actions.yml` also ships an optional
 
 `templates/ci/azure-pipelines.yml` is the equivalent for Azure Pipelines.
 
+## Reporting a drift audit to a human
+
+When the ask is "audit this repo for design drift and report it" (a human reading the
+findings, not just a CI gate exit code), run `lint_design.py <repo> --json` (and
+`check.py` for the full gate) and turn the deterministic output into a report a
+developer can act on **immediately**. The scanner already gives you the hard part —
+file:line, the literal offending value, the violated token, a concrete fix, perceptual
+ΔE precision. Present it well:
+
+- **Open with a one-line verdict + the gate summary** (e.g. `design-lint: 9; contrast/
+  a11y/overlap/house-rules: PASS`) so the reader knows the scope before the list.
+- **Group by SEVERITY/PRIORITY, highest-impact first** — and say *why* each tier is
+  ranked where it is. Identity drift (an off-brand color where the brand has none; a
+  non-permitted brand font) outranks subtle near-token drift, which outranks a one-off
+  off-scale value or a lone forbidden shadow. A flat undifferentiated list buries the
+  fixes that matter.
+- **Every finding carries file:line + the exact offending value + the exact fix
+  (the right token / the action).** Never paraphrase a location — copy the scanner's
+  line number verbatim (eyeballed line numbers drift by ±1 and cost the reader trust).
+- **Add a "Verified clean — NOT drift" section.** This is the audit's signature move
+  and the reason a real checker beats eyeballing: list the values that look suspicious
+  but are within ΔE tolerance of a token (near-duplicates), the token-DEFINING file
+  itself, and any contract color expressed in another notation (e.g. the danger hex as
+  an `rgba()` tint). State the ΔE reason. This stops a reviewer "fixing" a false
+  positive and proves the audit is precise, not trigger-happy.
+- **Do NOT pad the report with hand-added findings the scanner didn't flag** (a stray
+  `font-size`, a near-token value, a layout track width). If the contract doesn't govern
+  it, it isn't drift — adding it lowers precision and distorts the severity ranking. A
+  precise 9-finding report beats a noisy 12-finding one.
+- Close with a compact summary table (`# · pri · file:line · value · token · fix`).
+
 ## What runs
 
-- **design-lint** — file+line drift vs the token contract (perceptual ΔE).
+- **design-lint** — file+line drift vs the token contract: off-palette colors (perceptual
+  ΔE, incl. Tailwind palette classes), off-contract fonts, off-scale spacing & non-token
+  border-radius (when the contract declares a scale), and elevation-rule breaks
+  (a shadow in a borders-only system).
 - **contrast-audit** — every text/surface token pairing vs WCAG AA-large.
 - **house-rules** — violations of DESIGN.md §9 directives (e.g. a flyout where the
   project mandates modals), via `check_rules.py`.
 - **overlap-risk** — static collision-risk lint (gating severities only).
+- **a11y** — static accessibility scan over the repo's HTML (gates on `important`).
 
 These are dependency-light (stdlib Python), so the gate is fast and reliable.
 Generate `design/design-tokens.json` (via `generate-design-md`) before enabling.

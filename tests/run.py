@@ -100,7 +100,11 @@ def _run_test(fn):
         raise Skip(f"unsupported fixture(s): {', '.join(unknown)} "
                    "(this runner only provides tmp_path)")
     if "tmp_path" in params:
-        with tempfile.TemporaryDirectory(prefix="atelier-test-") as d:
+        # NOT "atelier-*": the collision-gate hook treats /tmp/atelier* as gateable
+        # scratch, so a test fixture (e.g. an intentionally-bad bad.html) under an
+        # atelier-prefixed tmpdir would trip the Stop hook of whatever session runs the
+        # suite. Keep test scratch out of that namespace.
+        with tempfile.TemporaryDirectory(prefix="atl-test-") as d:
             fn(tmp_path=Path(d))
     else:
         fn()

@@ -157,6 +157,36 @@ def _contract_from_block(block, path):
     if isinstance(comps, dict) and comps:
         out["components"] = {k: dict(v) if isinstance(v, dict) else v
                              for k, v in comps.items()}
+    # OPTIONAL named scale maps (additive): `rounded` (radii by name — md/lg/…) and
+    # `shadows` (elevation by name). The existing `radius` field is a LIST the range
+    # engine slides; `rounded` is the NAMED map that component `{rounded.md}` refs
+    # resolve against. Without it, a block whose components reference `{rounded.*}` has
+    # unresolvable refs — `validate_contract` flags this (component_ref_issues).
+    rounded = block.get("rounded")
+    if rounded is None:
+        rounded = block.get("radii")
+    if isinstance(rounded, dict) and rounded:
+        out["rounded"] = {str(k): str(v) for k, v in rounded.items()}
+    raw_shadows = block.get("shadows")
+    if isinstance(raw_shadows, dict) and raw_shadows:
+        out["shadows"] = {str(k): str(v) for k, v in raw_shadows.items()}
+    # OPTIONAL token-source provenance (additive): `sources` is a {role: "file:line"}
+    # map recording WHERE each token lives in the code, plus an optional nested `dark`
+    # sub-map for the dark theme. This is the measured-repo edge made machine-readable —
+    # a contract atelier MEASURED (vs synthesized greenfield) should carry per-token
+    # provenance in the block, not only in the prose table, so the machine artifact is
+    # itself traceable/verifiable. Values are kept verbatim (file:line / selector /
+    # config-key strings); `dark` is recursed one level.
+    raw_sources = block.get("sources")
+    if isinstance(raw_sources, dict) and raw_sources:
+        srcs = {}
+        for k, v in raw_sources.items():
+            if k == "dark" and isinstance(v, dict):
+                srcs["dark"] = {str(dk): str(dv) for dk, dv in v.items()}
+            elif isinstance(v, (str, int, float)):
+                srcs[str(k)] = str(v)
+        if srcs:
+            out["sources"] = srcs
     if dropped or dark_dropped:
         out["machine_block_dropped"] = dropped + dark_dropped
     return out
@@ -698,6 +728,48 @@ def unresolved_references(design_text, contract):
     return bad
 
 
+def component_ref_issues(contract):
+    """Return [(group, name), ...] for every `{group.name}` token reference inside the
+    machine block's `components` (and `typography`) that does NOT resolve against a
+    scale DEFINED in the same block. This catches the internal-consistency defect where
+    a contract declares components styled by `{rounded.md}` / `{colors.surface}` /
+    `{shadows.sm}` but never defines that scale in the block — leaving the refs dangling
+    and unenforceable. Only groups the block CAN define are checked strictly; an unknown
+    group (a consumer-resolved namespace) is left alone.
+
+    Resolves against: colors (light), dark (dark palette), typography, rounded (named
+    radii), shadows, spacing (by index OR name). A `{colors.x}` is satisfied if `x` is in
+    EITHER the light or dark palette (themes share role names)."""
+    comps = contract.get("components")
+    if not isinstance(comps, dict) or not comps:
+        return []
+    defined = {
+        "colors": {k.lower() for k in contract.get("colors", {})}
+        | {k.lower() for k in (contract.get("dark_colors") or {})},
+        "typography": {k.lower() for k in (contract.get("typography") or {})},
+        "rounded": {k.lower() for k in (contract.get("rounded") or {})},
+        "radii": {k.lower() for k in (contract.get("rounded") or {})},
+        "shadows": {k.lower() for k in (contract.get("shadows") or {})},
+    }
+    bad, seen = [], set()
+    # walk every string value in every component spec for {group.name} refs
+    blob = []
+    for spec in comps.values():
+        if isinstance(spec, dict):
+            blob.extend(str(v) for v in spec.values())
+        else:
+            blob.append(str(spec))
+    text = "\n".join(blob)
+    for group, name in _REF.findall(text):
+        g, n = group.lower(), name.lower()
+        if g not in defined:
+            continue  # a group the block isn't expected to define (consumer-resolved)
+        if n not in defined[g] and (group, name) not in seen:
+            bad.append((group, name))
+            seen.add((group, name))
+    return bad
+
+
 ALLOWED_REGISTERS = ("brand", "product")
 
 
@@ -723,11 +795,29 @@ def validate_contract(contract):
                       "(check the DESIGN.md palette table or add an atelier-contract block)")
     if not fonts:
         issues.append("no fonts parsed — typography can't be enforced")
+    # Internal consistency: every token ref inside a declared `components` map must
+    # resolve against a scale DEFINED in the block. A component styled by `{rounded.md}`
+    # while no `rounded` map exists is a dangling ref a consumer/linter can't resolve.
+    ref_issues = component_ref_issues(contract)
+    if ref_issues:
+        pretty = ", ".join(f"{{{g}.{n}}}" for g, n in ref_issues)
+        issues.append(
+            f"component(s) reference undefined token(s): {pretty} — define the scale "
+            "in the machine block (e.g. add a `rounded`/`shadows` map, or the color role) "
+            "so every component ref resolves")
+    # token-source coverage: how many color roles carry a machine-readable file:line
+    # provenance pointer (the measured-repo edge). Counts only top-level color-role keys
+    # (the `dark` sub-map is per-theme provenance, not a separate role). Surfaced so a
+    # measured contract can prove its provenance is in the block, not prose-only.
+    srcs = contract.get("sources") or {}
+    token_sources = sum(1 for k in srcs if k != "dark") if isinstance(srcs, dict) else 0
     report = {
         "source": contract.get("source"),
         "colors": len(colors), "fonts": len(fonts), "spacing": len(contract.get("spacing", [])),
         "dark_colors": len(contract.get("dark_colors") or {}),
+        "token_sources": token_sources,
         "depth": contract.get("depth"), "register": register,
+        "component_ref_issues": ref_issues,
         "issues": issues, "ok": not issues,
     }
     return (not issues), report

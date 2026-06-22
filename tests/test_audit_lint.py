@@ -2,7 +2,7 @@
 import json
 import os
 
-from audit_contrast import audit, _nearest_passing
+from audit_contrast import audit, _nearest_passing, nearest_passing_fix
 from lint_design import lint_repo
 from migrate_to_tokens import migrate_code_text, migrate_text
 
@@ -55,10 +55,78 @@ def test_audit_enforces_on_token_against_its_base():
     assert row["informational"] is False  # on-primary on primary IS enforced
 
 
+def _contract_with_scale(tmp_path):
+    (tmp_path / "DESIGN.md").write_text(
+        "```json atelier-contract\n"
+        '{"colors":{"background":"#0f1419","primary":"#3d8bfd"},'
+        '"fonts":["Inter"],'
+        '"spacing":["4px","8px","12px","16px","24px","32px","48px"],'
+        '"radius":["4px","8px","12px","999px"],"depth":"borders-only"}\n```\n')
+    return str(tmp_path)
+
+
+def test_lint_flags_off_scale_spacing(tmp_path):
+    # An off-scale padding (18px is not in the 4/8/12/16/24/32/48 scale) is drift;
+    # an on-scale padding (16px) is compliant and must NOT be flagged.
+    repo = _contract_with_scale(tmp_path)
+    (tmp_path / "a.css").write_text(
+        ".ok{padding:16px 24px}\n"          # both on-scale -> clean
+        ".bad{padding:18px var(--space-4)}\n"  # 18px off-scale -> drift
+        ".gap{gap:8px}\n")                   # on-scale -> clean
+    findings = [f for f in lint_repo(repo, repo) if f["kind"] == "spacing"]
+    vals = {(f["line"], f["value"]) for f in findings}
+    assert (2, "18px") in vals, findings
+    # exactly one off-scale spacing finding — 16px/24px/8px are all on-scale
+    assert len(findings) == 1, findings
+    f = findings[0]
+    assert f["severity"] == "important" and f["file"] == "a.css"
+    # the fix points at the nearest scale step (16px), actionable
+    assert "16px" in f["fix"]
+
+
+def test_lint_flags_off_scale_radius(tmp_path):
+    repo = _contract_with_scale(tmp_path)
+    (tmp_path / "b.css").write_text(
+        ".card{border-radius:12px}\n"   # on-scale -> clean
+        ".chip{border-radius:6px}\n"    # off-scale -> drift (nearest 8px)
+        ".pill{border-radius:999px}\n") # on-scale -> clean
+    findings = [f for f in lint_repo(repo, repo) if f["kind"] == "radius"]
+    assert len(findings) == 1, findings
+    f = findings[0]
+    assert f["line"] == 2 and f["value"] == "6px" and f["severity"] == "important"
+    assert f["file"] == "b.css"
+    assert "8px" in f["fix"]  # nearest contract radius
+
+
+def test_lint_scale_checks_skip_when_contract_has_no_scale(tmp_path):
+    # A contract with NO spacing/radius scale must not flag every length as drift
+    # (avoids false positives on repos that don't define a scale).
+    (tmp_path / "DESIGN.md").write_text(
+        "```json atelier-contract\n"
+        '{"colors":{"background":"#0f1419"},"fonts":["Inter"]}\n```\n')
+    (tmp_path / "c.css").write_text(".x{padding:18px;border-radius:6px}\n")
+    findings = lint_repo(str(tmp_path), str(tmp_path))
+    assert not [f for f in findings if f["kind"] in ("spacing", "radius")]
+
+
+def test_lint_scale_ignores_rem_when_scale_is_px(tmp_path):
+    # Unit-normalized: 1rem == 16px is on a px scale; 1.1rem (17.6px) is off.
+    repo = _contract_with_scale(tmp_path)
+    (tmp_path / "d.css").write_text(
+        ".a{padding:1rem}\n"      # 16px -> on-scale
+        ".b{padding:1.1rem}\n")   # 17.6px -> off-scale
+    findings = [f for f in lint_repo(repo, repo) if f["kind"] == "spacing"]
+    assert len(findings) == 1 and findings[0]["line"] == 2, findings
+
+
 def test_export_native_codegen():
     from export_native import swiftui, flutter, react_native
     cols, fonts = {"primary": "#2563eb"}, ["Sora", "Inter"]
-    assert "Color(red:" in swiftui(cols, fonts)
+    sw = swiftui(cols, fonts, dark={"primary": "#3b82f6"})
+    # idiomatic scheme-aware dynamic color + exact sRGB fidelity (#2563eb -> .145 .388 .922)
+    assert "init(light: Color, dark: Color)" in sw
+    assert "light: .srgb(0.145, 0.388, 0.922)" in sw
+    assert "public struct Theme {" in sw
     assert "Color(0xFF2563EB)" in flutter(cols, fonts)
     assert 'primary: "#2563eb"' in react_native(cols, fonts)
 
@@ -541,11 +609,174 @@ def test_migrate_rewrites_tailwind_arbitrary_and_css():
     assert m == 1 and "var(--color-primary)" in css
 
 
+def test_migrate_color_is_exact_match_only_not_near():
+    # A near-but-unequal hex must NOT be rewritten — snapping it would move pixels.
+    contract = {"#5e6ad2": "primary"}
+    css, n = migrate_text(".x{background:#5a66cc;}", contract)  # ΔE small but != token
+    assert n == 0 and "#5a66cc" in css and "var(" not in css
+    # the exact one IS rewritten
+    css2, n2 = migrate_text(".x{background:#5e6ad2;}", contract)
+    assert n2 == 1 and "var(--color-primary)" in css2
+
+
+def test_migrate_never_rewrites_token_definition_rhs():
+    # The definition of a custom property must stay literal (no self-reference cycle).
+    contract = {"#0d1117": "bg"}
+    css, n = migrate_text(":root{--color-bg:#0d1117;}\n.a{background:#0d1117;}", contract)
+    flat = css.replace(" ", "")
+    assert "--color-bg:#0d1117" in flat            # definition stays literal
+    assert "--color-bg:var(--color-bg)" not in flat  # no self-reference cycle
+    assert n == 1  # only the .a usage migrated, not the definition
+
+
+def test_migrate_role_aware_spacing_vs_radius_same_value():
+    # 8px as gap -> spacing token; 8px as border-radius -> radius token. Same literal.
+    spacing = {"8px": "--space-2"}
+    radius = {"8px": "--radius-md"}
+    css, n = migrate_text(".c{gap:8px;border-radius:8px;}", {}, spacing, radius)
+    assert n == 2
+    assert "gap:var(--space-2)" in css.replace(" ", "")
+    assert "border-radius:var(--radius-md)" in css.replace(" ", "")
+
+
+def test_migrate_spacing_leaves_nonspacing_roles_alone():
+    # 16px width / font-size must NOT be tokenized even when 16px is a spacing token.
+    spacing = {"16px": "--space-4"}
+    css, n = migrate_text(".c{padding:16px;width:16px;font-size:16px;}", {}, spacing)
+    assert "padding:var(--space-4)" in css.replace(" ", "")
+    assert "width:16px" in css.replace(" ", "")
+    assert "font-size:16px" in css.replace(" ", "")
+    assert n == 1
+
+
+def test_migrate_leaves_calc_interior_alone():
+    spacing = {"16px": "--space-4"}
+    css, n = migrate_text(".c{padding:calc(16px + 2px);}", {}, spacing)
+    assert n == 0 and "calc(16px + 2px)" in css
+
+
+def test_migrate_extracts_tokens_and_roles_from_css_defs():
+    from migrate_to_tokens import extract_css_tokens
+    roles = extract_css_tokens(
+        ":root{--color-primary:#5e6ad2;--space-2:8px;--radius-md:8px;"
+        "--font-sans:\"Inter\", sans-serif;}")
+    assert roles["color"]["#5e6ad2"] == "--color-primary"
+    assert roles["spacing"]["8px"] == "--space-2"
+    assert roles["radius"]["8px"] == "--radius-md"
+    assert "inter, sans-serif" in roles["font"]
+
+
+def test_migrate_font_family_to_token():
+    fonts = {'inter, system-ui, sans-serif': "--font-sans"}
+    css, n = migrate_text('.c{font-family:"Inter", system-ui, sans-serif;}', {}, font_tokens=fonts)
+    assert n == 1 and "font-family:var(--font-sans)" in css.replace(" ", "")
+
+
+def test_migrate_rem_px_equivalence():
+    # 1rem == 16px at default root; a 16px spacing token should match a 1rem literal.
+    spacing = {"16px": "--space-4"}
+    css, n = migrate_text(".c{padding:1rem;}", {}, spacing)
+    assert n == 1 and "padding:var(--space-4)" in css.replace(" ", "")
+
+
+def test_migrate_jsx_style_object_covers_conditional_hex():
+    # A hex inside a JSX style={{...}} object — including a ternary value — is styling
+    # and should migrate; a bare hex in a data array stays put.
+    contract = {"#2ea043": "success", "#f85149": "danger", "#5e6ad2": "primary"}
+    src = ('<i style={{ backgroundColor: ok ? "#2ea043" : "#f85149" }} />\n'
+           'export const C = ["#5e6ad2", "#2ea043"];')
+    out, n = migrate_code_text(src, contract)
+    assert 'ok ? "var(--color-success)" : "var(--color-danger)"' in out
+    assert '["#5e6ad2", "#2ea043"]' in out   # bare data array untouched
+    assert n == 2
+
+
+def test_migrate_respects_ignore_directive():
+    # An `atelier-ignore` directive on a CSS block leaves that block untouched
+    # (vendor / non-themable). The rest of the file still migrates.
+    contract = {"#5e6ad2": "primary"}
+    css = ("/* atelier-ignore */\n.vendor{background:#5e6ad2;}\n"
+           ".mine{background:#5e6ad2;}")
+    out, n = migrate_text(css, contract)
+    assert ".vendor{background:#5e6ad2;}" in out          # ignored block untouched
+    assert "background:var(--color-primary)" in out.split(".mine")[1]
+    assert n == 1
+
+
+def test_migrate_spacing_after_color_keeps_calc_guard_aligned():
+    # A color rewrite earlier in the file shifts offsets; the calc()-guard and the
+    # downstream spacing rewrite must stay aligned: the real `padding:12px` migrates,
+    # the `calc(14px ...)` is left, and nothing inside calc moves.
+    css = (".a{color:#f85149;}\n"
+           "@media (max-width:600px){.b{padding:12px;font-size:calc(14px + 0.2vw);}}")
+    colors = {"#f85149": "danger"}
+    spacing = {"12px": "--space-3", "14px": "--space-x"}
+    out, n = migrate_text(css, colors, spacing)
+    flat = out.replace(" ", "")
+    assert "color:var(--color-danger)" in flat
+    assert "padding:var(--space-3)" in flat          # the real declaration migrates
+    assert "calc(14px+0.2vw)" in flat                 # calc interior untouched
+    assert "var(--space-x)" not in flat               # nothing inside calc moved
+
+
 def test_nearest_passing_returns_a_passing_shade():
     from scan_repo import contrast_ratio, _hex_to_rgb
     suggestion = _nearest_passing("#c9a227", "#f7f5ef", target=4.5)
     assert suggestion is not None
     assert contrast_ratio(_hex_to_rgb(suggestion), _hex_to_rgb("#f7f5ef")) >= 4.5
+
+
+def test_nearest_passing_is_minimal_does_not_overshoot():
+    """The shade must clear the target without wildly overshooting it — a coarse
+    blend step lands far past 4.5 (a bigger, needless perceptual move). The fine
+    solver should clear the bar and stay near it."""
+    from scan_repo import contrast_ratio, _hex_to_rgb
+    s = _nearest_passing("#2f7df6", "#ffffff", target=4.5)  # the t30 link case
+    ratio = contrast_ratio(_hex_to_rgb(s), _hex_to_rgb("#ffffff"))
+    assert ratio >= 4.5
+    assert ratio < 4.75   # within a tight band of the target, not overshot to ~4.9
+
+
+def test_nearest_passing_fix_prefers_darkening_fill_for_white_on_brand():
+    """For a white label on a saturated brand fill, blending the WHITE TEXT toward
+    black to reach AA destroys the label (huge perceptual move). The brand-preserving
+    fix darkens the FILL and keeps the white label. nearest_passing_fix must return the
+    smaller-move option = changing the background fill here."""
+    from scan_repo import contrast_ratio, _hex_to_rgb, _delta_e
+    fix = nearest_passing_fix("#ffffff", "#2f7df6", target=4.5)
+    assert fix is not None
+    assert fix["change"] == "background"          # darken the fill, keep the label
+    # the new fill actually clears AA with the unchanged white label
+    assert contrast_ratio(_hex_to_rgb("#ffffff"), _hex_to_rgb(fix["new_value"])) >= 4.5
+    # and the move is far smaller than pushing the white text to near-black
+    text_move = _delta_e(_hex_to_rgb("#ffffff"), _hex_to_rgb(_nearest_passing("#ffffff", "#2f7df6", 4.5)))
+    assert fix["delta_e"] < text_move
+    assert fix["delta_e"] < 30                     # a recognizable brand shade, not a dump
+
+
+def test_nearest_passing_fix_moves_foreground_for_dark_text_on_light():
+    """For ordinary dark-text-on-light failures, moving the foreground is the smaller
+    move (darkening the fill = lightening the whole surface = a bigger change), so the
+    fix changes the foreground."""
+    from scan_repo import contrast_ratio, _hex_to_rgb
+    fix = nearest_passing_fix("#8a93a3", "#ffffff", target=4.5)  # t30 muted-on-bg
+    assert fix is not None
+    assert fix["change"] == "foreground"
+    assert contrast_ratio(_hex_to_rgb(fix["new_value"]), _hex_to_rgb("#ffffff")) >= 4.5
+
+
+def test_nearest_passing_fix_reports_recomputed_ratio_and_reaches_target():
+    from scan_repo import contrast_ratio, _hex_to_rgb
+    for fg, bg, tgt in [("#ffffff", "#36b37e", 4.5), ("#ffffff", "#e5534b", 4.5),
+                        ("#c4ccd6", "#ffffff", 3.0), ("#6e7686", "#10141b", 4.5)]:
+        fix = nearest_passing_fix(fg, bg, target=tgt)
+        assert fix is not None
+        if fix["change"] == "foreground":
+            got = contrast_ratio(_hex_to_rgb(fix["new_value"]), _hex_to_rgb(bg))
+        else:
+            got = contrast_ratio(_hex_to_rgb(fg), _hex_to_rgb(fix["new_value"]))
+        assert got >= tgt
+        assert abs(round(got, 2) - fix["new_ratio"]) < 0.02   # reported ratio is honest
 
 
 def test_lint_repo_flags_rogue_color_and_font(tmp_path):

@@ -32,9 +32,6 @@ def _run_hook(tmp_path, scripts_dir, session, html=True):
     scoped empty /tmp so only the cwd file is gated."""
     empty_tmp = tmp_path / "tmp"
     empty_tmp.mkdir(exist_ok=True)
-    if html:
-        (tmp_path / "page.html").write_text(
-            "<!doctype html><html><body><h1>x</h1></body></html>")
     # Scope the retry counter to tmp_path too: a hardcoded /tmp + fixed test session
     # ids would leak a counter across runs (a block writes one that survives) and make
     # the block/retry tests flaky on a second consecutive run.
@@ -44,6 +41,18 @@ def _run_hook(tmp_path, scripts_dir, session, html=True):
            "ATELIER_GATE_TMP": str(empty_tmp),
            "ATELIER_GATE_COUNTER_DIR": str(cdir)}
     env.pop("ATELIER_GATE_OFF", None)
+    # Mirror the real harness flow: SessionStart stamps the per-session start marker
+    # BEFORE any HTML is generated, so the gate's session-floor counts this turn's
+    # work. Without this the floor degrades to `now` and the freshly-written page
+    # (mtime < now) is excluded — the gate would silently no-op. Stamp once; the
+    # marker is not overwritten on repeat calls (resume/compact semantics), and the
+    # page is (re)written AFTER so its mtime stays at/after the marker.
+    subprocess.run([sys.executable, HOOK, "--mark-session-start"],
+                   input=json.dumps({"session_id": session}),
+                   text=True, capture_output=True, env=env, timeout=60)
+    if html:
+        (tmp_path / "page.html").write_text(
+            "<!doctype html><html><body><h1>x</h1></body></html>")
     return subprocess.run(
         [sys.executable, HOOK],
         input=json.dumps({"cwd": str(tmp_path), "session_id": session}),
@@ -56,6 +65,18 @@ def test_hooks_json_registers_stop_and_subagentstop():
         cmd = cfg[event][0]["hooks"][0]["command"]
         assert "atelier-collision-gate.py" in cmd
         assert "${CLAUDE_PLUGIN_ROOT}" in cmd
+
+
+def test_hooks_json_registers_sessionstart_marker():
+    # The session-floor logic is only correct when a SessionStart hook stamps the
+    # per-session start marker; without that registration the floor degrades to `now`
+    # and the Stop gate silently no-ops on the agent's work (the regression this guards).
+    cfg = json.load(open(HOOKS_JSON))["hooks"]
+    assert "SessionStart" in cfg, "SessionStart must be registered to stamp the gate's session marker"
+    cmd = cfg["SessionStart"][0]["hooks"][0]["command"]
+    assert "atelier-collision-gate.py" in cmd
+    assert "--mark-session-start" in cmd
+    assert "${CLAUDE_PLUGIN_ROOT}" in cmd
 
 
 def test_gate_noops_without_recent_html(tmp_path):

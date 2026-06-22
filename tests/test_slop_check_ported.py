@@ -56,6 +56,10 @@ Rule-by-rule diff of impeccable's 41 registry rules vs atelier's deterministic c
 | theater-slop-phrase            | PORTED (gated) | gpt-theater-copy (--profile gpt)               |
 | image-hover-transform          | covered (gated)| slop_check gemini-img-hover-scale              |
 
+Native to atelier (not from impeccable): harsh-dark-contrast (polish) — a pure #000
+canvas paired with pure #fff body ink in one running-text rule; AA passes (21:1) but the
+maximal pairing reads harsh and leaves no room for an elevation ladder. Fixtures below.
+
 Provenance — Defensive CSS: slop_ported.ported_tells ALSO hosts three rules ported from
 Defensive CSS (defensivecss.dev, Ahmad Shadeed): input-zoom-ios (important),
 img-no-max-width and bg-no-no-repeat (polish). Those rules and their flag/no-flag fixtures
@@ -568,6 +572,50 @@ def test_bright_green_hex_bg_is_not_dark():
 def test_bright_green_short_hex_bg_is_not_dark():
     html = _page(css="body{background:#0f0}.stat{color:#22d3ee}")
     assert "neon-on-dark" not in _kinds(html)
+
+
+# --- harsh-dark-contrast (pure #000 canvas + pure #fff text) -------------------------------------------------
+
+def test_pure_black_bg_with_pure_white_text_flags():
+    # The low-finish dark-mode tell: #000 canvas + #fff body text. AA passes, but the
+    # maximal 21:1 vibrates harshly; a finished dark theme lifts the surface off pure
+    # black and softens the ink off pure white.
+    html = _page(css="body{background:#000;color:#fff}")
+    assert "harsh-dark-contrast" in _kinds(html)
+
+
+def test_pure_black_six_digit_with_white_six_digit_flags():
+    html = _page(css="body{background:#000000;color:#ffffff}")
+    assert "harsh-dark-contrast" in _kinds(html)
+
+
+def test_pure_black_rgb_with_white_rgb_flags():
+    html = _page(css="body{background:rgb(0,0,0);color:rgb(255,255,255)}")
+    assert "harsh-dark-contrast" in _kinds(html)
+
+
+def test_lifted_dark_surface_does_not_flag():
+    # A finished dark theme: surface lifted off pure black, ink softened off pure white.
+    html = _page(css="body{background:#0e1420;color:#e6eaf2}")
+    assert "harsh-dark-contrast" not in _kinds(html)
+
+
+def test_pure_black_bg_without_pure_white_text_does_not_flag():
+    # #000 canvas but softened ink — not the harsh pairing; do not flag.
+    html = _page(css="body{background:#000;color:#e8ecf2}")
+    assert "harsh-dark-contrast" not in _kinds(html)
+
+
+def test_pure_white_text_on_lifted_dark_does_not_flag():
+    # Pure-white ink but the surface is lifted off pure black — not the harsh pairing.
+    html = _page(css="body{background:#10141c;color:#fff}")
+    assert "harsh-dark-contrast" not in _kinds(html)
+
+
+def test_light_page_black_text_on_white_does_not_flag():
+    # The ordinary light page (#fff bg, #000 text) is NOT the dark-mode harshness tell.
+    html = _page(css="body{background:#fff;color:#000}")
+    assert "harsh-dark-contrast" not in _kinds(html)
 
 
 # --- monotonous-spacing -------------------------------------------------------------------------------------

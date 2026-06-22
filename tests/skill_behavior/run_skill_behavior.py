@@ -40,7 +40,9 @@ def load_skill_body() -> str:
 
 
 def prepare_workspace(scenario) -> str:
-    d = tempfile.mkdtemp(prefix="atelier-skillbehavior-")
+    # NOT "atelier-*": keep test scratch out of the namespace the collision-gate hook
+    # treats as gateable atelier scratch (see tests/run.py prefix note).
+    d = tempfile.mkdtemp(prefix="atl-skillbehavior-")
     seed_skill_into_workspace(d)
     for rel, contents in scenario.get("files", {}).items():
         target = os.path.join(d, rel)

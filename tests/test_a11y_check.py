@@ -148,6 +148,84 @@ def test_clean_accessible_page_yields_zero_findings():
     assert check_a11y(html) == []
 
 
+# --- aria-labelledby-self-reference (important) --------------------------
+# A custom control (e.g. <button role=switch>) whose aria-labelledby points only
+# at its OWN id is a self-reference: it resolves to an empty/recursive accessible
+# name. This is a real, unambiguous bug (caught on a settings toggle).
+
+def test_aria_labelledby_self_reference_flags():
+    # button role=switch labelledby its own id → no real name
+    html = ('<button id="sw" role="switch" aria-checked="true" '
+            'aria-labelledby="sw"></button>')
+    assert "aria-labelledby-self-reference" in _kinds(html, "important")
+
+
+def test_aria_labelledby_self_reference_flags_among_tokens_when_only_self_resolves():
+    # labelledby lists only the own id (even with extra whitespace) → self only
+    html = ('<button id="sw-2fa" role="switch" '
+            'aria-labelledby="  sw-2fa  "></button>')
+    assert "aria-labelledby-self-reference" in _kinds(html, "important")
+
+
+def test_aria_labelledby_self_reference_does_not_fire_when_other_token_present():
+    # points at its own id AND a real label id → has a name, do not flag
+    html = ('<span id="lbl">Allow invites</span>'
+            '<button id="sw" role="switch" aria-labelledby="lbl sw"></button>')
+    assert "aria-labelledby-self-reference" not in _kinds(html, "important")
+
+
+def test_aria_labelledby_self_reference_does_not_fire_for_external_label():
+    html = ('<span id="lbl">Allow invites</span>'
+            '<button id="sw" role="switch" aria-labelledby="lbl"></button>')
+    assert "aria-labelledby-self-reference" not in _kinds(html, "important")
+
+
+def test_aria_labelledby_self_reference_does_not_fire_without_own_id():
+    # aria-labelledby with no matching id of its own can't self-reference
+    html = '<button role="switch" aria-labelledby="lbl"></button>'
+    assert "aria-labelledby-self-reference" not in _kinds(html, "important")
+
+
+# --- aria-checked-missing (important) ------------------------------------
+# An element with role=switch/checkbox/radio/menuitemcheckbox/menuitemradio
+# REQUIRES aria-checked. Putting the role on a native <input type=checkbox/radio>
+# does NOT make the native :checked satisfy the ARIA contract — the explicit role
+# overrides it, so AT announces no/incorrect state. (Caught on a settings toggle.)
+
+def test_aria_checked_missing_flags_switch_role():
+    html = '<input type="checkbox" role="switch" id="t" aria-label="2FA">'
+    assert "aria-checked-missing" in _kinds(html, "important")
+
+
+def test_aria_checked_missing_flags_button_switch_and_div_checkbox():
+    assert "aria-checked-missing" in _kinds(
+        '<button role="switch" aria-label="x"></button>', "important")
+    assert "aria-checked-missing" in _kinds(
+        '<div role="checkbox" tabindex="0" aria-label="x"></div>', "important")
+    assert "aria-checked-missing" in _kinds(
+        '<span role="radio" aria-label="x"></span>', "important")
+
+
+def test_aria_checked_present_does_not_flag():
+    assert "aria-checked-missing" not in _kinds(
+        '<input type="checkbox" role="switch" aria-checked="true" aria-label="x">',
+        "important")
+    assert "aria-checked-missing" not in _kinds(
+        '<button role="switch" aria-checked="false" aria-label="x"></button>',
+        "important")
+
+
+def test_aria_checked_missing_does_not_flag_plain_checkbox_or_other_roles():
+    # a native checkbox WITHOUT an ARIA widget role keeps its native :checked — fine
+    assert "aria-checked-missing" not in _kinds(
+        '<input type="checkbox" id="c"><label for="c">ok</label>', "important")
+    # unrelated roles are not checkable widgets
+    assert "aria-checked-missing" not in _kinds(
+        '<button role="button" aria-label="x"></button>', "important")
+    assert "aria-checked-missing" not in _kinds(
+        '<div role="tab" aria-label="x"></div>', "important")
+
+
 def test_malformed_html_does_not_crash():
     for junk in ("<img <<< alt", "<button><a href><img", "<<<>>>",
                  "<input type=text", "", "<html><body>", None):
