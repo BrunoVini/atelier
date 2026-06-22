@@ -57,6 +57,9 @@ SCRIPTS = os.environ.get("ATELIER_SCRIPTS") or os.path.join(
 )
 MAX_ATTEMPTS = 3            # consecutive blocks before we give up and surface it
 RECENT_SECS = 30 * 60       # only gate HTML touched in this window
+MARKER_BACKDATE = 2.0       # backdate the session-start floor by this many seconds so an
+                            # artifact created right after the marker isn't excluded by
+                            # filesystem mtime rounding / minor clock skew (see mark_session_start)
 # Timeout budget. qa.py --hook is HEAVIER than a single responsive_check.mjs: per
 # PAGE it renders three .mjs checks (responsive sweep across all widths + chart
 # legibility + no-JS reveal) plus the in-process anti-slop pass — call it ~3× a lone
@@ -165,7 +168,13 @@ def mark_session_start():
     if not os.path.exists(p):
         try:
             with open(p, "w") as f:
-                f.write(str(time.time()))
+                # Stamp a hair in the PAST (MARKER_BACKDATE). The floor is a full-precision
+                # time.time() value but file mtimes are filesystem-rounded; an artifact
+                # created microseconds after the marker can round to an mtime just BELOW it
+                # and be wrongly excluded (the gate would silently miss this turn's work).
+                # SessionStart fires before any artifact, so backdating a couple seconds is
+                # semantically free and makes `mtime >= floor` robust to that rounding/clock skew.
+                f.write(str(time.time() - MARKER_BACKDATE))
         except OSError:
             pass
     sys.exit(0)
@@ -185,7 +194,10 @@ def session_floor(session, now):
     try:
         start = float(open(sp).read().strip())
     except Exception:
-        start = now
+        # No marker (SessionStart didn't fire / gate installed mid-session). Anchor at
+        # now, backdated by MARKER_BACKDATE so an artifact written immediately before this
+        # stop isn't excluded by mtime rounding — same robustness as the stamped marker.
+        start = now - MARKER_BACKDATE
         try:
             with open(sp, "w") as f:
                 f.write(str(start))
