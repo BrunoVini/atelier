@@ -16,6 +16,7 @@
   var CONTROL = '/__atelier';                   // control endpoints the proxy serves
   var selected = null;                          // currently picked element
   var savedInline = null;                       // its inline style to restore on reject
+  var _prefetchedPages = {};                    // track which page URLs have been prefetched
 
   function log(m) { try { console.debug('[atelier-live] ' + m); } catch (_) {} }
 
@@ -62,11 +63,95 @@
   window.atelier.accept = function (o) {
     return post('/accept', { file: o.file, old: o.old, new: o.new, qa_target: o.qa_target,
                              session: o.session, contract: o.contract, register: o.register,
-                             label: o.label, rationale: o.rationale });
+                             label: o.label, rationale: o.rationale,
+                             knob_values: o.knob_values || null });
   };
   window.atelier.revert = function (journalId) {
     return post('/revert', { journal_id: journalId });
   };
+  // Insert mode: request an insert scaffold for net-new content at an anchor.
+  // The agent uses the returned {file, line, position} to write new variants ephemerally
+  // and persist the accepted one via atelier.accept() at accept time.
+  window.atelier.insert = function (o) {
+    return post('/insert', {
+      file: o.file,
+      anchor: o.anchor || {},
+      position: o.position || 'after',
+    });
+  };
+  // Steer: send a page-level direction without picking an element.
+  window.atelier.steer = function (text) {
+    return post('/steer', {
+      session: window.__atelierSession || 'default',
+      message: text,
+      page_url: location.href,
+    });
+  };
+
+  // ── Knob panel ───────────────────────────────────────────────────────────
+  function renderKnobPanel(params, el, barEl) {
+    var panel = document.createElement('div');
+    panel.id = 'atelier-knob-panel';
+    panel.style.cssText = 'display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;'
+      + 'border-top:1px solid #444;padding-top:8px;margin-top:6px;width:100%;';
+    params.forEach(function(p) {
+      var wrap = document.createElement('label');
+      wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;font-size:11px;color:#bbb;min-width:80px;';
+      var lbl = document.createElement('span');
+      lbl.textContent = p.label || p.id;
+      wrap.appendChild(lbl);
+      if (p.kind === 'range') {
+        var inp = document.createElement('input');
+        inp.type = 'range';
+        inp.min = p.min != null ? p.min : 0;
+        inp.max = p.max != null ? p.max : 1;
+        inp.step = p.step != null ? p.step : 0.05;
+        inp.value = p['default'] != null ? p['default'] : 0.5;
+        el.style.setProperty('--p-' + p.id, inp.value);
+        inp.oninput = function() { el.style.setProperty('--p-' + p.id, inp.value); };
+        wrap.appendChild(inp);
+      } else if (p.kind === 'steps') {
+        var seg = document.createElement('div');
+        seg.style.cssText = 'display:flex;gap:2px;';
+        (p.options || []).forEach(function(opt) {
+          var btn = document.createElement('button');
+          btn.textContent = opt.label || opt.value;
+          var isDefault = opt.value === p['default'];
+          btn.style.cssText = 'background:' + (isDefault ? '#555' : '#2a2a2a')
+            + ';color:#fff;border:1px solid #555;border-radius:3px;'
+            + 'padding:2px 6px;cursor:pointer;font-size:11px;';
+          btn.tabIndex = -1;
+          btn.onmousedown = function(e) { e.preventDefault(); };
+          btn.onclick = function() {
+            el.setAttribute('data-p-' + p.id, opt.value);
+            seg.querySelectorAll('button').forEach(function(b) {
+              b.style.background = '#2a2a2a';
+            });
+            btn.style.background = '#555';
+          };
+          if (isDefault) el.setAttribute('data-p-' + p.id, opt.value);
+          seg.appendChild(btn);
+        });
+        wrap.appendChild(seg);
+      } else if (p.kind === 'toggle') {
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!p['default'];
+        cb.onchange = function() {
+          el.style.setProperty('--p-' + p.id, cb.checked ? '1' : '0');
+          if (cb.checked) el.setAttribute('data-p-' + p.id, '');
+          else el.removeAttribute('data-p-' + p.id);
+        };
+        if (p['default']) {
+          el.style.setProperty('--p-' + p.id, '1');
+          el.setAttribute('data-p-' + p.id, '');
+        }
+        wrap.appendChild(cb);
+      }
+      panel.appendChild(wrap);
+    });
+    barEl.appendChild(panel);
+  }
 
   // ── Picker bar ───────────────────────────────────────────────────────────
   function teardown() {
@@ -126,6 +211,28 @@
             b.onclick = function () { pick(v, b); };
             bar.appendChild(b);
           });
+          // Knob panel (optional): if opts.params is provided, render tuning controls
+          // that drive CSS custom properties + data attributes on the picked element.
+          // No source write happens — purely in-page CSS var / attr manipulation.
+          var currentParams = opts.params || [];
+          if (currentParams.length && chosen) {
+            renderKnobPanel(currentParams, chosen, bar);
+          }
+          // Capture current knob values at accept time
+          function getKnobValues(el) {
+            var out = {};
+            currentParams.forEach(function(p) {
+              if (p.kind === 'range') {
+                var v = el.style.getPropertyValue('--p-' + p.id);
+                out[p.id] = {kind: 'range', value: parseFloat(v) || p['default'] || 0};
+              } else if (p.kind === 'steps') {
+                out[p.id] = {kind: 'steps', value: el.getAttribute('data-p-' + p.id) || p['default'] || ''};
+              } else if (p.kind === 'toggle') {
+                out[p.id] = {kind: 'toggle', value: el.hasAttribute('data-p-' + p.id)};
+              }
+            });
+            return Object.keys(out).length ? out : null;
+          }
           var accept = document.createElement('button');
           accept.textContent = 'Accept (qa-gated)';
           accept.style.cssText = 'background:#2a7;color:#fff;border:0;border-radius:5px;'
@@ -134,8 +241,9 @@
           accept.onmousedown = function (e) { e.preventDefault(); };   // never steal focus (#241)
           accept.onclick = function () {
             if (!chosen) { log('pick a variant first'); return; }
-            if (opts.onAccept) opts.onAccept(chosen, el);
-            else log('accept handler not wired — call atelier.accept({file,old,new,qa_target,session})');
+            var kv = getKnobValues(el);
+            if (opts.onAccept) opts.onAccept(chosen, el, kv);
+            else log('accept handler not wired — call atelier.accept({file,old,new,qa_target,session,knob_values})');
           };
           var reject = document.createElement('button');
           reject.textContent = 'Reject';
@@ -177,6 +285,16 @@
       if (keepFocus && active && active !== document.activeElement) {
         try { active.focus({ preventScroll: true }); } catch (_) {}
       }
+      // Fire a prefetch hint the FIRST time the user selects any element on this page.
+      // This lets the agent speculatively read the source file while the user decides.
+      var pageKey = location.pathname;
+      if (!_prefetchedPages[pageKey]) {
+        _prefetchedPages[pageKey] = true;
+        try {
+          post('/prefetch', { page_url: location.href })
+            .catch(function() {});   // best-effort, never surface errors
+        } catch (_) {}
+      }
     } catch (_) {}
   }
 
@@ -206,7 +324,70 @@
     } catch (_) { /* MutationObserver absent -> picker still works, just no auto-reattach */ }
   }
 
-  function boot() { attach(); watchHMR(); log('ready — alt+click an element, then atelier.openPicker()'); }
+  // ── Steer bar ────────────────────────────────────────────────────────────
+  // Floating bottom-right input for page-level directions. Always visible.
+  // Visually distinct from the picker bar (bottom-left center vs. bottom-right corner,
+  // smaller, darker bg, labelled "steer:"). Web Speech API is optional — gracefully absent.
+  function addSteerBar() {
+    var existing = document.getElementById('atelier-steer-bar');
+    if (existing) return;
+    var bar = document.createElement('div');
+    bar.id = 'atelier-steer-bar';
+    bar.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:2147483646;'
+      + 'background:#1a1a1a;border-radius:8px;padding:6px 10px;display:flex;gap:6px;'
+      + 'align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.4);';
+    var lbl = document.createElement('span');
+    lbl.style.cssText = 'font:11px system-ui,sans-serif;color:#666;white-space:nowrap;';
+    lbl.textContent = 'steer:';
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.placeholder = 'page direction…';
+    inp.style.cssText = 'background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:4px;'
+      + 'padding:3px 7px;font:12px system-ui,sans-serif;width:180px;outline:none;';
+    inp.onkeydown = function (e) {
+      if (e.key === 'Enter' && inp.value.trim()) {
+        var msg = inp.value.trim();
+        inp.value = '';
+        window.atelier.steer(msg).then(function (r) {
+          log('steer sent: ' + msg + (r.ok ? '' : ' (warn: ' + (r.reason || '') + ')'));
+        });
+      }
+    };
+    // Voice input (Web Speech API, graceful degradation)
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) {
+      var mic = document.createElement('button');
+      mic.textContent = '🎙';
+      mic.title = 'Click to speak a steer instruction';
+      mic.style.cssText = 'background:none;border:none;cursor:pointer;font-size:14px;padding:0 2px;';
+      mic.tabIndex = -1;
+      mic.onclick = function () {
+        var rec = new SR();
+        rec.lang = 'en-US';
+        rec.maxAlternatives = 1;
+        mic.style.color = '#f88';
+        rec.onresult = function (ev) {
+          var transcript = ev.results[0][0].transcript;
+          inp.value = transcript;
+          mic.style.color = '';
+          inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        };
+        rec.onerror = function () { mic.style.color = ''; };
+        rec.onend = function () { mic.style.color = ''; };
+        rec.start();
+      };
+      bar.appendChild(mic);
+    }
+    bar.appendChild(lbl);
+    bar.appendChild(inp);
+    document.body.appendChild(bar);
+  }
+
+  function boot() {
+    attach(); watchHMR();
+    log('ready — alt+click an element, then atelier.openPicker()');
+    try { addSteerBar(); } catch (_) {}
+  }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else { boot(); }

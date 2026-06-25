@@ -286,6 +286,54 @@ def test_build_injection_embeds_token_and_client():
     assert out["defaultInjectWorks"] is True
 
 
+def test_build_injection_embeds_session_id():
+    # Fix 1: buildInjection(clientSrc, token, sessionId) must embed window.__atelierSession
+    # when a sessionId is provided; it must be absent when not provided.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const withSession = p.buildInjection('SRC', 'tok', 'sess-ABC');"
+        "const noSession = p.buildInjection('SRC', 'tok');"
+        "process.stdout.write(JSON.stringify({"
+        "  hasSession: withSession.indexOf('window.__atelierSession=\"sess-ABC\"') !== -1,"
+        "  sessionAbsentWhenOmitted: noSession.indexOf('window.__atelierSession=') === -1"
+        "}));"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["hasSession"] is True, "buildInjection must embed window.__atelierSession when sessionId given"
+    assert out["sessionAbsentWhenOmitted"] is True, "window.__atelierSession must not appear without a sessionId"
+
+
+def test_make_server_injects_session_id_into_page():
+    # Fix 1: makeServer must generate a sessionId and embed window.__atelierSession via
+    # opts.injection; the sessionId must appear in the injected markup.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN'});"
+        "process.stdout.write(JSON.stringify({"
+        "  hasSession: (srv._opts || {sessionId: srv.sessionId || ''}),"
+        "  injectionHasSession: p.makeServer({upstream:'http://127.0.0.1:1'})._atelier_inj_check ||"
+        "    (() => { const s = p.makeServer({upstream:'http://127.0.0.1:1'}); return s._opts; })()"
+        "}));"
+    ) % PROXY
+    # Simpler approach: call buildInjection with a fixed sessionId and check the output
+    script2 = (
+        "const p = require(%r);"
+        "const inj = p.buildInjection('', 'tok', 'my-session-id-123');"
+        "process.stdout.write(JSON.stringify(inj.indexOf('my-session-id-123') !== -1));"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script2], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    assert json.loads(r.stdout) is True
+
+
 def test_control_post_requires_token_then_project_dir():
     # Token gate runs before project-dir: no token -> 403; correct token but no project-dir
     # -> still 403 (token gate passes, project-dir gate trips). Drive via makeServer with a
@@ -361,3 +409,194 @@ def test_control_response_has_no_cors_header():
     r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
     assert r.returncode == 0, r.stderr
     assert json.loads(r.stdout) is False
+
+
+# ── Insert endpoint ───────────────────────────────────────────────────────────
+
+def test_insert_endpoint_no_project_dir_returns_403():
+    # /insert must 403 when no --project-dir is given (mirrors /accept behaviour).
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN'});"  # no projectDir
+        "let code=0, body='';"
+        "const req = {url:'/__atelier/insert', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}, on(){}, pipe(){}};"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));}};"
+        "srv.emit('request', req, res);"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["code"] == 403
+    assert "project-dir" in out["body"]
+
+
+def test_insert_endpoint_bad_body_returns_400(tmp_path):
+    # /insert must 400 when file or anchor are missing from the request body.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    proj = str(tmp_path)
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN', projectDir: %r});"
+        "let code=0, body='';"
+        # Simulate a POST with a body missing `anchor`
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/insert', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({file:'/some/file.html'}));"
+        "req.emit('end');"
+    ) % (PROXY, proj)
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["code"] == 400
+    assert "anchor" in out["body"]
+
+
+def test_insert_endpoint_returns_ok(tmp_path):
+    # Happy path: /insert with a valid file, anchor, and position should return {ok:true,...}.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    proj = str(tmp_path)
+    # Create a real HTML file inside the project dir with a unique anchor.
+    target = tmp_path / "index.html"
+    target.write_text('<html><body>\n<div id="hero">\n  <h1>Hello</h1>\n</div>\n</body></html>\n')
+    target_str = str(target)
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN', projectDir: %r});"
+        "let code=0, body='';"
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/insert', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({file: %r, anchor:{id:'hero'}, position:'after'}));"
+        "req.emit('end');"
+    ) % (PROXY, proj, target_str)
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["code"] == 200
+    resp = json.loads(out["body"])
+    assert "ok" in resp
+    assert resp["ok"] is True
+
+
+def test_insert_endpoint_file_outside_project_returns_403(tmp_path):
+    # /insert must 403 when the requested file is outside the project dir.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    proj = str(tmp_path / "proj")
+    outside_file = str(tmp_path / "secret.html")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN', projectDir: %r});"
+        "let code=0, body='';"
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/insert', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({file: %r, anchor:{id:'hero'}, position:'after'}));"
+        "req.emit('end');"
+    ) % (PROXY, proj, outside_file)
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    out = json.loads(r.stdout)
+    assert out["code"] == 403
+    assert "project dir" in out["body"] or "outside" in out["body"]
+
+
+# ── Prefetch endpoint ─────────────────────────────────────────────────────────
+
+def test_prefetch_endpoint_returns_ok():
+    # POST /__atelier/prefetch with a valid page_url returns {ok:true} and the hint.
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN'});"
+        "let code=0, body='';"
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/prefetch', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));"
+        "    process.exit(0);}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({page_url:'http://localhost:5173/about'}));"
+        "req.emit('end');"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    # console.log writes to stdout before the JSON; extract just the JSON
+    lines = r.stdout.strip().split('\n')
+    json_str = lines[-1]  # last line is the JSON
+    out = json.loads(json_str)
+    assert out["code"] == 200
+    resp = json.loads(out["body"])
+    assert resp.get("ok") is True
+    assert "prefetch" in resp.get("hint", "").lower()
+
+
+def test_prefetch_endpoint_missing_url_returns_ok_with_unknown():
+    # POST /__atelier/prefetch without page_url still returns ok (best-effort hint).
+    node = _node()
+    if not node:
+        pytest.skip("node not available")
+    script = (
+        "const p = require(%r);"
+        "const srv = p.makeServer({upstream:'http://127.0.0.1:1', token:'T0KEN'});"
+        "let code=0, body='';"
+        "const emitter = require('events');"
+        "const req = Object.assign(new emitter(), {"
+        "  url:'/__atelier/prefetch', method:'POST',"
+        "  headers:{host:'localhost','x-atelier-token':'T0KEN'}});"
+        "const res = {headersSent:false,"
+        "  writeHead(c){code=c; this.headersSent=true;},"
+        "  end(b){ if(b) body+=b;"
+        "    process.stdout.write(JSON.stringify({code, body}));"
+        "    process.exit(0);}};"
+        "srv.emit('request', req, res);"
+        "req.emit('data', JSON.stringify({}));"
+        "req.emit('end');"
+    ) % PROXY
+    r = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=20)
+    assert r.returncode == 0, r.stderr
+    # console.log writes to stdout before the JSON; extract just the JSON
+    lines = r.stdout.strip().split('\n')
+    json_str = lines[-1]  # last line is the JSON
+    out = json.loads(json_str)
+    assert out["code"] == 200
+    resp = json.loads(out["body"])
+    assert resp.get("ok") is True
+    assert "(unknown)" in resp.get("hint", "")

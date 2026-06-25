@@ -35,8 +35,9 @@ atelier's own preview server (`preview.md`).
 
 3. **Classify it.** `scripts/live_detect.py` fetches `/` and classifies the framework
    from response signatures — Vite (`/@vite/client`, `import.meta.hot`), Next
-   (`/_next/`, `__NEXT_DATA__`). It returns `{url, framework, hmr, can_inject}`. Garbage
-   or unreachable resolves to `unknown` with `can_inject:false` (no crash).
+   (`/_next/`, `__NEXT_DATA__`), SvelteKit, Astro, Nuxt, or plain HTML. It returns
+   `{url, framework, hmr, can_inject}`. Garbage or unreachable resolves to `unknown` with
+   `can_inject:false` (no crash).
 
    ```bash
    python3 scripts/live_detect.py "$URL"
@@ -58,6 +59,58 @@ atelier's own preview server (`preview.md`).
    it, then call `atelier.openPicker({ mode: 'steps' })` (or `range` / `toggle`) from the
    console. Variants are contract-bound (the same on-contract engine as `refine.md`) and
    preview as **ephemeral inline styles** — nothing is written until accept.
+
+## Knob tuning (range / steps / toggle)
+
+After calling `atelier.openPicker({ params: [...] })`, a knob panel docks below the
+variant buttons. Each param drives a CSS custom property (`--p-<id>`) or data attribute
+(`data-p-<id>`) on the picked element in real time. No source write happens — the knobs
+are ephemeral. On accept, `atelier.accept({ ..., knob_values: atelier.getKnobValues() })`
+ships the current values to the server where `live_carbonize.py` bakes them into the
+accepted CSS (call it after accept on the CSS block you wrote to source).
+
+Param kinds: `range` (slider → `--p-id`), `steps` (segmented → `data-p-id="value"`),
+`toggle` (checkbox → `--p-id: 0|1` + presence of `data-p-id`).
+
+## Insert mode (net-new content)
+
+`atelier.insert({ file, anchor: {id?, tag?, classes?, text?}, position: 'before'|'after' })`
+calls `/__atelier/insert` → `{ ok, file, line, position, context }`. Use the returned
+`line` to know where to write net-new ephemeral HTML for the user to preview. Accept via
+the normal `atelier.accept()` flow.
+
+## Session journaling & recovery
+
+Each proxy run writes an append-only JSONL journal to `--journal-dir` (default:
+`/tmp/atelier-live/journal`). After a proxy restart, call:
+
+    python3 scripts/live_status.py --journal-dir <dir> --session <id>
+
+Or GET `/__atelier/status?session=<id>` to recover the session state without relaunching.
+
+## Steer (page-level direction)
+
+The floating steer bar (bottom-right of the proxied page) lets the user type or speak
+a page-level instruction without picking an element. Instructions POST to
+`/__atelier/steer`, are journaled, and printed to the proxy's stdout for the agent.
+From the console: `atelier.steer` is not a public API — the bar is the UX; the agent
+reads instructions from the proxy log.
+
+## Drift-heal warning
+
+`scripts/live_config.py` scans `project_dir` for HTML files not covered by the proxy's
+inject. Run at boot:
+
+    python3 scripts/live_config.py <project_dir> --injected '["path/to/index.html"]'
+
+Returns `{orphans, count, hint}`. Warn the user about orphan pages before entering the
+poll loop.
+
+## Prefetch
+
+The client fires a one-time `/__atelier/prefetch { page_url }` on the first element
+selection per page URL. The proxy logs it to stdout so the agent can speculatively read
+the source file for that page while the user decides what to do.
 
 ## The qa-gated accept (the differentiator)
 
@@ -96,11 +149,15 @@ snippet isn't unique, the edit is refused rather than rewriting the wrong place.
 
 ## Supported frameworks and fallback
 
-| Detected | Live mode | Notes |
+| Framework | `can_inject` | HMR |
 |---|---|---|
-| **Vite** | yes | `/@vite/client`, `import.meta.hot` |
-| **Next** | yes | `/_next/`, `__NEXT_DATA__` |
-| anything else / unreachable | no — fall back to `preview.md` | `can_inject:false` |
+| Vite | yes | yes |
+| Next.js | yes | yes |
+| SvelteKit | yes | yes |
+| Astro | yes | best-effort |
+| Nuxt | yes | yes |
+| Plain HTML | yes | no |
+| Unknown | no — falls back to `preview.md` | — |
 
 The proxy is framework-agnostic for any dev server that serves HTML; detection just
 decides whether atelier *claims* live mode or routes to its own preview server.

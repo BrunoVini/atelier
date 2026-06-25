@@ -32,15 +32,19 @@ const clientPath = path.join(__dirname, 'live-client.js');
 let CLIENT_SRC = '';
 try { CLIENT_SRC = fs.readFileSync(clientPath, 'utf-8'); } catch (_) { CLIENT_SRC = ''; }
 
-// Build the injected markup for a given client source + optional session token. When a
-// token is present we prepend a tiny same-origin <script> that exposes it as
-// window.__atelierToken so the in-page client can echo it back on control POSTs (the
-// server then validates it — see tokenOk). Pure string builder, unit-tested.
-function buildInjection(clientSrc, token) {
+// Build the injected markup for a given client source + optional session token and
+// sessionId. When a token is present we prepend a tiny same-origin <script> that
+// exposes it as window.__atelierToken so the in-page client can echo it back on control
+// POSTs (the server then validates it — see tokenOk). When a sessionId is present it is
+// similarly exposed as window.__atelierSession. Pure string builder, unit-tested.
+function buildInjection(clientSrc, token, sessionId) {
   var tokenScript = (token != null && token !== '')
     ? '<script>window.__atelierToken=' + JSON.stringify(String(token)) + ';</script>\n'
     : '';
-  return '\n' + tokenScript + '<script data-atelier-live="1">\n' + (clientSrc || '') + '\n</script>\n';
+  var sessionScript = (sessionId != null && sessionId !== '')
+    ? '<script>window.__atelierSession=' + JSON.stringify(String(sessionId)) + ';</script>\n'
+    : '';
+  return '\n' + tokenScript + sessionScript + '<script data-atelier-live="1">\n' + (clientSrc || '') + '\n</script>\n';
 }
 
 // Default (token-less) injection — kept exported so existing unit tests that call inject()
@@ -244,6 +248,7 @@ function handleControl(req, res, opts) {
       if (p.register) args.push('--register', String(p.register));
       if (p.label) args.push('--label', String(p.label));
       if (p.rationale) args.push('--rationale', String(p.rationale));
+      if (p.knob_values) args.push('--knob-values', JSON.stringify(p.knob_values));
       shellPython(args, (out) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(out); });
     });
     return true;
@@ -260,6 +265,89 @@ function handleControl(req, res, opts) {
     });
     return true;
   }
+
+  if (req.url === '/__atelier/insert' && req.method === 'POST') {
+    if (!opts.projectDir) {
+      res.writeHead(403); res.end('{"ok":false,"reason":"--project-dir required for insert"}');
+      return true;
+    }
+    readBody(req, (p) => {
+      if (!p || !p.file || !p.anchor) {
+        res.writeHead(400); res.end('{"ok":false,"reason":"insert needs file and anchor"}');
+        return;
+      }
+      const target = path.resolve(String(p.file));
+      if (!isConfined(target, opts.projectDir)) {
+        res.writeHead(403); res.end('{"ok":false,"reason":"file outside project dir"}');
+        return;
+      }
+      const position = ['before', 'after', 'first_child', 'last_child'].includes(p.position) ? p.position : 'after';
+      const args = [
+        path.join(scriptsDir, 'live_insert.py'), target,
+        '--anchor', JSON.stringify(p.anchor),
+        '--position', position,
+      ];
+      shellPython(args, (out) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(out);
+      }, 10000);
+    });
+    return true;
+  }
+
+  if (req.url.indexOf('/__atelier/status') === 0 && req.method === 'GET') {
+    var urlParts = new URL('http://x' + req.url);
+    var session = urlParts.searchParams.get('session') || opts.sessionId || '';
+    if (!session) {
+      res.writeHead(400); res.end('{"ok":false,"reason":"session param required"}');
+      return true;
+    }
+    var statusArgs = [
+      path.join(scriptsDir, 'live_status.py'),
+      '--journal-dir', journalDir,
+      '--session', session,
+    ];
+    shellPython(statusArgs, function(out) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(out);
+    }, 5000);
+    return true;
+  }
+
+  if (req.url === '/__atelier/steer' && req.method === 'POST') {
+    readBody(req, function(p) {
+      if (!p || !p.message || !p.session) {
+        res.writeHead(400); res.end('{"ok":false,"reason":"steer needs message and session"}');
+        return;
+      }
+      var args = [
+        path.join(scriptsDir, 'live_steer.py'),
+        '--journal-dir', journalDir,
+        '--session', String(p.session),
+        '--message', String(p.message),
+      ];
+      if (p.page_url) args.push('--page-url', String(p.page_url));
+      shellPython(args, function(out) {
+        // Also log to server stdout so the agent sees the steer instruction
+        console.log('[atelier-steer] ' + String(p.message));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(out);
+      }, 5000);
+    });
+    return true;
+  }
+
+  if (req.url === '/__atelier/prefetch' && req.method === 'POST') {
+    readBody(req, function(p) {
+      var pageUrl = (p && p.page_url) ? String(p.page_url) : '(unknown)';
+      // Log for agent awareness — no computation needed server-side.
+      console.log('[atelier-prefetch] hint for page: ' + pageUrl);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, hint: 'prefetch logged for: ' + pageUrl }));
+    });
+    return true;
+  }
+
   return false;
 }
 
@@ -311,9 +399,11 @@ function proxyRequest(req, res, opts) {
 function makeServer(opts) {
   opts = opts || {};
   // Per-instance session token (overridable via --token / ATELIER_TOKEN so the driving
-  // agent knows it) and the matching injection that embeds it into the page.
+  // agent knows it) and a stable sessionId that identifies this proxy session. Both are
+  // embedded into the page via window.__atelierToken / window.__atelierSession.
   if (!opts.token) opts.token = crypto.randomBytes(24).toString('hex');
-  if (opts.injection == null) opts.injection = buildInjection(CLIENT_SRC, opts.token);
+  if (!opts.sessionId) opts.sessionId = crypto.randomBytes(16).toString('hex');
+  if (opts.injection == null) opts.injection = buildInjection(CLIENT_SRC, opts.token, opts.sessionId);
   // Hosts we accept beyond the loopback set: the configured bind host and the url-host.
   const allowedHosts = [opts.host, opts.host === '127.0.0.1' ? 'localhost' : opts.host];
 

@@ -23,8 +23,15 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 
 import edit_apply  # noqa: E402  (same dir; conftest/run.py put scripts/ on the path)
+
+try:
+    import live_journal as _lj
+    _HAS_JOURNAL = True
+except ImportError:
+    _HAS_JOURNAL = False
 
 
 # ── pluggable variant agent (Phase 7 #4) ─────────────────────────────────────
@@ -94,7 +101,8 @@ def _run_qa(qa_target, contract=None, register=None, timeout=200):
 
 
 def accept_variant(file, old, new, qa_target, journal_dir, session,
-                   register=None, contract=None, label=None, rationale=None, now=None):
+                   register=None, contract=None, label=None, rationale=None,
+                   now=None, knob_values=None):
     """Apply a variant to source, QA it, and auto-revert on failure.
 
     Flow:
@@ -135,13 +143,51 @@ def accept_variant(file, old, new, qa_target, journal_dir, session,
             # Tell the truth loudly instead of claiming a clean revert.
             reason = (f"{gate} AND REVERT FAILED ({rev.get('reason')}) — file {file} is "
                       f"STILL MODIFIED; restore manually from backup")
+
+        # Write journal entry on failure so the session is recoverable.
+        if _HAS_JOURNAL:
+            try:
+                # Extract the qa failure message from qa_results
+                qa_failure_msg = ""
+                if qa_results and isinstance(qa_results, list):
+                    for r in qa_results:
+                        if isinstance(r, dict) and r.get("status") == "fail":
+                            qa_failure_msg = r.get("detail", "qa check failed")
+                            break
+                _lj.write_entry(journal_dir, session, "accept", {
+                    "file": file, "journal_id": journal_id,
+                    "qa": qa_verdict, "ok": False,
+                    "old": (old or "")[:120],
+                    "new": (new or "")[:120],
+                    "reason": qa_failure_msg or reason,
+                })
+            except Exception:
+                pass   # journal write failure never blocks the accept
+
         return {"ok": False, "reverted": reverted, "qa": qa_verdict,
                 "qa_results": qa_results, "journal_id": journal_id,
                 "revert": rev, "reason": reason}
 
     # PASS only: keep the edit. (ERROR/FAIL already reverted above; nothing else passes.)
-    return {"ok": True, "reverted": False, "qa": qa_verdict,
-            "qa_results": qa_results, "journal_id": journal_id}
+    result = {"ok": True, "reverted": False, "qa": qa_verdict,
+              "qa_results": qa_results, "journal_id": journal_id}
+    if knob_values is not None:
+        result["knob_values"] = knob_values
+
+    # Write journal entry on success so the session is recoverable after proxy restart.
+    if _HAS_JOURNAL:
+        try:
+            _lj.write_entry(journal_dir, session, "accept", {
+                "file": file, "journal_id": journal_id,
+                "qa": qa_verdict, "knob_values": knob_values,
+                "ok": True,
+                "old": (old or "")[:120],
+                "new": (new or "")[:120],
+            })
+        except Exception:
+            pass   # journal write failure never blocks the accept
+
+    return result
 
 
 if __name__ == "__main__":
@@ -156,9 +202,12 @@ if __name__ == "__main__":
     ap.add_argument("--register", choices=("brand", "product"))
     ap.add_argument("--label")
     ap.add_argument("--rationale")
+    ap.add_argument("--knob-values", default=None,
+                    help="JSON dict {id:{kind,value}} of accepted knob positions")
     ns = ap.parse_args()
+    kv = json.loads(ns.knob_values) if ns.knob_values else None
     res = accept_variant(ns.file, ns.old, ns.new, ns.qa_target, ns.journal_dir,
                          ns.session, register=ns.register, contract=ns.contract,
-                         label=ns.label, rationale=ns.rationale)
+                         label=ns.label, rationale=ns.rationale, knob_values=kv)
     print(json.dumps(res))
     sys.exit(0 if res.get("ok") else 1)
