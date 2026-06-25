@@ -146,6 +146,57 @@ def test_rtl_lint_and_dark_detection(tmp_path):
     assert detect_dark_mode("@media (prefers-color-scheme: dark){}") and not detect_dark_mode("body{}")
 
 
+def test_rtl_lints_html_inline_style_and_style_attr(tmp_path):
+    # A single-file RTL page (inline <style> + style="" attrs) is the MOST common RTL
+    # deliverable. lint_rtl MUST scan .html/.htm, not only .css/.scss — otherwise a page
+    # full of physical-direction CSS silently reports "RTL-safe".
+    from check_rtl import declares_rtl, lint_rtl
+    (tmp_path / "page.html").write_text(
+        '<html dir="rtl"><style>.s{margin-left:8px;left:0;text-align:right;border-left:1px}'
+        '.x{padding-right:4px}</style>'
+        '<div style="margin-right:10px;float:left"></div></html>')
+    assert declares_rtl(str(tmp_path))
+    f = lint_rtl(str(tmp_path))
+    uses = {x["use"] for x in f}
+    # from the <style> block
+    assert "margin-inline-start" in uses and "inset-inline-start" in uses
+    assert "text-align: end" in uses and "border-inline-start" in uses
+    assert "padding-inline-end" in uses
+    # from the inline style="" attribute
+    assert "margin-inline-end" in uses and "float: inline-start" in uses
+    # every finding carries a real 1-based line number into the html file
+    assert all(isinstance(x["line"], int) and x["line"] >= 1 for x in f)
+    assert all(x["file"].endswith(".html") for x in f)
+
+
+def test_rtl_extended_property_coverage(tmp_path):
+    # Beyond margin/padding/border/text-align/float/inset: clear, logical border-radius
+    # corners, and scroll-margin/padding directional variants are also physical leaks.
+    from check_rtl import lint_rtl
+    (tmp_path / "x.css").write_text(
+        '<html dir=rtl>'  # declares rtl so the lint runs
+        '.a{clear:left}'
+        '.b{border-top-left-radius:4px}'
+        '.c{scroll-margin-left:8px;scroll-padding-right:8px}')
+    uses = {x["use"] for x in lint_rtl(str(tmp_path))}
+    assert "clear: inline-start" in uses
+    assert "border-start-start-radius" in uses
+    assert "scroll-margin-inline-start" in uses and "scroll-padding-inline-end" in uses
+
+
+def test_rtl_check_html_string_helper(tmp_path):
+    # check_html(html_string) lets a single-file page be linted directly (no temp repo).
+    from check_rtl import check_html
+    leaks = check_html('<style>.x{margin-left:8px;text-align:left}</style>'
+                       '<i style="left:0"></i>')
+    uses = {x["use"] for x in leaks}
+    assert "margin-inline-start" in uses and "text-align: start" in uses
+    assert "inset-inline-start" in uses
+    # a clean logical-property page yields no leaks
+    assert check_html('<style>.x{margin-inline-start:8px;text-align:start;'
+                      'inset-inline-start:0}</style>') == []
+
+
 def test_slop_check_flags_tells_but_respects_contract():
     from slop_check import check_html
     slop = ('<style>body{font-family:Inter,sans-serif}'
