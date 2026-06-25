@@ -395,6 +395,29 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   `flutter test`), flags that the `surfaceContainer*` slots need Flutter 3.22+, and discloses
   that Flutter's unitless `height` and a Gaussian `blurRadius` only approximate total line
   height and a CSS blur — disclosed approximations, not fabricated equivalences.
+- **React Native (TypeScript) theme handoff — a complete idiomatic theme, not a flat const
+  dump.** `export_native.py` turns the token contract into a ready-to-drop-in React Native
+  theme module (`.ts`) carrying: a typed **`Theme`** interface with **`lightTheme` and
+  `darkTheme`** objects (every color role in both schemes); a React **Context `ThemeProvider`**
+  that defaults to the OS appearance via `useColorScheme()` (and can be pinned to a scheme),
+  plus a **`useTheme()`** hook — written JSX-free so the whole theme lives in one file.
+  Token shapes are **StyleSheet-friendly**: colors are hex strings, spacing and radii are
+  unitless **numbers** (never `"16px"` strings), and the type scale is emitted as
+  **`TextStyle`** presets with numeric `fontSize`/`lineHeight` and `fontWeight` as React
+  Native's **string union** (`'400'`, `'700'`, …). Spacing and radii are addressable by
+  **semantic name** at the call site (`theme.spacing.lg`, `theme.radii.md`), with a positional
+  `spacingScale` array for iteration. The CSS box-shadow elevation token maps to the only thing
+  RN can express — `shadowColor`/`shadowOffset`/`shadowOpacity`/`shadowRadius` (iOS) plus
+  `elevation` (Android) — typed as a clean `Pick<ViewStyle, …>` fragment so
+  `...theme.elevation.card` spreads straight into `StyleSheet.create` with no invalid style
+  key. The generated header is **honest about scope**: it discloses that React Native has no
+  multi-layer box-shadow (the layers collapse to a representative shadow using the token's real
+  ink color) and no CSS line-height unit; that **custom fonts are not bundled by RN** — the
+  named families must be linked by the app (expo-font / react-native.config.js) or RN falls
+  back to the system font; and it preserves the **verbatim source box-shadow token in a comment**
+  for traceability (not as a runtime field that would pollute a style spread). **Token fidelity
+  is exact** — every emitted value is the source token, both schemes. The output is written to
+  typecheck under `tsc --strict --noEmit`.
 - i18n / RTL logical-property linting.
 - Design planning + a 5-seat Design Council (for / against / neutral / UX / craft → a
   synthesized verdict) for hard, multi-surface calls.
