@@ -328,7 +328,14 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Realistic content with empty / loading / error states so mockups aren't lorem-ipsum.
 - Motion / interaction specs.
 - Responsiveness that survives the tablet zone — a width sweep (360→1920, including
-  768–1024) so the mid-range stops breaking silently; fluid-first generation.
+  768–1024) so the mid-range stops breaking silently; fluid-first generation. The page is
+  rendered at each width and checked for horizontal overflow and element collisions, so the
+  "awkward middle" (a 4-up grid that overflows at 1024, a 3-up row that orphans its 3rd card,
+  a nav that collides with the hero) is caught and fixed before delivery instead of being
+  reasoned about and hoped. The self-QA gate now sweeps the full tablet band by default —
+  including **360** (the narrowest, most overflow-prone width, where a page must never scroll
+  horizontally) and **900** (mid-tablet) — so a page that overflows or collides at exactly
+  those widths can no longer pass as "done".
 - Multi-brand / dark-mode / white-label theming, and native theme handoff
   (SwiftUI / Flutter / React Native). One shared component system, themed for several
   brands by **swapping a token set** — components consume only `var(--token)`; each brand
