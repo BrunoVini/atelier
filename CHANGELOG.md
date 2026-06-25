@@ -592,9 +592,16 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 - Optional render-capable CI gate in the GitHub Actions + Azure Pipelines templates —
   installs a headless browser and runs `qa.py --hook` on built pages, so CI now catches
   the rendered defect class (collisions, overflow, illegible charts) the static check can't.
-- PR-diff-scoped design review (`pr_review.py`): lints only the lines a PR changed and
-  emits GitHub `::warning file=…,line=…::` annotations, so governance lands at the point of
-  change instead of flooding a legacy file's pre-existing drift.
+- PR-diff-scoped design review (`pr_review.py`): reviews only the lines a PR changed and
+  emits GitHub line-anchored annotations (`::error` for blockers, `::warning` otherwise), so
+  governance lands at the point of change instead of flooding a legacy file's pre-existing drift —
+  every annotation is anchored to a real changed line, ready to apply. Beyond contract drift
+  (off-token colors, off-scale spacing/radius, off-contract fonts) it now also catches the
+  accessibility defects a PR commonly introduces, scoped to the changed lines: a **clickable
+  non-button** (a `<div>`/`<span>` with a click/key handler but no `role`/`tabindex` — not
+  keyboard-operable), and a **new button/interactive variant that ships without a
+  `:focus-visible` state** (WCAG 2.4.7). Pre-existing interactive code on unchanged lines is
+  never flagged.
 - Canonical machine block in DESIGN.md: the contract can be embedded as a fenced
   `atelier-contract` JSON block that the tools parse **first** — the prose tables become a
   human-facing fallback, so the enforceable half of the thesis no longer rests on regex.
