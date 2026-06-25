@@ -557,7 +557,29 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   per-file impact, and the full score derivation is printed in the report — measured, not
   eyeballed, and auditable.
 - Design QA in CI — a merge gate (GitHub Actions + Azure Pipelines templates), plus PR
-  design review and team onboarding packs.
+  design review and team onboarding packs. The gate runs as a reusable GitHub Action
+  (`uses: BrunoVini/atelier@…`) or a one-line `check.py` call, writes a SARIF 2.1.0
+  report so findings annotate the PR inline in code-scanning, exits 0/1/2, and resolves
+  the token contract from the repo's own `design/design-tokens.json` / `DESIGN.md` — no
+  hand-maintained palette list to keep in sync. A `--update-baseline` / `--ratchet`
+  adoption mode lets a drifty legacy repo turn the gate on without fixing everything
+  first (drift may only shrink). It catches a change that introduces a real design
+  regression — an off-token color, an off-scale spacing value, a forbidden box-shadow
+  under a borders-only contract, a WCAG-AA contrast failure, or an inaccessible new
+  control — and passes a legitimately on-contract change.
+- **Keyboard-accessibility gate for new controls:** the design gate now flags a clickable
+  non-`<button>` — a generic `<div>`/`<span>`/`<li>`/`<p>` wired with a click/key handler
+  but no `role`/`tabindex` (not keyboard-focusable or operable, WCAG 2.1.1/4.1.2). Real
+  controls (`<button>`/`<a href>`) and intentional custom controls (with `role` +
+  `tabindex`) are left alone, so it's low-false-positive.
+- **Contract-integrity governance:** the token contract is now governed as an artifact,
+  not just config. Against a committed baseline (`design/.contract-baseline.json`), the
+  gate flags a color role **added** to the contract (widening the palette — the move that
+  launders an off-token or low-contrast color by simply declaring a new role for it) or
+  **removed**, and a `tokens.css` `--color-*` whose value has **diverged** from the
+  contract. It is a no-op until you commit a baseline (existing repos are unaffected); a
+  genuine palette change then becomes a reviewed, git-visible event. Findings surface in
+  SARIF/code-scanning alongside the rest of the gate.
 - Adversarial-by-default review: verifies rendered structure and well-formed markup
   (not just "it rendered"), requires evidence rather than intent to clear a
   decoration-over-text flag, and hard-gates opaque decoration-over-text in the
