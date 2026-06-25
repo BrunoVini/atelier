@@ -3,10 +3,24 @@ import os
 import subprocess
 import sys
 
-from qa import CheckResult, verdict, format_evidence, _slop, _contrast, _a11y, _motion_static
+from qa import CheckResult, verdict, format_evidence, _slop, _contrast, _a11y, _motion_static, DEFAULT_WIDTHS
 
 _QA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                    "scripts", "qa.py")
+
+
+def test_default_width_sweep_covers_narrowest_and_full_tablet_band():
+    # The --hook gate (the "definition of done") must sweep the widths the responsive
+    # capability itself names — including 360 (the narrowest, most overflow-prone width:
+    # a page MUST NOT scroll horizontally there) and the FULL tablet band 768/834/900/1024.
+    # A default that skips 360 or 900 lets a page overflow/collide at exactly those widths
+    # and still pass the gate. Pin the default to cover the awkward middle end-to-end.
+    widths = [int(w) for w in DEFAULT_WIDTHS.split(",") if w.strip()]
+    assert 360 in widths, f"default sweep must include 360 (narrowest); got {widths}"
+    for w in (768, 834, 900, 1024):
+        assert w in widths, f"default sweep must include tablet width {w}; got {widths}"
+    assert max(widths) >= 1440, f"default sweep must reach a wide anchor; got {widths}"
+    assert widths == sorted(set(widths)), f"widths should be sorted & unique; got {widths}"
 
 
 def test_verdict_fails_only_on_gating_failure():

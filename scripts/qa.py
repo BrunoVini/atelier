@@ -7,7 +7,7 @@ hard to skip or argue with. A check that crashed or found no browser is reported
 
 Usage:
     python3 qa.py <artifact.html | repo-dir> [--contract <repo|tokens.json>]
-                  [--widths 390,768,834,1024,1440] [--register brand|product] [--hook] [--json]
+                  [--widths 360,390,480,600,768,834,900,1024,1280,1440] [--register brand|product] [--hook] [--json]
 
 `--register` overrides the contract's own `register` field and modulates slop
 severity for the active register (see slop_check.py / references/registers/).
@@ -19,7 +19,11 @@ import sys
 from collections import namedtuple
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_WIDTHS = "390,768,834,1024,1440"
+# The default sweep for the --hook gate. Covers 360 (narrowest — most overflow-prone,
+# a page must never H-scroll there) through the FULL tablet band (768/834/900/1024 — the
+# "awkward middle" where endpoint-only designs break) to a wide anchor (1440). A gate that
+# skipped 360 or 900 would pass a page that overflows/collides at exactly those widths.
+DEFAULT_WIDTHS = "360,390,480,600,768,834,900,1024,1280,1440"
 
 # status: "pass" | "fail" | "unknown";  gating: does a fail flip the verdict;
 # counts: {label: n};  detail: short human string.
