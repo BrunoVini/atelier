@@ -383,3 +383,31 @@ def test_flutter_no_dark_falls_back_disclosed():
     assert "no dark palette" in out.lower()
     # still emits both ThemeData (dark uses light values, disclosed)
     assert "static ThemeData get dark" in out
+
+
+def test_flutter_named_spacing_and_radii_context_accessors():
+    """A widget should read spacing/radii by SEMANTIC NAME at the call site
+    (`context.spacing.lg`, `context.radii.md`), not by an opaque positional
+    list index (`context.tokens.spacing[3]`) that requires knowing the scale
+    order. The named accessors are the legible, self-documenting surface."""
+    out = flutter(COLORS, ["Inter"], dark=DARK, spacing=SPACING, rounded=ROUNDED,
+                  typography=TYPO, shadows=SHADOWS)
+    # context-level named accessors exist
+    assert "AppSpacing get spacing" in out
+    assert "AppRadii get radii" in out
+    # named members are reachable through them (semantic, not positional)
+    assert "context.spacing.lg" in out
+    assert "context.radii.md" in out
+    # the usage example must demonstrate the NAMED surface, not spacing[3]
+    assert "context.tokens.spacing[3]" not in out
+    # AppSpacing/AppRadii remain const-usable namespaces too (static consts kept)
+    assert "final class AppSpacing" in out
+    assert "final class AppRadii" in out
+    assert "static const double lg = 16" in out      # const-context still works
+    assert "static const BorderRadius mdRadius" in out
+
+
+def test_flutter_named_spacing_accessor_only_with_spacing():
+    # no spacing tokens -> no context.spacing accessor (nothing to expose)
+    out = flutter(COLORS, ["Inter"], dark=DARK)
+    assert "AppSpacing get spacing" not in out

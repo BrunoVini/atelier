@@ -693,7 +693,8 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     out.append("")
 
     # ---- BuildContext accessor ---------------------------------------------
-    out.append("/// Ergonomic accessor: `context.tokens.accent`, `context.tokens.spacing[3]`.")
+    out.append("/// Ergonomic accessors: `context.tokens.accent`, `context.spacing.lg`,")
+    out.append("/// `context.radii.md`, `context.type.headline`, `context.elevation.card`.")
     out.append("/// Asserts (with an actionable message) when the extension isn't registered,")
     out.append("/// rather than silently falling back to the light tokens — a silent fallback")
     out.append("/// would show LIGHT tokens in an unthemed dark subtree and mask the bug.")
@@ -707,6 +708,14 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     out.append("    );")
     out.append("    return tokens!;")
     out.append("  }")
+    if sp:
+        out.append("")
+        out.append("  /// Spacing scale by semantic name: `context.spacing.lg`.")
+        out.append("  AppSpacing get spacing => AppSpacing._i;")
+    if rad_map:
+        out.append("")
+        out.append("  /// Corner radii by semantic name: `context.radii.md` / `.mdRadius`.")
+        out.append("  AppRadii get radii => AppRadii._i;")
     if typography:
         out.append("")
         out.append("  /// The type scale: `context.type.headline`.")
@@ -726,26 +735,50 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     out.append("}")
     out.append("")
 
-    # ---- spacing + radius plain constants (handy outside a context) --------
+    # ---- spacing + radius scales: const namespace + named accessors --------
+    # Each scale is BOTH a static const namespace (`AppSpacing.lg` — usable in
+    # const contexts / outside a widget) AND a const-singleton with named
+    # INSTANCE getters (so `context.spacing.lg` reads by semantic name at the
+    # call site instead of an opaque positional index like `spacing[3]`).
+    snames = ["xs", "sm", "md", "lg", "xl", "xxl", "xxxl"]
     if sp:
-        out.append("/// Spacing scale (logical pixels), in token order.")
-        out.append("abstract final class AppSpacing {")
-        snames = ["xs", "sm", "md", "lg", "xl", "xxl", "xxxl"]
+        out.append("/// Spacing scale (logical pixels). Use `AppSpacing.lg` in const")
+        out.append("/// contexts, or `context.spacing.lg` inside a widget — both name the")
+        out.append("/// step semantically rather than by a positional index.")
+        out.append("final class AppSpacing {")
+        out.append("  const AppSpacing._();")
+        out.append("  static const AppSpacing _i = AppSpacing._();")
         for i, v in enumerate(sp):
-            nm = snames[i] if i < len(snames) else f"s$i"
+            nm = snames[i] if i < len(snames) else f"s{i}"
             out.append(f"  static const double {nm} = {v};")
         out.append("  static const List<double> scale = <double>[" + ", ".join(sp) + "];")
+        # named instance getters (delegate to the consts) for `context.spacing.lg`
+        for i, v in enumerate(sp):
+            nm = snames[i] if i < len(snames) else f"s{i}"
+            out.append(f"  double get {nm} => {v};")
+        out.append("  List<double> get all => scale;")
+        out.append("  double operator [](int i) => scale[i];")
         out.append("}")
         out.append("")
     if rad_map:
-        out.append("/// Corner radii as ready-to-use `BorderRadius` values.")
-        out.append("abstract final class AppRadii {")
+        out.append("/// Corner radii. `AppRadii.md` / `AppRadii.mdRadius` for const contexts,")
+        out.append("/// `context.radii.md` / `context.radii.mdRadius` inside a widget — both")
+        out.append("/// read by semantic name.")
+        out.append("final class AppRadii {")
+        out.append("  const AppRadii._();")
+        out.append("  static const AppRadii _i = AppRadii._();")
         for nm, v in rad_map.items():
             out.append(f"  static const double {nm} = {v};")
         out.append("")
         for nm, v in rad_map.items():
             out.append(f"  static const BorderRadius {nm}Radius = "
                        f"BorderRadius.all(Radius.circular({v}));")
+        out.append("")
+        for nm, v in rad_map.items():
+            out.append(f"  double get {nm} => {v};")
+        for nm, v in rad_map.items():
+            out.append(f"  BorderRadius get {nm}Radius => "
+                       f"const BorderRadius.all(Radius.circular({v}));")
         out.append("}")
         out.append("")
 
@@ -941,10 +974,14 @@ def flutter(colors, fonts, dark=None, typography=None, spacing=None,
     out.append("")
 
     # ---- Usage example ------------------------------------------------------
-    pad = "context.tokens.spacing[3]" if sp else "16"
-    rad = "AppRadii.mdRadius" if "md" in rad_map else (
-        f"AppRadii.{next(iter(rad_map))}Radius" if rad_map else
-        "BorderRadius.circular(12)")
+    # Demonstrate the SEMANTIC, named surface (`context.spacing.lg`,
+    # `context.radii.md`) — not an opaque positional index.
+    pad = "context.spacing.lg" if sp else "16"
+    if rad_map:
+        rname = "md" if "md" in rad_map else next(iter(rad_map))
+        rad = f"context.radii.{rname}Radius"
+    else:
+        rad = "BorderRadius.circular(12)"
     out.append("// MARK: usage")
     out.append("class ThemedCard extends StatelessWidget {")
     out.append("  const ThemedCard({super.key});")
