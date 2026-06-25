@@ -128,7 +128,10 @@ def test_export_native_codegen():
     assert "light: .srgb(0.145, 0.388, 0.922)" in sw
     assert "public struct Theme {" in sw
     assert "Color(0xFF2563EB)" in flutter(cols, fonts)
-    assert 'primary: "#2563eb"' in react_native(cols, fonts)
+    # RN: a typed theme exposing the role as a hex string (conventional uppercase source form)
+    rn = react_native(cols, fonts)
+    assert 'primary: "#2563EB"' in rn
+    assert "export interface Theme {" in rn and "export function useTheme(): Theme {" in rn
 
 
 def test_rtl_lint_and_dark_detection(tmp_path):

@@ -38,13 +38,43 @@ def _slug(s):
 def _from_tokens_json(path):
     data = json.load(open(path, encoding="utf-8"))
 
+    # A tokens.json may itself be in the canonical `atelier-contract` SHAPE (a flat
+    # `colors` role map, plus optional `dark`/`typography`/`rounded`/`shadows`/`fonts`
+    # as a list) — the same object the DESIGN.md machine block carries. When it is,
+    # resolve it through the block parser so the FULL contract (dark palette, type
+    # scale, named radii, shadows) is available — not just the colors/fonts/spacing/
+    # radius subset the token-group reader extracts. Detected by a dict `colors` whose
+    # values are hex strings AND the presence of any contract-only key; this also keeps
+    # a list-valued `fonts` from crashing the `.items()` token-group reader below.
+    def _looks_like_contract_block(d):
+        c = d.get("colors")
+        if not isinstance(c, dict) or not c:
+            return False
+        if not all(isinstance(v, str) and v.startswith("#") for v in c.values()):
+            return False
+        return any(k in d for k in ("dark", "typography", "rounded", "shadows", "spacing")) \
+            or isinstance(d.get("fonts"), list)
+
+    if _looks_like_contract_block(data):
+        return _contract_from_block(data, path)
+
     def vals(*groups):
         # Accept BOTH singular ("color") and plural ("colors") group keys — a
         # hand-written or scan-shaped tokens.json often uses the plural, and silently
         # returning an empty contract would flag every color as off-palette.
         out = {}
         for group in groups:
-            for name, node in (data.get(group, {}) or {}).items():
+            node_group = data.get(group, {}) or {}
+            # A group can legitimately be a LIST (e.g. `"fonts": ["Inter", ...]`) rather
+            # than a {name: value} map; index it positionally so it doesn't crash on
+            # `.items()`. Non-dict/non-list groups are ignored.
+            if isinstance(node_group, list):
+                items = enumerate(node_group)
+            elif isinstance(node_group, dict):
+                items = node_group.items()
+            else:
+                continue
+            for name, node in items:
                 v = node.get("$value", node) if isinstance(node, dict) else node
                 out.setdefault(name, v)
         return out

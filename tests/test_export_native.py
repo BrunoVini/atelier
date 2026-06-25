@@ -7,7 +7,7 @@ Token fidelity (every emitted value EXACTLY equals the source) is the load-beari
 property — verified here against known hexes.
 """
 from export_native import (swiftui, flutter, react_native, _swift_weight, _camel,
-                           _num, _parse_box_shadow, _flutter_weight)
+                           _num, _parse_box_shadow, _flutter_weight, _rn_weight)
 
 
 def test_flutter_weight_maps_numeric_and_named():
@@ -182,10 +182,158 @@ def test_swiftui_no_dark_falls_back_disclosed():
     assert "init(light: Color, dark: Color)" in out
 
 
-def test_rn_still_emits():
-    rn = react_native(COLORS, ["Inter"])
-    assert "export const theme" in rn
-    assert '"#2F6BFF"' in rn or '"#2f6bff"' in rn
+# --- React Native: a COMPLETE idiomatic RN + TypeScript theme handoff --------
+# The emitter must produce a typed Theme + light/dark objects, a Context
+# ThemeProvider + useTheme hook, StyleSheet-friendly shapes (hex strings, numeric
+# spacing/radii, fontWeight as the RN string union), named spacing/radii, a TextStyle
+# type scale, and an honestly-disclosed shadow mapping. Token fidelity is load-bearing.
+
+def _rn_full():
+    return react_native(COLORS, ["Inter", "JetBrains Mono"], dark=DARK,
+                        typography=TYPO, spacing=SPACING, rounded=ROUNDED,
+                        shadows=SHADOWS)
+
+
+def test_rn_weight_is_string_union():
+    # RN's TextStyle.fontWeight is a STRING union; map to a real member, never a number.
+    assert _rn_weight("700") == "700"
+    assert _rn_weight("400") == "400"
+    assert _rn_weight("semibold") == "600"
+    assert _rn_weight("bold") == "bold"
+    assert _rn_weight("regular") == "400"
+    assert _rn_weight("zzz") == "400"  # unknown -> a real member
+
+
+def test_rn_typed_theme_interface_and_objects():
+    rn = _rn_full()
+    assert "export interface Theme {" in rn
+    assert "export interface ThemeColors {" in rn
+    # both concrete theme objects, typed as Theme
+    assert "export const lightTheme: Theme = {" in rn
+    assert "export const darkTheme: Theme = {" in rn
+
+
+def test_rn_provider_context_and_hook():
+    rn = _rn_full()
+    assert "createContext" in rn
+    assert "export function ThemeProvider(" in rn
+    assert "export function useTheme(): Theme {" in rn
+    assert "useContext(" in rn
+    # defaults to the OS scheme
+    assert "useColorScheme" in rn
+    # modern RN/React: no class components, no fabricated APIs
+    assert "extends React.Component" not in rn
+    assert "class " not in rn
+
+
+def test_rn_every_color_role_both_schemes():
+    rn = _rn_full()
+    # light values
+    assert '"#2F6BFF"' in rn  # primary light
+    assert '"#F7F8FA"' in rn  # background light
+    # dark values
+    assert '"#6E9BFF"' in rn  # primary dark
+    assert '"#0E1116"' in rn  # background dark
+    # onPrimary must not flatten
+    assert "onPrimary: string;" in rn
+
+
+def test_rn_token_fidelity_exact():
+    rn = _rn_full()
+    # colors exact (uppercase source form)
+    assert 'primary: "#2F6BFF"' in rn
+    assert 'danger: "#FF6B62"' in rn  # dark danger
+    # spacing/radii are NUMBERS, not "px" strings
+    assert "lg: 16," in rn
+    assert "pill: 999," in rn
+    assert '"16px"' not in rn and '"16"' not in rn
+    # typography: numeric fontSize/lineHeight + fontWeight string union
+    assert "fontSize: 28" in rn
+    assert 'fontWeight: "700"' in rn
+    assert "lineHeight: 34" in rn
+
+
+def test_rn_named_spacing_and_radii():
+    rn = _rn_full()
+    assert "export interface ThemeSpacing {" in rn
+    assert "export interface ThemeRadii {" in rn
+    # named accessors, not just a positional array
+    assert "md: number;" in rn
+    # but a positional scale is still available
+    assert "spacingScale: readonly number[];" in rn
+
+
+def test_rn_typography_presets_are_textstyle():
+    rn = _rn_full()
+    assert "export interface ThemeTypography {" in rn
+    assert "title: TextStyle;" in rn
+    assert "body: TextStyle;" in rn
+    assert "import type { TextStyle, ViewStyle } from 'react-native';" in rn
+
+
+def test_rn_shadow_disclosed_and_mapped():
+    rn = _rn_full()
+    # RN has no box-shadow — disclosed honestly
+    assert "box-shadow" in rn
+    assert "shadowColor" in rn and "shadowOffset" in rn
+    assert "shadowOpacity" in rn and "shadowRadius" in rn
+    assert "elevation:" in rn  # Android elevation
+    # carries the token's REAL color, not a hardcoded guess
+    assert "#000000" in react_native(
+        COLORS, ["Inter"], shadows={"card": "0 1px 2px rgba(0,0,0,0.06)"})
+
+
+def test_rn_honest_header():
+    rn = _rn_full()
+    assert "NOT executed" in rn or "not executed" in rn.lower()
+    assert "CANNOT express" in rn or "cannot" in rn.lower()
+    # a usage example
+    assert "useTheme()" in rn
+    assert "StyleSheet.create" in rn
+
+
+def test_rn_header_font_linking_caveat():
+    # RN does not bundle fonts: a faithful handoff must disclose that the custom
+    # families (Inter / JetBrains Mono) have to be LINKED by the app (expo-font /
+    # react-native.config.js), else RN silently falls back to the system font.
+    rn = _rn_full()
+    low = rn.lower()
+    assert "font" in low and ("link" in low or "expo-font" in low or "react-native.config" in low)
+    # names the actual font families from the contract so the caveat is actionable
+    assert "Inter" in rn
+
+
+def test_rn_raw_shadow_token_traceable_but_not_in_style_object():
+    # The original CSS box-shadow string must be preserved for auditability/traceability
+    # (so the lossy collapse is checkable against the source) — but it must live in a
+    # COMMENT, NOT as a field inside the spreadable elevation style object (a non-style
+    # `raw` key pollutes `...theme.elevation.card` spreads into a StyleSheet).
+    rn = _rn_full()
+    # the verbatim source token appears (traceability)
+    assert SHADOWS["card"] in rn
+    # but the elevation style object carries ONLY real RN style props — no `raw` field
+    import re as _re
+    m = _re.search(r"const elevation:[^=]*=\s*\{(.*?)\n\};", rn, _re.S)
+    assert m, "elevation const not found"
+    assert "raw" not in m.group(1)
+
+
+def test_rn_no_dark_falls_back_disclosed():
+    rn = react_native(COLORS, ["Inter"], typography=TYPO)
+    # without a dark palette, dark reuses light — disclosed, still emits darkTheme
+    assert "export const darkTheme: Theme = {" in rn
+    assert "No dark palette" in rn
+
+
+def test_rn_drives_from_contract_variable_shapes():
+    # A DIFFERENT contract shape (no shadows, fewer roles, custom radii names) must
+    # still produce a coherent theme — nothing hardcoded to the Aurora set.
+    rn = react_native({"brand": "#112233", "ink": "#000000"}, ["Roboto"],
+                      spacing=["2", "4"], rounded={"tiny": "2", "round": "8"})
+    assert "brand: string;" in rn and "ink: string;" in rn
+    assert "tiny: number;" in rn and "round: number;" in rn
+    # no shadow group -> no elevation interface emitted
+    assert "ThemeElevation" not in rn
 
 
 # --- Flutter: a COMPLETE idiomatic Material 3 theme handoff -------------------
