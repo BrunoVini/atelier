@@ -545,6 +545,17 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   migrations grouped by kind with the role traps flagged, and a complete "left alone, with
   reason" list, so a reviewer can verify the whole change without re-reading the repo.
 - Coherence score + design-debt report — one 0–100 number with hotspots and a trend.
+  Works in two modes: against a declared `DESIGN.md` / token contract, OR — for the
+  common audit case of a drifted repo with **no formal contract** (tokens in a `:root`
+  block the components ignore, or none at all) — a **contract-free measured score**
+  derived from the repo's own sprawl: palette entropy (raw distinct colors vs their
+  perceptual clusters), competing font families, an unsystematic spacing scale (+ off-grid
+  values), radius sprawl, duplicated components, and off-token hardcoding (raw values that
+  are near-duplicates of a token that already exists). Per-axis penalties are capped and
+  small credits are added for a real token system and how widely it's actually adopted, so
+  the score stays defensible at the low end instead of collapsing. Hotspots are ranked by
+  per-file impact, and the full score derivation is printed in the report — measured, not
+  eyeballed, and auditable.
 - Design QA in CI — a merge gate (GitHub Actions + Azure Pipelines templates), plus PR
   design review and team onboarding packs.
 - Adversarial-by-default review: verifies rendered structure and well-formed markup
