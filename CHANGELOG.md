@@ -418,7 +418,19 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   for traceability (not as a runtime field that would pollute a style spread). **Token fidelity
   is exact** — every emitted value is the source token, both schemes. The output is written to
   typecheck under `tsc --strict --noEmit`.
-- i18n / RTL logical-property linting.
+- i18n / RTL logical-property pass. `check_rtl.py` lints physical-direction CSS
+  (`margin-left/right`, `padding-left/right`, `border-left/right`, `text-align: left/right`,
+  `float`/`clear: left/right`, logical-radius corners, `scroll-margin/padding-left/right`, and
+  bare `left:/right:` insets) and suggests the logical equivalent (`margin-inline-start`,
+  `text-align: start`, `inset-inline-start`, `border-start-start-radius`, …) — so the same page
+  mirrors automatically under `dir="rtl"`. It scans CSS/SCSS **and HTML** (inline `<style>` and
+  `style="…"` attributes) and accepts a **single file**, so a self-contained `page.html` — the
+  most common RTL deliverable — no longer slips through; a clean conversion drives the leak count
+  to zero. It also flags the **fragment-bidi anti-pattern** — isolating just a number or
+  sub-token mid-phrase (instead of the whole run) makes that fragment jump to the wrong end under
+  RTL; the i18n/RTL guide teaches isolating the **whole** latin/numeric run (email, time, count,
+  code) as one `<bdi dir="ltr">`, and which directional icons to mirror vs leave alone. Verify by
+  rendering both directions (LTR + RTL) at every breakpoint.
 - Design planning + a 5-seat Design Council (for / against / neutral / UX / craft → a
   synthesized verdict) for hard, multi-surface calls.
 - Named refinement moves (`references/capabilities/refine.md`): bolder / quieter (intensity
