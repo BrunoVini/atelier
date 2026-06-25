@@ -90,6 +90,34 @@ def check_html(text):
     return findings
 
 
+_BDI_RE = re.compile(r"<bdi\b[^>]*>.*?</bdi>", re.I | re.S)
+
+
+def lint_bidi_runs(text):
+    """Flag the fragment-bidi anti-pattern.
+
+    A `<bdi>`/isolate around a FRAGMENT (with loose visible text on the SAME line) floats
+    to the wrong end under `dir="rtl"`. The fix is to isolate the WHOLE logical run as one
+    `<bdi>` with no loose neighbour text. We only inspect a line that contains a `<bdi>`;
+    if, after removing the `<bdi>…</bdi>` islands and all other tags, any visible text
+    remains on that line, the isolate is a fragment (its neighbours are loose) → flag it.
+    Whole-run isolation (the bdi IS the whole run, nothing loose beside it) is clean.
+    """
+    out = []
+    for i, line in enumerate(text.splitlines(), 1):
+        if "<bdi" not in line.lower():
+            continue
+        rest = _BDI_RE.sub("", line)          # drop the isolated islands
+        rest = re.sub(r"<[^>]+>", "", rest)   # drop remaining tags
+        rest = re.sub(r"&[a-z]+;", "", rest, flags=re.I)  # drop entities (e.g. &lt;)
+        if rest.strip():                      # loose visible text remained beside the bdi
+            out.append({"line": i,
+                        "issue": "fragment-bdi: <bdi> isolates a fragment with loose text "
+                                 "on the same line — isolate the WHOLE run instead "
+                                 "(it will reorder to the wrong end under dir=rtl)"})
+    return out
+
+
 def declares_rtl(root):
     if os.path.isfile(root):
         try:
@@ -147,11 +175,20 @@ if __name__ == "__main__":
         print("RTL/i18n not declared here — skipping (use --force to lint anyway).")
         sys.exit(0)
     findings = lint_rtl(root)
+    # bidi fragment-isolation advisory (single file only — needs the markup text)
+    bidi = []
+    if os.path.isfile(root) and root.endswith(_MARKUP_EXT):
+        try:
+            bidi = lint_bidi_runs(open(root, encoding="utf-8").read())
+        except Exception:
+            bidi = []
     if "--json" in args:
-        print(json.dumps(findings, indent=2))
+        print(json.dumps({"physical": findings, "bidi": bidi}, indent=2))
     else:
         if not findings:
             print("✓ no physical-direction properties found — RTL-safe.")
         for f in findings:
             print(f"  {f['file']}:{f['line']}  physical property → use `{f['use']}`")
+        for b in bidi:
+            print(f"  bidi advisory line {b['line']}: {b['issue']}")
     sys.exit(1 if findings else 0)

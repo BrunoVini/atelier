@@ -39,14 +39,46 @@ The `check_html(text)` helper lints a CSS/HTML string in-process if you script i
 - Don't bake copy into components (DESIGN.md §7 already mandates this) — strings
   come from the locale files, and layouts must survive a 1.4× text expansion.
 
-## Things that must NOT mirror
+## Bidi: isolate the WHOLE run, never a fragment
 
-Logical properties flip the *layout*, but some content must stay LTR even under
-`dir="rtl"`: latin-script identifiers, email addresses, code, URLs, version numbers,
-and embedded numeric runs (prices, invoice IDs). Wrap them so they don't get visually
-reversed — `<bdi>`, or `dir="ltr"` / `unicode-bidi: isolate` on the run. The brand logo
-and non-directional icons (envelope, search glass, avatars) stay as-is — only
-*directional* icons (chevrons, arrows, back/forward, progress) flip.
+Logical properties flip the *layout* — that's the easy half. The hard half is the **bidi
+ordering of embedded text**, and it's where conversions silently break. Latin/numeric
+runs must stay LTR even under `dir="rtl"`: latin identifiers, email addresses, code,
+URLs, version numbers, prices, invoice IDs, clock times, and **count/status phrases that
+are still authored in English** (a UI that isn't actually translated yet is an LTR run in
+its entirety).
+
+**The rule: wrap the ENTIRE logical run as one isolate — never sub-tokenize.** Isolate the
+whole phrase with `<bdi dir="ltr">…</bdi>` (or `dir="ltr"; unicode-bidi: isolate`).
+
+**The anti-pattern that breaks (do NOT do this):** wrapping a *fragment* — one number, one
+sub-token — mid-phrase, while leaving its neighbors loose. Under RTL the isolated fragment
+becomes a single neutral object that the bidi algorithm re-orders relative to the
+surrounding text, so it jumps to the wrong end:
+
+```html
+<!-- BROKEN: fragment-bdi — the isolated piece floats to the wrong side under RTL -->
+<div><bdi>3</bdi> unread · updated 2 minutes ago</div>   <!-- renders "…ago 3" -->
+<div>Today, <bdi>9:41 AM</bdi></div>                      <!-- "Today" splits from the time -->
+<div>Aisha Malik &lt;<bdi>aisha@finance.co</bdi>&gt;</div><!-- brackets reorder around it -->
+<div>Showing <bdi>1–3</bdi> of <bdi>128</bdi></div>       <!-- two islands reorder -->
+
+<!-- CORRECT: isolate the whole English/LTR run as one unit -->
+<div><bdi dir="ltr">3 unread · updated 2 minutes ago</bdi></div>
+<div><bdi dir="ltr">Today, 9:41 AM</bdi></div>
+<div><bdi dir="ltr">Aisha Malik &lt;aisha@finance.co&gt;</bdi></div>
+<div><bdi dir="ltr">Showing 1–3 of 128</bdi></div>
+```
+
+Decide the boundary by **meaning, not by token**: if the whole line is one English phrase,
+isolate the whole line; only split when an LTR identifier is genuinely embedded inside
+*translated* RTL prose (then isolate just the identifier). When unsure, render `dir="rtl"`
+and read every line — a number or time that jumped to the wrong end is a fragment-bidi bug.
+`check_rtl.py` flags the fragment-bdi anti-pattern (an isolated `<bdi>` with loose text on
+the same line) as an advisory.
+
+The brand logo and non-directional icons (envelope, search glass, avatars) stay as-is —
+only *directional* icons (chevrons, arrows, back/forward, progress) flip.
 
 ## Verify
 

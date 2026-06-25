@@ -197,6 +197,22 @@ def test_rtl_check_html_string_helper(tmp_path):
                       'inset-inline-start:0}</style>') == []
 
 
+def test_rtl_flags_fragment_bdi_antipattern():
+    # The harder half of RTL: a <bdi>/isolate around a FRAGMENT mid-phrase (with loose
+    # sibling text on the same line) floats to the wrong end under dir=rtl. lint_bidi_runs
+    # flags it; isolating the WHOLE run (no loose neighbour text) is clean.
+    from check_rtl import lint_bidi_runs
+    bad = lint_bidi_runs('<div><bdi>3</bdi> unread · updated 2 minutes ago</div>\n'
+                         '<div>Today, <bdi>9:41 AM</bdi></div>')
+    assert len(bad) == 2
+    assert all("fragment" in f["issue"].lower() for f in bad)
+    assert all(isinstance(f["line"], int) for f in bad)
+    # whole-run isolation (no loose text beside the bdi) is clean
+    assert lint_bidi_runs('<div><bdi dir="ltr">3 unread · updated 2 minutes ago</bdi></div>') == []
+    # a bare numeric/identifier with no isolation at all is not this check's concern (no bdi) -> clean
+    assert lint_bidi_runs('<div>plain text only</div>') == []
+
+
 def test_slop_check_flags_tells_but_respects_contract():
     from slop_check import check_html
     slop = ('<style>body{font-family:Inter,sans-serif}'
