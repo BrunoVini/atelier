@@ -37,6 +37,11 @@ _VOID = {"img", "br", "hr", "input", "meta", "link", "source", "area",
 # everything else (text, email, checkbox, radio, range, …) needs a name.
 _INPUT_NO_LABEL_NEEDED = {"hidden", "submit", "button", "image"}
 
+# Generic, non-focusable containers that become an a11y bug when wired as a control.
+_GENERIC_CONTAINERS = {"div", "span", "li", "p"}
+# Inline event handlers that make an element behave like a clickable control.
+_CLICK_HANDLERS = {"onclick", "onkeydown", "onkeyup", "onkeypress", "onmousedown"}
+
 # Tokens (tag or role) that count as a document landmark.
 _LANDMARK_TAGS = {"main", "header", "footer", "nav"}
 _LANDMARK_ROLES = {"main", "navigation", "banner", "contentinfo"}
@@ -176,6 +181,31 @@ class _A11yWalk(HTMLParser):
             self.has_landmark = True
         if tag == "h1":
             self.h1_count += 1
+
+        # clickable-non-button (important) — a generic container made interactive
+        # with a click/key handler (or cursor:pointer + a handler) but given NO
+        # control semantics: not a <button>/<a href>, no role, no tabindex. Such an
+        # element is invisible to keyboard + AT users (WCAG 2.1.1 keyboard, 4.1.2
+        # name/role/value). Low false-positive by design: only the generic,
+        # non-focusable containers (div/span/li/p) qualify, only WITH a real handler,
+        # and a role= or tabindex (an intentional custom control) exempts it.
+        if tag in _GENERIC_CONTAINERS:
+            handler = any(k in am for k in _CLICK_HANDLERS)
+            style = (am.get("style") or "").lower()
+            cursor_pointer = "cursor:pointer" in style.replace(" ", "")
+            interactive = handler or cursor_pointer
+            has_semantics = (
+                bool((am.get("role") or "").strip())
+                or _has(attrs, "tabindex")
+                or _has(attrs, "href")
+            )
+            # cursor:pointer alone (no handler) is decorative styling, not a control.
+            if interactive and handler and not has_semantics:
+                self._add("important", "clickable-non-button",
+                          f"<{tag}> has a click/key handler but no control semantics — "
+                          "it is not keyboard-focusable or operable; use a <button> (or "
+                          "add role + tabindex=0 + a key handler and a visible "
+                          ":focus-visible state) (WCAG 2.1.1 / 4.1.2)", line)
 
         # img-missing-alt (important) — no alt attribute AT ALL. alt="" is valid.
         if tag == "img" and not _is_hidden_img(am) and not _has(attrs, "alt"):

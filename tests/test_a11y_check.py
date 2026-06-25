@@ -226,6 +226,49 @@ def test_aria_checked_missing_does_not_flag_plain_checkbox_or_other_roles():
         '<div role="tab" aria-label="x"></div>', "important")
 
 
+# --- clickable-non-button (important) ------------------------------------
+# A generic container (<div>/<span>/<li>/<p>) carrying a click/key handler but
+# NO control semantics (role / tabindex / href) is not keyboard-focusable or
+# operable — an unambiguous WCAG 2.1.1 / 4.1.2 regression a design gate must
+# catch. Real controls and already-semantic containers are left alone.
+
+def test_clickable_div_with_onclick_flags():
+    assert "clickable-non-button" in _kinds(
+        '<div onclick="save()">Save</div>', "important")
+    assert "clickable-non-button" in _kinds(
+        '<span onclick="go()">Go</span>', "important")
+
+
+def test_clickable_cursor_pointer_div_flags():
+    # a div made to LOOK clickable via cursor:pointer, with a key/click handler,
+    # but no role/tabindex
+    assert "clickable-non-button" in _kinds(
+        '<div onkeydown="k()" style="cursor: pointer">X</div>', "important")
+
+
+def test_clickable_non_button_does_not_fire_on_real_controls():
+    # a real <button> / <a href> is fine
+    assert "clickable-non-button" not in _kinds(
+        '<button onclick="save()">Save</button>', "important")
+    assert "clickable-non-button" not in _kinds(
+        '<a href="/x" onclick="go()">Go</a>', "important")
+
+
+def test_clickable_non_button_does_not_fire_when_made_focusable():
+    # a div given role + tabindex is an (intentional) custom control — not flagged
+    assert "clickable-non-button" not in _kinds(
+        '<div role="button" tabindex="0" onclick="save()">Save</div>', "important")
+
+
+def test_clickable_non_button_does_not_fire_without_handler():
+    # a plain non-interactive div is fine
+    assert "clickable-non-button" not in _kinds(
+        '<div class="card">just content</div>', "important")
+    # cursor:pointer WITHOUT any handler is decorative styling, not a control
+    assert "clickable-non-button" not in _kinds(
+        '<div style="cursor: pointer">label</div>', "important")
+
+
 def test_malformed_html_does_not_crash():
     for junk in ("<img <<< alt", "<button><a href><img", "<<<>>>",
                  "<input type=text", "", "<html><body>", None):
