@@ -372,6 +372,29 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   the file was not compiled in a headless environment (verify in Xcode), and that SwiftUI has
   no precise total-line-height control nor a 1:1 CSS-box-shadow equivalent, so those are
   disclosed approximations rather than fabricated equivalences.
+- **Flutter (Material 3) theme handoff — a complete idiomatic theme, not a flat constants
+  class.** `export_native.py` turns the token contract into a ready-to-drop-in Flutter theme
+  file carrying: a **`ColorScheme.light` and `.dark`** with the contract's roles mapped onto
+  the canonical Material 3 slots (`primary`/`onPrimary`/`secondary`/`error`/`surface`/
+  `outline` …, plus the modern `surfaceContainer*` ramp, `onSurfaceVariant`, `outlineVariant`,
+  and brand `accent`→`tertiary`), wired into a `ThemeData` for each brightness with
+  `useMaterial3: true`; a full **`TextTheme`** (every M3 slot filled) plus a typed type scale
+  with correct `FontWeight`, `fontFamily`, and `height` expressed as the **exact** unitless
+  `lineHeight / size` ratio; **spacing + radius scales** readable by *semantic name* at the
+  call site — `context.spacing.lg`, `context.radii.md` / `.mdRadius` — and also as
+  `const`-usable `AppSpacing` / `AppRadii` namespaces; and the design tokens that don't fit a
+  ColorScheme slot carried on lerp-able **`ThemeExtension`s** (`copyWith` + `lerp`) so type,
+  spacing, radii, and elevation animate across a theme transition. The CSS box-shadow
+  elevation token becomes a derived `List<BoxShadow>` (one `BoxShadow` per layer, with each
+  layer's real color and offset). A `context` accessor reads the tokens and **asserts** with an
+  actionable message when the theme isn't registered, instead of silently falling back to light
+  tokens. **Token fidelity is exact** — every emitted `Color(0xFF…)` is the source hex, both
+  schemes. The generated header is **honest about scope**: it imports `lerpDouble` from
+  `dart:ui` (it is not re-exported by `material.dart`) so the `lerp` methods actually compile,
+  states the file was not run through a Dart toolchain (verify with `dart analyze` /
+  `flutter test`), flags that the `surfaceContainer*` slots need Flutter 3.22+, and discloses
+  that Flutter's unitless `height` and a Gaussian `blurRadius` only approximate total line
+  height and a CSS blur — disclosed approximations, not fabricated equivalences.
 - i18n / RTL logical-property linting.
 - Design planning + a 5-seat Design Council (for / against / neutral / UX / craft → a
   synthesized verdict) for hard, multi-surface calls.
