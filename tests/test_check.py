@@ -137,3 +137,43 @@ def test_valid_integer_max_drift_still_works(tmp_path):
     repo = _repo(tmp_path)
     assert _check([repo]).returncode == 1               # config gate at 0 -> fail
     assert _check([repo, "--max-drift", "5"]).returncode == 0
+
+
+def _governed_repo(tmp_path, widen=False):
+    """A repo whose contract has a committed baseline (governance adopted)."""
+    d = tmp_path / "design"
+    d.mkdir()
+    base = {"colors": {"ink": "#111111", "paper": "#ffffff"},
+            "fonts": ["Inter"], "spacing": ["4", "8"]}
+    (d / ".contract-baseline.json").write_text(json.dumps(base))
+    cur = json.loads(json.dumps(base))
+    if widen:
+        cur["colors"]["accent"] = "#3366cc"      # a 3rd role beyond the baseline 2
+    (d / "design-tokens.json").write_text(json.dumps(cur))
+    (tmp_path / "a.css").write_text("a{color:var(--ink)}")   # no drift
+    return str(tmp_path)
+
+
+def test_contract_integrity_gates_on_widened_contract(tmp_path):
+    # adding a color role beyond the committed baseline FAILS the gate
+    repo = _governed_repo(tmp_path, widen=True)
+    r = _check([repo])
+    assert r.returncode == 1
+    assert "contract-drift" in r.stdout and "accent" in r.stdout
+
+
+def test_contract_integrity_passes_when_unchanged(tmp_path):
+    repo = _governed_repo(tmp_path, widen=False)
+    assert _check([repo]).returncode == 0
+
+
+def test_contract_integrity_is_noop_without_baseline(tmp_path):
+    # the historical case: no baseline file -> the step never gates (repos unaffected)
+    d = tmp_path / "design"
+    d.mkdir()
+    (d / "design-tokens.json").write_text(
+        json.dumps({"colors": {"ink": "#111111", "paper": "#ffffff"}, "fonts": ["Inter"]}))
+    (tmp_path / "a.css").write_text("a{color:var(--ink)}")
+    r = _check([str(tmp_path)])
+    assert r.returncode == 0
+    assert "[PASS] contract-integrity" in r.stdout

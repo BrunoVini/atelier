@@ -16,6 +16,7 @@ from audit_contrast import audit, gate_failures, load_themed_colors
 from check_rules import check as check_house_rules
 from overlap_risk import scan_repo_overlap_risk
 from a11y_check import scan_repo_a11y
+from contract_integrity import check_contract_integrity
 
 
 def run(repo, contract, max_drift=0, allow_contrast_fail=False, max_overlap_risk=0,
@@ -100,6 +101,24 @@ def run(repo, contract, max_drift=0, allow_contrast_fail=False, max_overlap_risk
     else:
         a11y = []
         results["steps"].append({"step": "a11y", "skipped": True, "ok": True})
+
+    # Contract-integrity governance — the token contract is itself a governed
+    # artifact: a change that WIDENS it (adds a color role) or NARROWS it (removes
+    # one), e.g. to launder an off-token/low-contrast color by declaring a new role,
+    # is drift the per-value drift/contrast steps can't see. Gates against a committed
+    # baseline (design/.contract-baseline.json); a NO-OP when no baseline is committed,
+    # so repos that haven't adopted governance are unaffected. Default-on like the
+    # other steps; toggle via the `checks`/`rules` config under "contract-integrity".
+    if _on("contract-integrity"):
+        integrity = check_contract_integrity(repo)
+        integrity_ok = not integrity
+        results["steps"].append({"step": "contract-integrity",
+                                 "findings": len(integrity), "ok": integrity_ok})
+        results["ok"] &= integrity_ok
+    else:
+        integrity = []
+        results["steps"].append({"step": "contract-integrity", "skipped": True, "ok": True})
+    results["contract_integrity"] = integrity
 
     results["a11y_findings"] = a11y
     results["drift"] = drift
@@ -351,6 +370,8 @@ def main(argv=None):
             for a in [f for f in res.get("a11y_findings", []) if f["severity"] == "important"][:20]:
                 loc = f":{a['line']}" if "line" in a else ""
                 print(f"    a11y {a.get('file','')}{loc} {a['kind']} — {a['detail']}")
+            for ci in res.get("contract_integrity", [])[:20]:
+                print(f"    {ci['kind']} {ci['file']}:{ci['line']} {ci['value']} — {ci['fix']}")
         print("\natelier check:", "PASS" if res["ok"] else "FAIL")
     return 0 if res["ok"] else 1
 

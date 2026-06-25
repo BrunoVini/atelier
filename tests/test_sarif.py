@@ -34,7 +34,31 @@ def _synthetic_results():
             {"file": "/proj/repo/c.css", "line": 9, "kind": "negative-margin",
              "detail": "neg margin", "severity": "polish"},
         ],
+        "contract_integrity": [
+            {"file": "design/design-tokens.json", "line": 14,
+             "value": '"text-faint": "#5a6573"', "kind": "contract-drift",
+             "severity": "important", "detail": "color role 'text-faint' was ADDED",
+             "fix": "map to an existing role"},
+        ],
     }
+
+
+def test_contract_integrity_emitted_as_warning():
+    doc = build_sarif(_synthetic_results(), REPO_ROOT)
+    by_rule = {}
+    for r in doc["runs"][0]["results"]:
+        by_rule.setdefault(r["ruleId"], []).append(r)
+    assert "atelier/contract-integrity" in by_rule
+    ci = by_rule["atelier/contract-integrity"][0]
+    assert ci["level"] == "warning"
+    assert "text-faint" in ci["message"]["text"]
+    # carries a physical location pointing at the contract file:line
+    loc = ci["locations"][0]["physicalLocation"]
+    assert loc["artifactLocation"]["uri"] == "design/design-tokens.json"
+    assert loc["region"]["startLine"] == 14
+    # the rule is registered
+    rules = _rules_index(doc)
+    assert "atelier/contract-integrity" in rules
 
 
 def _rules_index(doc):

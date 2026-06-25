@@ -52,6 +52,11 @@ _RULES = {
         "Static layout pattern with collision/overlap risk.",
         INFO_URI + "/blob/main/references/workflows/ci.md",
     ),
+    "atelier/contract-integrity": (
+        "contract-integrity",
+        "The token contract was widened/narrowed, or its CSS mirror diverged, vs the committed baseline.",
+        INFO_URI + "/blob/main/references/workflows/ci.md",
+    ),
 }
 
 _OVERLAP_LEVEL = {"critical": "error", "important": "warning", "polish": "note"}
@@ -141,6 +146,14 @@ def build_sarif(results, repo_root):
         det = o.get("detail")
         text = f"{kind}: {det}" if det else str(kind)
         emitted.append(("atelier/overlap-risk", level, text, loc))
+
+    # --- contract integrity -> warning (widen/narrow/mirror vs baseline) ------
+    for ci in results.get("contract_integrity", []) or []:
+        loc = _location(ci.get("file"), ci.get("line"), repo_root)
+        det = ci.get("detail") or ci.get("value")
+        fix = ci.get("fix")
+        text = f"{det}. {fix}" if fix else str(det)
+        emitted.append(("atelier/contract-integrity", "warning", text, loc))
 
     used_rule_ids = {rid for rid, *_ in emitted}
     rules = []

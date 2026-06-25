@@ -23,7 +23,8 @@ A repo-ROOT **`.atelier.json`** is also read and **merged OVER**
 `design/atelier.config.json` (the root file wins per key; deep-merged, so you can
 override one threshold without restating the section). It adds a `checks` object
 (alias `rules`) that toggles individual gate **steps** on/off — `design-lint`,
-`contrast-audit`, `house-rules`, `overlap-risk` (default `true`). A disabled step
+`contrast-audit`, `house-rules`, `overlap-risk`, `a11y`, `contract-integrity`
+(default `true`). A disabled step
 is **skipped** (not computed, not gating) and prints `[SKIP] <step> (disabled in
 config)`. An explicit CLI flag (e.g. `--max-drift N`) still overrides config.
 
@@ -164,7 +165,17 @@ file:line, the literal offending value, the violated token, a concrete fix, perc
 - **house-rules** — violations of DESIGN.md §9 directives (e.g. a flyout where the
   project mandates modals), via `check_rules.py`.
 - **overlap-risk** — static collision-risk lint (gating severities only).
-- **a11y** — static accessibility scan over the repo's HTML (gates on `important`).
+- **a11y** — static accessibility scan over the repo's HTML (gates on `important`):
+  missing `alt`, an unnamed control/input, and a **clickable non-`<button>`** (a
+  `<div>`/`<span>`/`<li>`/`<p>` wired with a click/key handler but no `role`/`tabindex`
+  — not keyboard-operable, WCAG 2.1.1/4.1.2).
+- **contract-integrity** — governs the **token contract itself** against a committed
+  baseline (`design/.contract-baseline.json`): a color role **added** (widening the
+  palette — e.g. to launder an off-token/low-contrast color by declaring a new role)
+  or **removed**, and a `tokens.css` `--color-*` whose hex **diverges** from the
+  contract. **No-op until you commit a baseline**, so existing repos are unaffected.
+  Adopt it with `cp design/design-tokens.json design/.contract-baseline.json`; a
+  genuine palette change is then a reviewed event (update the baseline in the same PR).
 
 These are dependency-light (stdlib Python), so the gate is fast and reliable.
 Generate `design/design-tokens.json` (via `generate-design-md`) before enabling.
