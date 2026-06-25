@@ -77,3 +77,74 @@ def test_scan_rendered_reconciles_against_static(tmp_path):
     rec = json.loads(r.stdout)["reconciliation"]
     assert "#ff00ff" in rec["declared_not_painted"]                # declared but never painted
     assert any(c["hex"].lower() == "#e8e6e1" for c in rec["painted_not_declared"])  # painted but not declared
+
+
+# A declared color that is never mounted in the DOM (a dead class / never-activated
+# theme) paints ZERO pixels; a real but small element (a 1px border, one link) paints a
+# faint sliver. A static read cannot tell these apart — rendering can. The reconciliation
+# must split declared-not-painted into `dead` (0 paint) vs `faint` (a real sliver).
+DEAD_VS_FAINT_PAGE = (
+    '<!doctype html><html><head><style>'
+    'html,body{margin:0;min-height:100vh;background:#101418;color:#e8e6e1}'
+    '.box{border:1px solid #445566;padding:40px}'           # #445566 paints only a 1px border -> faint
+    '.dead{background:#ff00aa;color:#00ffcc}'               # class never used -> zero paint
+    '</style></head><body><div class="box">Live text</div></body></html>')
+
+
+def test_reconcile_splits_dead_from_faint(tmp_path):
+    page = tmp_path / "p.html"
+    page.write_text(DEAD_VS_FAINT_PAGE)
+    static = tmp_path / "scan.json"
+    static.write_text(json.dumps({"colors": [
+        {"hex": "#101418", "count": 3},   # dominant bg -> painted
+        {"hex": "#445566", "count": 1},   # only a 1px border -> faint
+        {"hex": "#ff00aa", "count": 1},   # dead class bg -> zero paint
+        {"hex": "#00ffcc", "count": 1},   # dead class text -> zero paint
+    ]}))
+    r = _run([str(page), "--json", "--static", str(static)])
+    if _skip_or_return_if_no_browser(r):
+        return
+    assert r.returncode == 0, r.stderr
+    rec = json.loads(r.stdout)["reconciliation"]
+    # The never-mounted class colors paint zero pixels -> dead, not merely "faint".
+    assert "#ff00aa" in rec["dead"], rec
+    assert "#00ffcc" in rec["dead"], rec
+    # The 1px border is a real, painted sliver -> faint, NOT dead.
+    assert "#445566" in rec["faint"], rec
+    assert "#445566" not in rec["dead"], rec
+    # The dominant bg is painted plenty -> in neither bucket.
+    assert "#101418" not in rec["declared_not_painted"], rec
+    assert "#101418" not in rec["faint"], rec
+    # declared_not_painted is the headline dead set (no visible paint).
+    assert set(rec["declared_not_painted"]) == set(rec["dead"]), rec
+    # dead and faint are disjoint.
+    assert not (set(rec["dead"]) & set(rec["faint"])), rec
+
+
+# A color applied by JS / inline at runtime (never a hex in the CSS source) is exactly
+# what a static scan misses. Even when it paints only a small but VISIBLE sliver, the
+# render must surface it as painted-but-not-declared (flagged as an `accent`).
+JS_COLOR_PAGE = (
+    '<!doctype html><html><head><style>'
+    'html,body{margin:0;min-height:100vh;background:#101418;color:#e8e6e1}'
+    '.banner{padding:24px;font-size:20px}'
+    '</style></head><body><div class="banner" id="t">System alert: degraded</div></body>'
+    '<script>document.getElementById("t").style.background="#ff6d00";</script>'
+    '</html>')
+
+
+def test_painted_not_declared_catches_visible_js_color(tmp_path):
+    page = tmp_path / "p.html"
+    page.write_text(JS_COLOR_PAGE)
+    static = tmp_path / "scan.json"
+    # The static CSS scan only sees the two stylesheet colors; #ff6d00 is JS-applied.
+    static.write_text(json.dumps({"colors": [
+        {"hex": "#101418", "count": 2}, {"hex": "#e8e6e1", "count": 1}]}))
+    r = _run([str(page), "--json", "--static", str(static)])
+    if _skip_or_return_if_no_browser(r):
+        return
+    assert r.returncode == 0, r.stderr
+    rec = json.loads(r.stdout)["reconciliation"]
+    hit = [c for c in rec["painted_not_declared"] if c["hex"].lower() == "#ff6d00"]
+    assert hit, f"JS-applied #ff6d00 must be caught as painted-but-not-declared: {rec}"
+    assert hit[0]["painted"] in ("accent", "major")

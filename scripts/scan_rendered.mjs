@@ -113,16 +113,47 @@ function deltaE(h1, h2) {
   return Math.hypot(a - d, b - e, c - f);
 }
 
-const DELTA_E = 8;       // same as scan_repo.py clustering
-const PAINT_SHARE = 0.01; // ignore trace paints when judging "is this painted?"
+const DELTA_E = 8;        // same as scan_repo.py clustering
+const PAINT_SHARE = 0.01; // a color is a "major" painted region at >= 1% of the screen
+// A color painting any non-trace area at all — used to catch a real on-screen run
+// (e.g. a status color applied inline by JS, never present as a hex in the CSS) that
+// a static scan can't see but that a viewer plainly does. ~1 part in 3000 of a
+// 1440×900 layout (~430px²): below this is sub-pixel rounding noise, above it a real,
+// if small, painted element (one tag, a single icon, a hairline border).
+const VISIBLE_SHARE = 0.0003;
 
 function reconcile(rendered, staticColors) {
+  // Painted but never declared in the static palette — surfaced even at a small (but
+  // visible) share, because a JS/inline-applied color is exactly what a static CSS
+  // scan misses; flag whether it's a major region or only a visible accent.
   const paintedNotDeclared = rendered
-    .filter(rc => rc.share >= PAINT_SHARE && !staticColors.some(sc => deltaE(rc.hex, sc) <= DELTA_E))
-    .map(rc => ({ hex: rc.hex, share: rc.share }));
-  const declaredNotPainted = staticColors
-    .filter(sc => !rendered.some(rc => rc.share >= PAINT_SHARE / 2 && deltaE(rc.hex, sc) <= DELTA_E));
-  return { painted_not_declared: paintedNotDeclared, declared_not_painted: declaredNotPainted };
+    .filter(rc => rc.share >= VISIBLE_SHARE && !staticColors.some(sc => deltaE(rc.hex, sc) <= DELTA_E))
+    .map(rc => ({ hex: rc.hex, share: rc.share, painted: rc.share >= PAINT_SHARE ? 'major' : 'accent' }));
+
+  // For each declared color, how much area does it (or a ΔE-near render of it) paint?
+  // This is the reconciliation insight a static read literally can't produce: it tells a
+  // genuinely DEAD token (0 painted pixels — a never-mounted class, a never-activated
+  // theme) apart from a LIVE-but-FAINT one (a real sliver: a 1px border, a single link).
+  // Use the RAW (unrounded) share so a real hairline isn't rounded down into "dead".
+  const declaredPaint = staticColors.map(sc => {
+    const share = rendered
+      .filter(rc => deltaE(rc.hex, sc) <= DELTA_E)
+      .reduce((s, rc) => s + rc.share, 0);
+    return { hex: sc, share };
+  });
+  const dead = declaredPaint.filter(d => d.share < VISIBLE_SHARE).map(d => d.hex);
+  const faint = declaredPaint.filter(d => d.share >= VISIBLE_SHARE && d.share < PAINT_SHARE).map(d => d.hex);
+  // `declared_not_painted` (the headline "dead palette" for a static-vs-render
+  // reconcile) = tokens that paint no visible pixels = `dead`. The finer `faint`
+  // bucket (a real but sub-1% sliver — a hairline, a single link) is reported
+  // separately so a live-but-tiny token isn't mislabelled dead.
+  const declaredNotPainted = dead.slice();
+
+  return {
+    painted_not_declared: paintedNotDeclared,
+    declared_not_painted: declaredNotPainted,
+    dead, faint,
+  };
 }
 
 (async () => {
@@ -156,9 +187,12 @@ function reconcile(rendered, staticColors) {
       if (out.reconciliation && !out.reconciliation.error) {
         const r = out.reconciliation;
         if (r.painted_not_declared.length)
-          console.error('\n⚠ painted but NOT in the contract: ' + r.painted_not_declared.map(c => c.hex).join(', '));
-        if (r.declared_not_painted.length)
-          console.error('◦ declared but not painted (dead palette?): ' + r.declared_not_painted.join(', '));
+          console.error('\n⚠ painted but NOT in the static palette: '
+            + r.painted_not_declared.map(c => c.hex + (c.painted === 'major' ? '' : ' (accent)')).join(', '));
+        if (r.dead && r.dead.length)
+          console.error('☠ DEAD palette — declared but paints zero pixels: ' + r.dead.join(', '));
+        if (r.faint && r.faint.length)
+          console.error('◦ faint — declared, painted only a sliver: ' + r.faint.join(', '));
       }
     }
     await ctx.b.close();
