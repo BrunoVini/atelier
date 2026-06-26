@@ -96,6 +96,16 @@ of this initial pre-release; nothing has shipped under a version tag yet.
   *see*, weighted by on-screen painted area, and reconciles against the static scan —
   surfacing "declared but not painted" (dead palette) and "painted but not declared"
   (under-counted real surfaces). A string count can't tell you what carries the design.
+  The reconciliation distinguishes three things a stylesheet read cannot: a **dead** token
+  that paints zero pixels (a never-mounted class, a never-activated theme — including the
+  case where the *most-mentioned* color in the CSS paints nothing), a **faint-but-live**
+  token that paints only a real sub-1% sliver (a hairline, one link, a brand accent that's
+  declared everywhere yet barely shows — flagged, never mislabelled dead), and a color
+  **painted but never declared** (applied at runtime by JS/inline) caught even at a small
+  visible share. Painted-area reports carry a disclosure discipline: state the render
+  method + viewport, that painted-share is pixel coverage not perceived prominence, and the
+  standard limits (viewport- and state-dependent, ΔE-merge, reference-count caveat) — and
+  never fabricate a share you didn't measure.
 - Consistency-aware contract generation: grades a repo's coherence first, auto-maps a
   coherent repo, and gives a chaotic one per-dimension warnings with the best options
   pre-selected — never writing a confident contract over chaos.
