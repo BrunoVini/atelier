@@ -85,7 +85,7 @@ Three phases: **MEASURE** the repo → **GENERATE** artifacts → **GOVERN** coh
 | The user wants… | Read | Key scripts |
 |---|---|---|
 | A DESIGN.md / design system / "map our design" | `references/workflows/generate-design-md.md` | `scan_repo.py`, `export_tokens.py` |
-| Measure what users actually SEE (paint-weighted), reconcile vs the static scan | `references/workflows/generate-design-md.md` | `scan_rendered.mjs` |
+| Measure what users actually SEE (paint-weighted), reconcile vs the static scan, find the DEAD palette (declared-but-unpainted) — disclose method + limits, never fabricate a share | `references/workflows/generate-design-md.md` | `scan_rendered.mjs` |
 | Measure a site's MOTION system (@keyframes + timing, animation libraries, scroll patterns) | `references/capabilities/scroll-motion.md` | `scan_motion.mjs` |
 | Is the repo too inconsistent to auto-generate a contract? | `references/workflows/generate-design-md.md` | `assess.py` |
 | "Make it like this" / import a reference / cold start | `references/workflows/generate-design-md.md` | `import_reference.py` |

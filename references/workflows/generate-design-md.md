@@ -33,8 +33,38 @@ and let it arbitrate which static colors are real:
 node scripts/scan_rendered.mjs <built-page.html|url> --static /tmp/atelier-scan.json
 ```
 
-Colors flagged `declared but not painted` are likely dead palette (don't promote them to
-roles); `painted but not in the contract` are real surfaces the static scan under-counted.
+The reconciliation distinguishes three things a static read CANNOT:
+- **`dead`** — declared in CSS but paints **zero** pixels (a never-mounted class, a
+  never-activated theme). Genuinely dead palette: don't promote to roles. Note the trap
+  that the *most-mentioned* color in the static scan can be dead (e.g. a `#fff` used only
+  in unmounted classes + an inactive light theme) — mention-count ranks it #1, the render
+  shows zero. Always call this out by name when it happens; it's the sharpest reconciliation insight.
+- **`faint`** — declared AND painted, but a sub-1% sliver (a 1px border, one link, an accent
+  declared all over the CSS that paints under 1%). These are **LIVE, not dead** — never
+  label a small-but-real token dead. Flagging an over-declared/under-painted accent is a real
+  finding (the brand color that's "a rounding error"); calling it dead is a false positive.
+- **`painted_not_declared`** — painted but absent from the CSS source (a color applied at
+  runtime by JS/inline). The render catches it even at a small *visible* (not just ≥1%) share,
+  flagged `accent` vs `major`. This is exactly what a static CSS scan misses.
+
+**Report the painted-area measurement HONESTLY — disclosure is a deliverable, not a footnote.**
+A painted-area number is only trustworthy if its method + limits are stated; a measurement
+presented without them reads as less rigorous than an *honest estimate that admits it's an
+estimate*. State, every time:
+- **What you did** — rendered with a headless browser at a stated viewport (default 1440×900),
+  over the full document, painted-area per color **alpha-weighted** (translucent paint counts
+  proportionally), colors canvas-normalized so oklch/lab/inline are read.
+- **What painted-share IS and is NOT** — it is *pixel coverage*, NOT perceived visual
+  prominence or importance (a 0.98% accent can still be the focal point); a dominant neutral
+  surface is not "the most important color" just because it covers the most pixels.
+- **The standard limits** — viewport-dependent (a different width shifts surface-vs-text
+  ratios); one route / one rendered state (activating a theme or mounting a class would
+  resurrect dead colors — they are dead *as shipped*, not unreachable in principle); shadow
+  DOM / cross-origin iframes are not traversed; the static `count` is a *reference tally*, not
+  a literal-occurrence count, and near-colors merge at ΔE 8 (so a 2nd-dominant color can be
+  absorbed into a neighbor's static entry).
+- **Never fabricate** — report only shares you actually measured; if you could not render,
+  say so plainly and frame any ranking as a static estimate, not a painted-area measurement.
 
 ### 1b. Assess consistency — DON'T write a confident contract for a messy repo
 
