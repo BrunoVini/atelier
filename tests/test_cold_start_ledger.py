@@ -149,6 +149,36 @@ def test_category_warning_fires_in_cli_with_nonzero_exit(tmp_path):
     assert "reflex" in r.stdout.lower()
 
 
+def test_artisanal_food_register_has_reflex_coverage():
+    # The warm/heritage food register (artisanal maker, bakery/mill) is a large real
+    # category whose second-order monoculture is unbleached-cream paper + a high-contrast
+    # serif (Playfair/Cormorant/Palatino) + terracotta/kraft + a letterpress crest. It must
+    # have curated reflex rows so the second-order check fires on that predictable look,
+    # not only the existing Restaurant/Coffee roaster slices. (t45: both a from-scratch
+    # build AND atelier defaulted into cream+serif+terracotta for a heritage mill brief.)
+    from cold_start_ledger import load_reflex, reflex_reject_hit
+    table = load_reflex()  # the SHIPPED csv
+    cats = set(table)
+    assert {"artisanal food/maker", "bakery"} <= cats, (
+        f"missing artisanal-food register reflex rows; have: {sorted(cats)}")
+    # the cream-paper ground (the warm-neutral default the slop check also flags) is the
+    # reflex hue for this register -> a cream + Palatino pick must FIRE.
+    for cat in ("artisanal food/maker", "bakery"):
+        hit = reflex_reject_hit("Palatino", ["#f2e9d8", "#2a1f17", "#9a4318"], cat)
+        assert hit is not None, f"cream+serif+terracotta should be the reflex for {cat!r}"
+        assert hit["reach_for"], f"{cat!r} reflex row must offer a concrete reach_for"
+        # a genuinely off-reflex pick — a committed dark/saturated ground (no near-white
+        # cream, no terracotta) with a non-reflex font — must NOT fire.
+        assert reflex_reject_hit("Söhne", ["#1b2a4a", "#2f6f5e"], cat) is None
+
+
+def test_reflex_reject_rows_carry_reach_for_alternatives():
+    # every reflex row must name a concrete escape hatch, or the warning is a dead end.
+    from cold_start_ledger import load_reflex
+    for cat, row in load_reflex().items():
+        assert row.get("reach_for"), f"reflex row {cat!r} has no reach_for alternative"
+
+
 def test_products_and_reflex_reject_categories_stay_aligned():
     # 1:1 guard: every product category must have a reflex-reject row and vice-versa.
     # Without this, a new product category with no reflex row would silently stop the

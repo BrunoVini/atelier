@@ -294,12 +294,25 @@ the main reason cold-start output is generic; naming the read up front breaks it
    python3 scripts/synthesize_tokens.py '{"primary":"#2563eb","background":"#ffffff"}'
    ```
    Then **guard against your own sameness** — check the pick differs from recent
-   cold-start work, and record it once committed:
+   cold-start work, and record it once committed. **Always pass `--category` when the
+   brief names a product category** — it fires the *second-order* check (the predictable
+   "safe" look for that category) which the recent-collision check alone cannot see:
    ```bash
-   python3 scripts/cold_start_ledger.py check  "<display font>" "<archetype>" "#p" "#ink" "#paper"
+   python3 scripts/cold_start_ledger.py check  "<display font>" "<archetype>" "#p" "#ink" "#paper" --category "<category>"
    python3 scripts/cold_start_ledger.py record "<display font>" "<archetype>" "#p" "#ink" "#paper"
    ```
-   If `check` warns it's too similar to a recent output, pick a different palette/font family.
+   If `check` warns it's too similar to a recent output **or that it's the category
+   reflex**, pick a different palette/font family — follow the `reach for instead:` line
+   it prints. The category trap is the one that bites a 2nd brief in a NEW register: you
+   escape your *previous* project's look but land on the new register's *default* look
+   (every warm/heritage food brand → unbleached-cream paper + a Playfair/Palatino serif +
+   terracotta; every fintech → emerald + Space Grotesk). Diverging from the prior is NOT
+   enough if you land on the register's cliché.
+   - **Treat a `slop_check` `*-default` finding as a divergence signal, not just a lint.**
+     `oklch-warm-neutral-default` (the cream/sand/paper monoculture) and the
+     purple/indigo-gradient defaults are the *same* second-order trap the reflex-reject
+     names: a generic, un-owned ground. Source a real ground color from the product's own
+     material (the grain, the stone, the liquid, the room), not the register's safe cream.
 4. **Generate** using the craft refs (design-philosophy, prototypes/animations).
 5. **Run the self-QA loop and FIX** (see SKILL.md "Definition of done") — `slop_check`,
    `audit_contrast`, `overlap_risk`/`responsive_check`. This is the part a blank model

@@ -151,6 +151,7 @@ def load_reflex(csv_path=REFLEX_CSV):
                     "styles": _split_field(row.get("reflex_styles")),
                     "hues": hues,
                     "note": (row.get("note") or "").strip(),
+                    "reach_for": (row.get("reach_for") or "").strip(),
                 }
     except Exception:
         return out
@@ -196,7 +197,8 @@ def reflex_reject_hit(font, palette, category, csv_path=REFLEX_CSV):
     if not reasons:
         return None
     return {"category": _norm_cat(category), "reasons": reasons,
-            "reflex_fonts": row["fonts"], "reflex_styles": row["styles"], "note": row["note"]}
+            "reflex_fonts": row["fonts"], "reflex_styles": row["styles"],
+            "note": row["note"], "reach_for": row.get("reach_for", "")}
 
 
 def _extract_category(argv):
@@ -239,6 +241,8 @@ if __name__ == "__main__":
                 print("  reasons:", json.dumps(reflex["reasons"]))
                 if reflex["note"]:
                     print("  why:", reflex["note"])
+                if reflex.get("reach_for"):
+                    print("  reach for instead:", reflex["reach_for"])
                 fired = True
             if fired:
                 sys.exit(1)
