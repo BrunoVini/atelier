@@ -149,6 +149,53 @@ def test_category_warning_fires_in_cli_with_nonzero_exit(tmp_path):
     assert "reflex" in r.stdout.lower()
 
 
+def test_ground_side_classifies_dark_vs_light():
+    from cold_start_ledger import ground_side
+    # a dark-theme palette reads dark, a light-theme palette reads light
+    assert ground_side(["#0b1020", "#141a2e", "#6d5efc", "#eef1fb"]) == "dark"   # navy SaaS
+    assert ground_side(["#2f322e", "#23251f", "#d6a93f", "#ece7da"]) == "dark"   # stone-grey mill
+    assert ground_side(["#f4ecd8", "#fbf6e9", "#9a3b1f", "#2b2117"]) == "light"  # cream paper
+    assert ground_side(["#ffffff", "#111111", "#2563eb"]) == "light"             # white ground
+    assert ground_side([]) is None
+    assert ground_side(["not-a-hex"]) is None
+
+
+def test_same_ground_value_catches_the_at_a_glance_reskin(tmp_path):
+    # the t45 lesson: a stone-grey page and a navy page are FAR apart in palette ΔE yet
+    # both read 'dark' — the strongest distinctness axis (value) didn't move. The
+    # advisory must catch that even though too_similar() (same font+archetype) would not.
+    from cold_start_ledger import fingerprint, record, same_ground_value, too_similar
+    led = str(tmp_path / "cs.jsonl")
+    prior = fingerprint("Segoe UI", "gradient-glow-saas", ["#0b1020", "#141a2e", "#eef1fb"])
+    record(prior, ledger=led)
+    new_dark = fingerprint("Optima", "stone-ledger", ["#2f322e", "#23251f", "#d6a93f", "#ece7da"])
+    # not a hard collision (different font + archetype):
+    assert too_similar(new_dark, ledger=led) is None
+    # but the value-axis advisory fires — both read dark:
+    hit = same_ground_value(new_dark, ledger=led)
+    assert hit is not None and hit.get("ground") == "dark"
+    # flipping the ground light clears the advisory:
+    new_light = fingerprint("Optima", "stone-ledger", ["#f3eee2", "#fbf6e9", "#9a4318", "#2a1f17"])
+    assert same_ground_value(new_light, ledger=led) is None
+
+
+def test_value_advisory_does_not_change_check_exit_code(tmp_path):
+    # the value note is advisory: a same-value-but-otherwise-distinct pick still exits 0.
+    import os, subprocess, sys
+    script = os.path.join(os.path.dirname(__file__), "..", "scripts", "cold_start_ledger.py")
+    led = str(tmp_path / "cs.jsonl")
+    env = dict(os.environ, ATELIER_LEDGER=led)
+    subprocess.run([sys.executable, script, "record", "Segoe UI", "saas",
+                    "#0b1020", "#141a2e", "#6d5efc", "#eef1fb"],
+                   capture_output=True, text=True, env=env)
+    r = subprocess.run([sys.executable, script, "check", "Optima", "stone",
+                        "#23251f", "#2f322e", "#d6a93f", "#ece7da"],
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 0                       # advisory only — does not gate
+    assert "reads DARK" in r.stdout                # the value note fired
+    assert "✓ distinct" in r.stdout                # and the pick still cleared
+
+
 def test_artisanal_food_register_has_reflex_coverage():
     # The warm/heritage food register (artisanal maker, bakery/mill) is a large real
     # category whose second-order monoculture is unbleached-cream paper + a high-contrast

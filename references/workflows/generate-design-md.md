@@ -313,6 +313,16 @@ the main reason cold-start output is generic; naming the read up front breaks it
      purple/indigo-gradient defaults are the *same* second-order trap the reflex-reject
      names: a generic, un-owned ground. Source a real ground color from the product's own
      material (the grain, the stone, the liquid, the room), not the register's safe cream.
+   - **Diverge on GROUND VALUE (light↔dark) — it is the FIRST thing the eye reads.** When
+     the new brief must look different from a prior, value is the strongest single
+     distinctness move: a viewer registers light-vs-dark before hue, type, or layout.
+     Diverging on hue/type/layout while keeping the *same value* as the prior (a dark
+     stone page after a dark navy page; a light page after a light page) reads as a
+     **reskin at a glance** even when the palette ΔE is large. The `check` step prints a
+     `• note: this pick reads DARK/LIGHT like a recent output …` advisory for exactly this
+     — if the brief allows either value, **flip it** (escape a dark prior by going light,
+     and vice-versa). Only stay on the same value when the register genuinely demands it,
+     and then make the divergence unmistakable in hue + layout + type.
 4. **Generate** using the craft refs (design-philosophy, prototypes/animations).
 5. **Run the self-QA loop and FIX** (see SKILL.md "Definition of done") — `slop_check`,
    `audit_contrast`, `overlap_risk`/`responsive_check`. This is the part a blank model

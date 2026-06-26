@@ -61,11 +61,39 @@ def _palette_distance(a, b):
     return (avg_nn(ra, rb) + avg_nn(rb, ra)) / 2
 
 
+def _rel_luminance(rgb):
+    """WCAG relative luminance of an (r,g,b) 0-255 triple."""
+    def lin(c):
+        c = c / 255.0
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = rgb
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+
+
+DARK_SURFACE = 0.08   # rel-luminance below this = a genuinely dark surface
+
+
+def ground_side(palette):
+    """Classify a palette's GROUND as 'dark' or 'light' — the single most perceptually
+    dominant 'this looks different' axis (the eye reads value before hue or type). A DARK
+    page carries at least TWO genuinely dark surfaces (a dark ground + a raised
+    surface/border); a LIGHT page has only its INK dark and everything else light. So:
+    dark iff ≥2 palette colors sit below DARK_SURFACE. This separates a dark navy/stone
+    page (many dark tones) from a cream/white page (one dark ink) where a naive
+    median/mean is fooled by accents and the single dark ink. Returns 'dark'/'light', or
+    None for an empty/non-hex palette (never collides)."""
+    lums = [_rel_luminance(rgb) for rgb in _palette_rgbs(palette)]
+    if not lums:
+        return None
+    return "dark" if sum(1 for l in lums if l < DARK_SURFACE) >= 2 else "light"
+
+
 def fingerprint(font, archetype, palette):
     return {
         "font": _norm_font(font),
         "archetype": (archetype or "").lower(),
         "palette": [h.lower() for h in palette if isinstance(h, str)],
+        "ground": ground_side(palette),
     }
 
 
@@ -92,6 +120,23 @@ def record(fp, ledger=DEFAULT_LEDGER):
     with open(ledger, "a", encoding="utf-8") as f:
         f.write(json.dumps(fp) + "\n")
     return fp
+
+
+def same_ground_value(fp, ledger=DEFAULT_LEDGER, n=RECENT):
+    """Return the most recent prior on the SAME ground value-side (both dark, or both
+    light) as the proposed pick, or None. Value (light↔dark) is the FIRST thing the eye
+    reads — diverging on hue/type/layout while keeping the same value reads as a reskin at
+    a glance. Orthogonal to `too_similar` (which keys on same font+archetype): a stone-grey
+    page and a navy page are far apart in ΔE yet both read 'dark'. Advisory, not a hard
+    collision — a brief can legitimately need the same value as a prior; it's a prompt to
+    consider flipping the value, which is the strongest single distinctness move."""
+    side = fp.get("ground")
+    if side is None:
+        return None
+    for prior in reversed(load(ledger)[-n:]):
+        if prior.get("ground") == side:
+            return prior
+    return None
 
 
 def too_similar(fp, ledger=DEFAULT_LEDGER, n=RECENT):
@@ -244,6 +289,17 @@ if __name__ == "__main__":
                 if reflex.get("reach_for"):
                     print("  reach for instead:", reflex["reach_for"])
                 fired = True
+            # value-axis advisory (NON-gating): value (light↔dark) is the first thing the
+            # eye reads, so a same-value prior is a prompt to consider flipping it — the
+            # strongest single at-a-glance distinctness move. Never changes the exit code.
+            vhit = same_ground_value(fp)
+            if vhit and fp.get("ground"):
+                print(f"• note: this pick reads {fp['ground'].upper()} like a recent output "
+                      f"({vhit.get('ground')} ground). Value is the FIRST thing the eye reads —"
+                      f" diverging on hue/type/layout but keeping the same value can read as a "
+                      f"reskin at a glance. If the brief allows, flipping the ground "
+                      f"{'light' if fp['ground']=='dark' else 'dark'} is the strongest single "
+                      f"distinctness move.")
             if fired:
                 sys.exit(1)
             print("✓ distinct from recent cold-start outputs"
