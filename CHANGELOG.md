@@ -125,7 +125,17 @@ of this initial pre-release; nothing has shipped under a version tag yet.
 
 - Hi-fi prototypes, app mockups, and device frames written as real UI code into an
   existing repo, plus 2–3 distinct design directions to choose from (content held
-  identical across directions for a fair comparison).
+  identical across directions for a fair comparison). Producing real *choices* — not
+  three recolors of one layout: each direction varies the **layout system itself**
+  (grid, density, section rhythm), not only its type and palette, and earns a
+  **signature visual moment native to its language** (a product-native chart, a
+  gradient hero, an editorial masthead) so every direction reads as a complete,
+  shippable comp rather than styled placeholder text. The recolor/reskin trap — same
+  skeleton, swapped font/palette — is named and avoided, with parity of visual ambition
+  across the set so the weakest direction isn't bare text next to comp-grade siblings.
+  Each direction's rationale is surfaced as scannable, parallel metadata (who it's for /
+  what it optimizes / the honest tradeoff, plus a design-language descriptor and
+  type/palette/layout/mood tags) so a stakeholder can compare the languages at a glance.
 - Themed live preview — a local server that serves output themed by the project's own
   tokens, with click-to-select and live element iteration (pick an element → contract-
   bound variants → accept back into source, with journaled undo). Never collides with
