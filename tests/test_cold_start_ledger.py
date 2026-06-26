@@ -156,6 +156,14 @@ def test_ground_side_classifies_dark_vs_light():
     assert ground_side(["#2f322e", "#23251f", "#d6a93f", "#ece7da"]) == "dark"   # stone-grey mill
     assert ground_side(["#f4ecd8", "#fbf6e9", "#9a3b1f", "#2b2117"]) == "light"  # cream paper
     assert ground_side(["#ffffff", "#111111", "#2563eb"]) == "light"             # white ground
+    # the confound: a LIGHT page legitimately carries several dark colors (ink + secondary
+    # text + a saturated dark accent) — it must NOT be miscounted as dark just for those.
+    assert ground_side(["#cdd2cf", "#e7e9e6", "#f3f4f2", "#2b2c28",
+                         "#2f4c44", "#4d514a"]) == "light"  # pale grey ground, dark teal accent
+    # the inverse confound: a DARK page with several light tones (text + faint surfaces)
+    # stays dark because dark surfaces still outnumber the light ones.
+    assert ground_side(["#1c1e19", "#23251f", "#2f322e", "#5d6258",
+                         "#bdb8a8", "#ece7da", "#d6a93f"]) == "dark"
     assert ground_side([]) is None
     assert ground_side(["not-a-hex"]) is None
 

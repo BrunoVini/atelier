@@ -71,21 +71,29 @@ def _rel_luminance(rgb):
 
 
 DARK_SURFACE = 0.08   # rel-luminance below this = a genuinely dark surface
+LIGHT_SURFACE = 0.5   # rel-luminance above this = a genuinely light surface
 
 
 def ground_side(palette):
     """Classify a palette's GROUND as 'dark' or 'light' — the single most perceptually
-    dominant 'this looks different' axis (the eye reads value before hue or type). A DARK
-    page carries at least TWO genuinely dark surfaces (a dark ground + a raised
-    surface/border); a LIGHT page has only its INK dark and everything else light. So:
-    dark iff ≥2 palette colors sit below DARK_SURFACE. This separates a dark navy/stone
-    page (many dark tones) from a cream/white page (one dark ink) where a naive
-    median/mean is fooled by accents and the single dark ink. Returns 'dark'/'light', or
-    None for an empty/non-hex palette (never collides)."""
+    dominant 'this looks different' axis (the eye reads value before hue or type). With no
+    area weighting available (just a hex set), compare how many colors are genuinely DARK
+    surfaces (<DARK_SURFACE) vs genuinely LIGHT surfaces (>LIGHT_SURFACE): a dark page
+    stacks several dark surfaces (ground + raised surfaces + borders) and only a light ink
+    or two, a light page is the reverse. Whichever extreme has MORE colors is the ground
+    side; mid-tone accents (the trap for a naive mean/median, e.g. a navy page's indigo
+    accents) are ignored. A tie breaks toward 'dark' only when the floor is near-black and
+    there is no near-white ground. A heuristic, not a render measurement — the doctrine
+    advisory it powers is non-gating. Returns 'dark'/'light', or None for an empty/non-hex
+    palette (never collides)."""
     lums = [_rel_luminance(rgb) for rgb in _palette_rgbs(palette)]
     if not lums:
         return None
-    return "dark" if sum(1 for l in lums if l < DARK_SURFACE) >= 2 else "light"
+    dark = sum(1 for l in lums if l < DARK_SURFACE)
+    light = sum(1 for l in lums if l > LIGHT_SURFACE)
+    if dark == light:
+        return "dark" if (min(lums) < 0.03 and max(lums) < 0.85) else "light"
+    return "dark" if dark > light else "light"
 
 
 def fingerprint(font, archetype, palette):
